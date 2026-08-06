@@ -1,0 +1,44 @@
+{
+  "$schema": "https://turbo.build/schema.json",
+  "globalDependencies": ["**/.env.*local"],
+  "globalPassThroughEnv": [
+    "NODE_ENV",
+    "PORT",
+    "API_PORT",
+    "FIREBASE_PROJECT_ID",
+    "FIREBASE_PRIVATE_KEY",
+    "FIREBASE_CLIENT_EMAIL",
+    "FIREBASE_AUTH_EMULATOR_HOST",
+    "FIRESTORE_EMULATOR_HOST",
+    "GOOGLE_CLIENT_ID",
+    "GOOGLE_CLIENT_SECRET",
+    "GOOGLE_REDIRECT_URI",
+    "CREDENTIAL_ENCRYPTION_KEY",
+    "ALLOWED_DOMAIN",
+    "PUBLIC_FIREBASE_API_KEY",
+    "PUBLIC_FIREBASE_AUTH_DOMAIN",
+    "PUBLIC_FIREBASE_PROJECT_ID",
+    "PUBLIC_FIREBASE_APP_ID",
+    "PUBLIC_API_URL"
+  ],
+  "tasks": {
+    "build": {
+      "dependsOn": ["^build"],
+      "outputs": ["dist/**", ".astro/**"]
+    },
+    "typecheck": {
+      "dependsOn": ["^build"]
+    },
+    "lint": {},
+    "test": {
+      "dependsOn": ["^build"]
+    },
+    "test:ci": {
+      "dependsOn": ["^build"]
+    },
+    "dev": {
+      "cache": false,
+      "persistent": true
+    }
+  }
+}

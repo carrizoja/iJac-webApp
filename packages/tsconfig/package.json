@@ -1,0 +1,15 @@
+{
+  "name": "@ijac/tsconfig",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Shared TypeScript configurations for iJac webapp",
+  "main": "./tsconfig.base.json",
+  "files": [
+    "tsconfig.base.json",
+    "tsconfig.node.json",
+    "tsconfig.web.json"
+  ],
+  "devDependencies": {
+    "typescript": "^5.7.2"
+  }
+}

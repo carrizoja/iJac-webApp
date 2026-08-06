@@ -1,0 +1,32 @@
+{
+  "name": "ijac-webapp",
+  "version": "0.1.0",
+  "private": true,
+  "description": "iJac IT Solutions internal operations web application",
+  "license": "UNLICENSED",
+  "author": "iJac IT Solutions",
+  "type": "module",
+  "packageManager": "pnpm@10.15.1+sha512.34e538c329b5553014ca8e8f4535997f96180a1d0f614339357449935350d924e22f8614682191264ec33d1462ac21561aff97f6bb18065351c162c7e8f6de67",
+  "engines": {
+    "node": ">=22.0.0"
+  },
+  "scripts": {
+    "build": "turbo run build",
+    "dev": "turbo run dev",
+    "lint": "turbo run lint",
+    "typecheck": "turbo run typecheck",
+    "test": "turbo run test",
+    "test:ci": "turbo run test:ci",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
+  },
+  "devDependencies": {
+    "@ijac/tsconfig": "workspace:*",
+    "prettier": "^3.3.3",
+    "turbo": "^2.3.3"
+  },
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ]
+}

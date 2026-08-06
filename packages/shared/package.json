@@ -1,0 +1,26 @@
+{
+  "name": "@ijac/shared",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Shared domain contracts for iJac webapp",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    }
+  },
+  "scripts": {
+    "build": "tsc && tsc -p tsconfig.cjs.json && find dist/cjs -name '*.js' -exec sh -c 'mv \"$1\" \"dist/$(basename \"$1\" .js).cjs\"' _ {} \\; && rm -rf dist/cjs",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint \"src/**/*.ts\"",
+    "test": "node --test dist/**/*.test.js"
+  },
+  "devDependencies": {
+    "@ijac/tsconfig": "workspace:*",
+    "typescript": "^5.7.2"
+  }
+}
