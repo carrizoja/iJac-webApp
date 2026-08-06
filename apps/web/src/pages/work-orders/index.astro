@@ -1,0 +1,18 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import { Protected } from '../../components/layout/Protected';
+import { AppShell } from '../../components/layout/AppShell';
+import { WorkOrderManager } from '../../components/work-orders/WorkOrderManager';
+---
+
+<Layout title="Órdenes | iJac Operations">
+  <Protected client:load>
+    <AppShell client:load>
+      <h1 class="text-2xl font-semibold text-slate-100">Órdenes de trabajo</h1>
+      <p class="mt-2 text-slate-400">Gestiona las órdenes de trabajo.</p>
+      <div class="mt-6">
+        <WorkOrderManager client:load />
+      </div>
+    </AppShell>
+  </Protected>
+</Layout>
