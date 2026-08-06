@@ -1,0 +1,1 @@
+export const WORK_ORDER_REPOSITORY = Symbol('WORK_ORDER_REPOSITORY');

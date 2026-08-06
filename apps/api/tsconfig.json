@@ -1,0 +1,17 @@
+{
+  "extends": "@ijac/tsconfig/tsconfig.node.json",
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["src/*"],
+      "@ijac/shared": ["../packages/shared/src"]
+    },
+    "outDir": "./dist",
+    "rootDir": ".",
+    "types": ["node", "jest"],
+    "noEmit": true,
+    "isolatedModules": false
+  },
+  "include": ["src/**/*", "test/**/*"],
+  "exclude": ["node_modules", "dist"]
+}
