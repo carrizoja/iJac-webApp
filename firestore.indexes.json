@@ -1,0 +1,45 @@
+{
+  "indexes": [
+    {
+      "collectionGroup": "workOrders",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "status", "order": "ASCENDING" },
+        { "fieldPath": "updatedAt", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "workOrders",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "clientId", "order": "ASCENDING" },
+        { "fieldPath": "updatedAt", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "workOrders",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "priority", "order": "ASCENDING" },
+        { "fieldPath": "updatedAt", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "workOrders",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "dueDate", "order": "ASCENDING" },
+        { "fieldPath": "status", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "clients",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "searchPrefixes", "arrayConfig": "CONTAINS" },
+        { "fieldPath": "updatedAt", "order": "DESCENDING" }
+      ]
+    }
+  ],
+  "fieldOverrides": []
+}

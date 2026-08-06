@@ -1,0 +1,10 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Deny all direct client access by default.
+    // All application reads and writes go through the NestJS API using Firebase Admin.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

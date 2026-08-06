@@ -40,6 +40,23 @@ pnpm dev
 
 The web app runs on `http://localhost:4321` and the API on `http://localhost:3001/api`.
 
+### Verifying the API
+
+```bash
+# Run only the API in development
+pnpm --filter @ijac/api dev
+
+# Check runtime readiness (public, no token required)
+curl http://localhost:3001/api/health
+# -> { "status": "ok", "timestamp": "<ISO 8601>" }
+
+# Full built-process smoke check (build first, no Firebase/Google network calls)
+pnpm --filter @ijac/api build
+pnpm --filter @ijac/api test:smoke
+```
+
+The API validates its environment at startup and exits with an actionable error naming any missing or invalid variable.
+
 ## Root commands
 
 ```bash
