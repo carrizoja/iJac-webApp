@@ -1,9 +1,7 @@
 ## Purpose
 
 Define the workspace structure, shared contracts, environment boundaries, and local development foundation.
-
 ## Requirements
-
 ### Requirement: Workspace organization
 The project SHALL use a pnpm workspace coordinated by Turborepo, with the Astro web application in `apps/web`, the NestJS API in `apps/api`, and reusable TypeScript contracts in `packages/shared`.
 
@@ -16,11 +14,11 @@ The project SHALL use a pnpm workspace coordinated by Turborepo, with the Astro 
 - **THEN** Turborepo executes the corresponding task for every affected workspace package
 
 ### Requirement: Web application foundation
-The web workspace SHALL provide an Astro application using React islands and Tailwind CSS, with authenticated application pages that remain usable on desktop and mobile viewports.
+The web workspace SHALL provide an Astro application using React islands and Tailwind CSS, with authenticated application pages that remain usable on desktop and mobile viewports and use the shared iJac brand-aligned frontend foundation.
 
 #### Scenario: Render the application shell
 - **WHEN** an authenticated user opens the web application
-- **THEN** the system renders navigation to clients, work orders, and calendar views using the provisional dark-slate visual foundation
+- **THEN** the system renders responsive navigation to clients, work orders, and calendar views using the shared iJac typography, surface, action, focus, and motion conventions
 
 ### Requirement: API application foundation
 The API workspace SHALL provide a NestJS application with configuration validation, global request validation, and feature modules for authentication, clients, work orders, and calendar synchronization.
@@ -39,3 +37,4 @@ The shared package SHALL export framework-independent TypeScript contracts for `
 #### Scenario: Consume shared contracts
 - **WHEN** the web and API workspaces compile
 - **THEN** both consume the same domain contract definitions from the shared package without importing framework-specific code
+
