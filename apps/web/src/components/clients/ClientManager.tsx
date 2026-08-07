@@ -17,12 +17,12 @@ export function ClientManager() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h2 className="text-xl font-semibold text-slate-100">Clientes</h2>
+        <h2 className="text-xl font-semibold text-fg-primary">Clientes</h2>
       </div>
 
       {(creating || editing) && (
-        <div className="rounded-lg border border-slate-800 bg-slate-900/50 p-4">
-          <h3 className="mb-4 text-lg font-medium text-slate-100">
+        <div className="rounded-lg border border-border-primary bg-bg-secondary p-4">
+          <h3 className="mb-4 text-lg font-medium text-fg-primary">
             {editing ? 'Editar cliente' : 'Nuevo cliente'}
           </h3>
           <ClientForm

@@ -19,10 +19,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="min-h-screen">
-      <header className="border-b border-slate-800 bg-slate-900/80 px-4 py-3 backdrop-blur">
+      <header className="border-b border-border-primary bg-bg-secondary px-4 py-3 backdrop-blur">
         <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-4">
-            <a href="/" className="font-semibold text-slate-100">
+            <a href="/" className="font-semibold text-fg-primary">
               iJac
             </a>
             <nav className="hidden gap-3 text-sm sm:flex" aria-label="Navegación principal">
@@ -30,7 +30,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 <a
                   key={link.href}
                   href={link.href}
-                  className="rounded-md px-2 py-1 text-slate-300 hover:bg-slate-800 hover:text-slate-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-focus"
+                  className="rounded-md px-2 py-1 text-fg-secondary hover:bg-bg-tertiary hover:text-fg-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-focus"
                 >
                   {link.label}
                 </a>
@@ -38,11 +38,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             </nav>
           </div>
           <div className="flex items-center gap-3">
-            <span className="hidden text-sm text-slate-400 md:inline">{user?.email}</span>
+            <span className="hidden text-sm text-fg-muted md:inline">{user?.email}</span>
             <button
               type="button"
               onClick={() => signOut(auth)}
-              className="rounded-md px-3 py-1.5 text-sm text-slate-300 hover:bg-slate-800 hover:text-slate-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-focus"
+              className="rounded-md px-3 py-1.5 text-sm text-fg-secondary hover:bg-bg-tertiary hover:text-fg-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-focus"
             >
               Salir
             </button>
@@ -53,7 +53,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <a
               key={link.href}
               href={link.href}
-              className="rounded-md px-2 py-1 text-slate-300 hover:bg-slate-800 hover:text-slate-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-focus"
+              className="rounded-md px-2 py-1 text-fg-secondary hover:bg-bg-tertiary hover:text-fg-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-focus"
             >
               {link.label}
             </a>
