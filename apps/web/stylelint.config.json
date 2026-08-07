@@ -6,6 +6,10 @@
   "rules": {
     "selector-class-pattern": null,
     "color-no-hex": null,
-    "custom-property-pattern": null
+    "custom-property-pattern": null,
+    "import-notation": null,
+    "at-rule-no-unknown": [true, {
+      "ignoreAtRules": ["tailwind"]
+    }]
   }
 }

@@ -21,6 +21,9 @@
   },
   "devDependencies": {
     "@ijac/tsconfig": "workspace:*",
+    "@typescript-eslint/eslint-plugin": "^8.65.0",
+    "@typescript-eslint/parser": "^8.65.0",
+    "eslint": "^9.39.5",
     "typescript": "^5.7.2"
   }
 }

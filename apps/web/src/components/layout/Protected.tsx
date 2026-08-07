@@ -1,5 +1,6 @@
 import { useAuth } from '../../hooks/useAuth';
 import { SignIn } from '../auth/SignIn';
+import { LoadingState } from '../ui';
 
 interface ProtectedProps {
   children: React.ReactNode;
@@ -11,7 +12,11 @@ export function Protected({ children }: ProtectedProps) {
   if (loading) {
     return (
       <div className="flex min-h-screen items-center justify-center">
-        <div className="text-slate-400">Cargando...</div>
+        <LoadingState
+          variant="spinner"
+          message="Cargando..."
+          size="md"
+        />
       </div>
     );
   }

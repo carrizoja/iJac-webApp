@@ -1,7 +1,8 @@
 import { useState } from 'react';
-import type { WorkOrder, Client, WorkOrderClientSummary } from '@ijac/shared';
+import type { Client, WorkOrderClientSummary } from '@ijac/shared';
+import { WORK_ORDER_STATUSES, WORK_ORDER_PRIORITIES, WorkOrderStatus, WorkOrderPriority } from '@ijac/shared';
 import { createWorkOrder, updateWorkOrder } from '../../lib/resources';
-import { WORK_ORDER_STATUSES, WORK_ORDER_PRIORITIES } from '@ijac/shared';
+import { Input, Textarea, Select, Button, Alert } from '../ui';
 
 interface WorkOrderFormProps {
   clients: Client[];
@@ -42,10 +43,15 @@ export function WorkOrderForm({ clients, workOrder, onSaved, onCancel }: WorkOrd
     setSubmitting(true);
     setErrors({});
     try {
+      const payload = {
+        ...form,
+        status: form.status as WorkOrderStatus,
+        priority: form.priority as WorkOrderPriority,
+      };
       if (workOrder) {
-        await updateWorkOrder(workOrder.id, form);
+        await updateWorkOrder(workOrder.id, payload);
       } else {
-        await createWorkOrder(form as unknown as WorkOrder);
+        await createWorkOrder(payload);
       }
       onSaved();
     } catch (err) {
@@ -58,114 +64,96 @@ export function WorkOrderForm({ clients, workOrder, onSaved, onCancel }: WorkOrd
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       {errors.general && (
-        <div className="rounded-md bg-red-900/30 px-3 py-2 text-red-200">{errors.general}</div>
+        <Alert type="error" icon="⚠️" onClose={() => setErrors({ ...errors, general: undefined })}>
+          {errors.general}
+        </Alert>
       )}
-      <div>
-        <label htmlFor="title" className="block text-sm font-medium text-slate-300">
-          Título
-        </label>
-        <input
-          id="title"
-          value={form.title}
-          onChange={(e) => setForm({ ...form, title: e.target.value })}
-          className="mt-1 w-full rounded-md border border-slate-700 bg-slate-900 px-3 py-2 text-slate-100"
-        />
-        {errors.title && <p className="mt-1 text-xs text-red-300">{errors.title}</p>}
-      </div>
-      <div>
-        <label htmlFor="clientId" className="block text-sm font-medium text-slate-300">
-          Cliente
-        </label>
-        <select
-          id="clientId"
-          value={form.clientId}
-          onChange={(e) => setForm({ ...form, clientId: e.target.value })}
-          className="mt-1 w-full rounded-md border border-slate-700 bg-slate-900 px-3 py-2 text-slate-100"
+
+      <Input
+        id="title"
+        label="Título"
+        value={form.title}
+        onChange={(e) => setForm({ ...form, title: e.target.value })}
+        error={errors.title}
+        required
+      />
+
+      <Select
+        id="clientId"
+        label="Cliente"
+        value={form.clientId}
+        onChange={(e) => setForm({ ...form, clientId: e.target.value })}
+        error={errors.clientId}
+        required
+      >
+        <option value="">Seleccionar cliente</option>
+        {clients.map((c) => (
+          <option key={c.id} value={c.id}>
+            {c.name}
+          </option>
+        ))}
+      </Select>
+
+      <div className="grid gap-4 sm:grid-cols-2">
+        <Select
+          id="status"
+          label="Estado"
+          value={form.status}
+          onChange={(e) => setForm({ ...form, status: e.target.value })}
         >
-          <option value="">Seleccionar cliente</option>
-          {clients.map((c) => (
-            <option key={c.id} value={c.id}>
-              {c.name}
+          {WORK_ORDER_STATUSES.map((s) => (
+            <option key={s} value={s}>
+              {s}
             </option>
           ))}
-        </select>
-        {errors.clientId && <p className="mt-1 text-xs text-red-300">{errors.clientId}</p>}
+        </Select>
+
+        <Select
+          id="priority"
+          label="Prioridad"
+          value={form.priority}
+          onChange={(e) => setForm({ ...form, priority: e.target.value })}
+        >
+          {WORK_ORDER_PRIORITIES.map((p) => (
+            <option key={p} value={p}>
+              {p}
+            </option>
+          ))}
+        </Select>
       </div>
-      <div className="grid gap-4 sm:grid-cols-2">
-        <div>
-          <label htmlFor="status" className="block text-sm font-medium text-slate-300">
-            Estado
-          </label>
-          <select
-            id="status"
-            value={form.status}
-            onChange={(e) => setForm({ ...form, status: e.target.value })}
-            className="mt-1 w-full rounded-md border border-slate-700 bg-slate-900 px-3 py-2 text-slate-100"
-          >
-            {WORK_ORDER_STATUSES.map((s) => (
-              <option key={s} value={s}>
-                {s}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div>
-          <label htmlFor="priority" className="block text-sm font-medium text-slate-300">
-            Prioridad
-          </label>
-          <select
-            id="priority"
-            value={form.priority}
-            onChange={(e) => setForm({ ...form, priority: e.target.value })}
-            className="mt-1 w-full rounded-md border border-slate-700 bg-slate-900 px-3 py-2 text-slate-100"
-          >
-            {WORK_ORDER_PRIORITIES.map((p) => (
-              <option key={p} value={p}>
-                {p}
-              </option>
-            ))}
-          </select>
-        </div>
-      </div>
-      <div>
-        <label htmlFor="dueDate" className="block text-sm font-medium text-slate-300">
-          Fecha de vencimiento
-        </label>
-        <input
-          id="dueDate"
-          type="date"
-          value={form.dueDate ? form.dueDate.slice(0, 10) : ''}
-          onChange={(e) => setForm({ ...form, dueDate: e.target.value ? new Date(e.target.value).toISOString() : '' })}
-          className="mt-1 w-full rounded-md border border-slate-700 bg-slate-900 px-3 py-2 text-slate-100"
-        />
-      </div>
-      <div>
-        <label htmlFor="description" className="block text-sm font-medium text-slate-300">
-          Descripción
-        </label>
-        <textarea
-          id="description"
-          value={form.description}
-          onChange={(e) => setForm({ ...form, description: e.target.value })}
-          rows={3}
-          className="mt-1 w-full rounded-md border border-slate-700 bg-slate-900 px-3 py-2 text-slate-100"
-        />
-      </div>
-      <div className="flex justify-end gap-3">
-        <button
+
+      <Input
+        id="dueDate"
+        type="date"
+        label="Fecha de vencimiento"
+        value={form.dueDate ? form.dueDate.slice(0, 10) : ''}
+        onChange={(e) =>
+          setForm({ ...form, dueDate: e.target.value ? new Date(e.target.value).toISOString() : '' })
+        }
+      />
+
+      <Textarea
+        id="description"
+        label="Descripción"
+        value={form.description}
+        onChange={(e) => setForm({ ...form, description: e.target.value })}
+        rows={3}
+      />
+
+      <div className="flex justify-end gap-3 pt-4">
+        <Button
           type="button"
+          variant="secondary"
           onClick={onCancel}
-          className="rounded-md px-4 py-2 text-sm text-slate-300 hover:bg-slate-800"
         >
           Cancelar
-        </button>
-        <button
+        </Button>
+        <Button
           type="submit"
-          disabled={submitting}
-          className="rounded-md bg-accent px-4 py-2 text-sm font-medium text-white hover:bg-accent-light disabled:opacity-50"
+          isLoading={submitting}
         >
           {submitting ? 'Guardando...' : workOrder ? 'Guardar cambios' : 'Crear orden'}
-        </button>
+        </Button>
       </div>
     </form>
   );

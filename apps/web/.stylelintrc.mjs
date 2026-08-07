@@ -1,0 +1,15 @@
+export default {
+  extends: [
+    'stylelint-config-standard',
+    'stylelint-config-html/astro'
+  ],
+  rules: {
+    'selector-class-pattern': null,
+    'color-no-hex': null,
+    'custom-property-pattern': null,
+    'import-notation': null,
+    'at-rule-no-unknown': [true, {
+      ignoreAtRules: ['tailwind']
+    }]
+  }
+};

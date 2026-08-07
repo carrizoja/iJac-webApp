@@ -1,21 +1,29 @@
-import type { Linter } from 'eslint';
+import tsParser from '@typescript-eslint/parser';
+import jsxA11y from 'eslint-plugin-jsx-a11y';
+import react from 'eslint-plugin-react';
+import reactHooks from 'eslint-plugin-react-hooks';
+import astroPlugin from 'eslint-plugin-astro';
 
-const config: Linter.Config[] = [
+export default [
   {
     ignores: ['dist/**', '.astro/**', 'node_modules/**', 'coverage/**'],
   },
   {
-    files: ['**/*.{js,jsx,ts,tsx,astro}'],
+    files: ['**/*.{js,jsx,ts,tsx}'],
     languageOptions: {
+      parser: tsParser,
       parserOptions: {
         ecmaVersion: 'latest',
         sourceType: 'module',
+        ecmaFeatures: {
+          jsx: true,
+        },
       },
     },
     plugins: {
-      'jsx-a11y': (await import('eslint-plugin-jsx-a11y')).default,
-      'react': (await import('eslint-plugin-react')).default,
-      'react-hooks': (await import('eslint-plugin-react-hooks')).default,
+      'jsx-a11y': jsxA11y,
+      react,
+      'react-hooks': reactHooks,
     },
     rules: {
       'react/react-in-jsx-scope': 'off',
@@ -25,16 +33,5 @@ const config: Linter.Config[] = [
       'jsx-a11y/anchor-is-valid': 'warn',
     },
   },
-  {
-    files: ['**/*.astro'],
-    plugins: {
-      astro: (await import('eslint-plugin-astro')).default,
-    },
-    rules: {
-      'astro/no-conflict-set-directives': 'error',
-      'astro/no-unused-define-vars-in-style': 'error',
-    },
-  },
+  ...astroPlugin.configs.recommended,
 ];
-
-export default config;

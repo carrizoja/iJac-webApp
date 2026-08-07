@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { getCalendarConnectionStatus, startCalendarConnection } from '../../lib/calendar';
+import { Button, Alert, Panel, LoadingState } from '../ui';
 
 export function CalendarConnection() {
   const [status, setStatus] = useState<{ connected: boolean; status: string } | null>(null);
@@ -36,39 +37,38 @@ export function CalendarConnection() {
   };
 
   if (loading) {
-    return <div className="text-sm text-slate-400">Consultando estado de Google Calendar...</div>;
+    return <LoadingState>Consultando estado de Google Calendar...</LoadingState>;
   }
 
   return (
-    <div className="rounded-lg border border-slate-800 bg-slate-900/50 p-4">
-      <h2 className="text-lg font-medium text-slate-100">Conexión con Google Calendar</h2>
+    <Panel>
+      <h2 className="text-lg font-medium text-fg-primary">Conexión con Google Calendar</h2>
       <div className="mt-2 flex items-center gap-2 text-sm">
         <span
           className={`inline-block h-2 w-2 rounded-full ${
-            status?.connected ? 'bg-green-500' : 'bg-slate-500'
+            status?.connected ? 'bg-status-success' : 'bg-fg-muted'
           }`}
           aria-hidden="true"
         />
-        <span className="text-slate-300">
+        <span className="text-fg-muted">
           {status?.connected ? 'Conectado' : 'Desconectado'}
         </span>
       </div>
       {error && (
-        <div className="mt-2 rounded-md bg-red-900/30 px-3 py-2 text-sm text-red-200" role="alert" aria-live="assertive">
+        <Alert type="error" icon="⚠️" onClose={() => setError(null)} className="mt-2" role="alert" aria-live="assertive">
           {error}
-        </div>
+        </Alert>
       )}
       {!status?.connected && (
-        <button
-          type="button"
+        <Button
           onClick={handleConnect}
-          disabled={connecting}
+          isLoading={connecting}
           aria-busy={connecting}
-          className="mt-4 rounded-md bg-accent px-4 py-2 text-sm font-medium text-white hover:bg-accent-light disabled:opacity-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-focus"
+          className="mt-4"
         >
           {connecting ? 'Conectando...' : 'Conectar con Google Calendar'}
-        </button>
+        </Button>
       )}
-    </div>
+    </Panel>
   );
 }

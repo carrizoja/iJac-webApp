@@ -3,15 +3,14 @@ import tsEslint from '@typescript-eslint/eslint-plugin';
 
 export default [
   {
-    ignores: ['dist/**', 'node_modules/**', 'coverage/**'],
+    ignores: ['dist/**', 'node_modules/**', '**.d.ts'],
   },
   {
     files: ['**/*.ts'],
     languageOptions: {
       parser: tsParser,
       parserOptions: {
-        project: './tsconfig.json',
-        tsconfigRootDir: process.cwd(),
+        ecmaVersion: 'latest',
         sourceType: 'module',
       },
     },

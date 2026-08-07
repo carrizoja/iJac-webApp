@@ -14,6 +14,20 @@ function isObject(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null;
 }
 
+/**
+ * Narrow an unknown value to a valid ApiError.
+ * Returns the error if it matches the contract, null otherwise.
+ */
+function isApiError(value: unknown): value is ApiError {
+  return (
+    isObject(value) &&
+    typeof value.code === 'string' &&
+    typeof value.message === 'string' &&
+    value.code.length > 0 &&
+    value.message.length > 0
+  );
+}
+
 function buildApiUrl(path: string): URL {
   const baseUrl = import.meta.env.PUBLIC_API_URL;
   const fallbackBaseUrl = 'http://localhost:3001/api';
@@ -64,8 +78,8 @@ export async function apiCall<T>(
 
     const body = (await response.json()) as unknown;
     if (!response.ok) {
-      if (isObject(body) && isObject(body.error)) {
-        return { error: body.error as ApiError };
+      if (isObject(body) && isApiError(body.error)) {
+        return { error: body.error };
       }
       return {
         error: {

@@ -1,9 +1,26 @@
+/* Import self-hosted fonts */
+@import '@fontsource/inter/400.css';
+@import '@fontsource/inter/500.css';
+@import '@fontsource/space-grotesk/400.css';
+@import '@fontsource/space-grotesk/600.css';
+
+/* SphereFez brand font */
+@font-face {
+  font-family: SphereFez;
+  src: url('/fonts/SphereFez-8MAzJ.ttf') format('truetype'),
+       url('/fonts/SphereFez-Yz5g4.otf') format('opentype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 @layer base {
   :root {
+    /* Base color palette */
     --color-slate-50: #f8fafc;
     --color-slate-100: #f1f5f9;
     --color-slate-200: #e2e8f0;
@@ -15,25 +32,278 @@
     --color-slate-800: #1e293b;
     --color-slate-900: #0f172a;
     --color-slate-950: #020617;
-    --color-accent: #1f2937;
-    --color-accent-light: #334155;
+
+    /* Semantic backgrounds */
+    --color-bg-primary: #020617;           /* Darkest, primary UI background */
+    --color-bg-secondary: #0f172a;         /* Secondary backgrounds, main content */
+    --color-bg-tertiary: #1e293b;          /* Tertiary surfaces, cards, raised */
+
+    /* Panels and containers */
+    --color-panel-default: #111827;        /* Default panel background */
+    --color-panel-hover: #1f2937;          /* Panel hover state */
+    --color-panel-active: #2d3748;         /* Panel active state */
+
+    /* Borders */
+    --color-border-default: #334155;       /* Default borders */
+    --color-border-subtle: #475569;        /* Subtle/secondary borders */
+    --color-border-strong: #1e293b;        /* Strong/emphasized borders */
+
+    /* Foreground text */
+    --color-fg-primary: #f1f5f9;           /* Primary text */
+    --color-fg-secondary: #cbd5e1;         /* Secondary text */
+    --color-fg-tertiary: #94a3b8;          /* Tertiary/muted text */
+    --color-fg-inverse: #020617;           /* Inverse text on light backgrounds */
+
+    /* Muted content */
+    --color-muted-bg: #1e293b;             /* Muted backgrounds */
+    --color-muted-fg: #94a3b8;             /* Muted foreground text */
+
+    /* Primary gradient (cyan/blue) */
+    --color-gradient-start: #06b6d4;       /* Cyan */
+    --color-gradient-end: #3b82f6;         /* Blue */
+    --color-primary: #0ea5e9;              /* Primary action color */
+
+    /* Secondary accent (purple) */
+    --color-accent-primary: #8b5cf6;       /* Purple accent */
+    --color-accent-light: #a78bfa;         /* Purple accent light */
+
+    /* Status colors */
+    --color-status-open: #3b82f6;          /* Open/pending */
+    --color-status-in-progress: #f59e0b;   /* In progress */
+    --color-status-completed: #22c55e;     /* Completed/success */
+    --color-status-cancelled: #64748b;     /* Cancelled/disabled */
+
+    /* Priority colors */
+    --color-priority-low: #64748b;         /* Low priority */
+    --color-priority-normal: #3b82f6;      /* Normal priority */
+    --color-priority-high: #f59e0b;        /* High priority */
+    --color-priority-urgent: #ef4444;      /* Urgent priority */
+
+    /* Destructive/danger */
+    --color-destructive: #dc2626;          /* Destructive actions */
+    --color-destructive-hover: #b91c1c;    /* Destructive hover */
+    --color-destructive-active: #991b1b;   /* Destructive active */
+
+    /* Focus/selection */
+    --color-focus: #60a5fa;                /* Focus ring color */
+    --color-focus-offset: #020617;         /* Focus ring offset */
+
+    /* Typography */
+    --font-body: 'Inter', system-ui, -apple-system, sans-serif;
+    --font-heading: 'Space Grotesk', system-ui, -apple-system, sans-serif;
+    --font-brand: 'SphereFez', 'Space Grotesk', system-ui, -apple-system, sans-serif;
+
+    /* Glass morphism */
+    --glass-bg: rgb(15 23 42 / 40%);
+    --glass-border: rgb(51 65 85 / 20%);
+
+    /* Transitions */
+    --transition-fast: 150ms ease;
+    --transition-base: 200ms ease;
+    --transition-slow: 300ms ease;
   }
 
   html {
     @apply antialiased;
+
+    font-family: var(--font-body);
   }
 
   body {
-    @apply bg-slate-950 text-slate-100;
+    background-color: var(--color-bg-primary);
+    color: var(--color-fg-primary);
+    font-family: var(--font-body);
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    font-family: var(--font-heading);
+
+    @apply font-semibold;
+
+    color: var(--color-fg-primary);
   }
 
   :focus-visible {
-    @apply outline-none ring-2 ring-slate-400 ring-offset-2 ring-offset-slate-900;
+    @apply outline-none;
+
+    box-shadow:
+      0 0 0 2px var(--color-focus-offset),
+      0 0 0 4px var(--color-focus);
+  }
+}
+
+@layer components {
+  /* Glass surface component */
+  .glass-surface {
+    background: var(--glass-bg);
+    border: 1px solid var(--glass-border);
+    backdrop-filter: blur(10px);
+  }
+
+  .glass-surface-hover {
+    @apply glass-surface transition-colors;
+  }
+
+  .glass-surface-hover:hover {
+    background: rgb(15 23 42 / 50%);
   }
 }
 
 @layer utilities {
+  /* Text utilities */
   .text-balance {
     text-wrap: balance;
+  }
+
+  .font-body {
+    font-family: var(--font-body);
+  }
+
+  .font-heading {
+    font-family: var(--font-heading);
+  }
+
+  .font-brand {
+    font-family: var(--font-brand);
+  }
+
+  /* Color utilities */
+  .bg-primary {
+    background-color: var(--color-bg-primary);
+  }
+
+  .bg-secondary {
+    background-color: var(--color-bg-secondary);
+  }
+
+  .bg-tertiary {
+    background-color: var(--color-bg-tertiary);
+  }
+
+  .bg-panel {
+    background-color: var(--color-panel-default);
+  }
+
+  .bg-panel-hover {
+    background-color: var(--color-panel-hover);
+  }
+
+  .bg-muted {
+    background-color: var(--color-muted-bg);
+  }
+
+  .text-primary {
+    color: var(--color-fg-primary);
+  }
+
+  .text-secondary {
+    color: var(--color-fg-secondary);
+  }
+
+  .text-tertiary {
+    color: var(--color-fg-tertiary);
+  }
+
+  .text-muted {
+    color: var(--color-muted-fg);
+  }
+
+  /* Border utilities */
+  .border-default {
+    border-color: var(--color-border-default);
+  }
+
+  .border-subtle {
+    border-color: var(--color-border-subtle);
+  }
+
+  .border-strong {
+    border-color: var(--color-border-strong);
+  }
+
+  /* Status utilities */
+  .text-status-open {
+    color: var(--color-status-open);
+  }
+
+  .text-status-in-progress {
+    color: var(--color-status-in-progress);
+  }
+
+  .text-status-completed {
+    color: var(--color-status-completed);
+  }
+
+  .text-status-cancelled {
+    color: var(--color-status-cancelled);
+  }
+
+  .bg-status-open {
+    background-color: var(--color-status-open);
+  }
+
+  .bg-status-in-progress {
+    background-color: var(--color-status-in-progress);
+  }
+
+  .bg-status-completed {
+    background-color: var(--color-status-completed);
+  }
+
+  /* Priority utilities */
+  .text-priority-low {
+    color: var(--color-priority-low);
+  }
+
+  .text-priority-normal {
+    color: var(--color-priority-normal);
+  }
+
+  .text-priority-high {
+    color: var(--color-priority-high);
+  }
+
+  .text-priority-urgent {
+    color: var(--color-priority-urgent);
+  }
+
+  /* Gradient utilities */
+  .gradient-primary {
+    background: linear-gradient(135deg, var(--color-gradient-start), var(--color-gradient-end));
+  }
+
+  .text-gradient-primary {
+    background: linear-gradient(135deg, var(--color-gradient-start), var(--color-gradient-end));
+    background-clip: text;
+    color: transparent;
+  }
+
+  /* Transition utilities */
+  .transition-fast {
+    transition-duration: var(--transition-fast);
+  }
+
+  .transition-base {
+    transition-duration: var(--transition-base);
+  }
+
+  .transition-slow {
+    transition-duration: var(--transition-slow);
+  }
+
+  /* Reduced motion */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
   }
 }
