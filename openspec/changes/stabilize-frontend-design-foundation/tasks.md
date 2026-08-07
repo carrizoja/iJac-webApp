@@ -30,11 +30,11 @@
 
 ## 5. Build Accessible Interaction Primitives
 
-- [ ] 5.1 Add a typed class-merging utility and Button primitive with primary gradient, secondary, ghost, and destructive variants plus size, icon, disabled, and pending behavior
-- [ ] 5.2 Add shared input, select, textarea, label, help-text, and field-error primitives with stable identifier and accessibility relationships
-- [ ] 5.3 Add panel, badge, alert, loading-state, and empty-state primitives that express operational meaning without color alone
-- [ ] 5.4 Add an accessible confirmation dialog with focus entry, cancellation, Escape handling, destructive pending state, and focus restoration
-- [ ] 5.5 Add bounded shell, dialog, and state transitions with reduced-motion equivalents and no continuous decorative animation
+- [x] 5.1 Add a typed class-merging utility and Button primitive with primary gradient, secondary, ghost, and destructive variants plus size, icon, disabled, and pending behavior
+- [x] 5.2 Add shared input, select, textarea, label, help-text, and field-error primitives with stable identifier and accessibility relationships
+- [x] 5.3 Add panel, badge, alert, loading-state, and empty-state primitives that express operational meaning without color alone
+- [x] 5.4 Add an accessible confirmation dialog with focus entry, cancellation, Escape handling, destructive pending state, and focus restoration
+- [x] 5.5 Add bounded shell, dialog, and state transitions with reduced-motion equivalents and no continuous decorative animation
 
 ## 6. Migrate Existing Feature Surfaces
 
