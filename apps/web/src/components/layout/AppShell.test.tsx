@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 
 // Mock useAuth and Firebase before importing AppShell
 vi.mock('../../hooks/useAuth', () => ({
@@ -52,18 +52,87 @@ describe('AppShell', () => {
       </AppShell>
     );
 
-    // Navigation links appear in both desktop and mobile navs, so we use getAllByText
-    const inicioLinks = screen.getAllByText('Inicio');
-    expect(inicioLinks.length).toBeGreaterThan(0);
-    
-    const clientesLinks = screen.getAllByText('Clientes');
-    expect(clientesLinks.length).toBeGreaterThan(0);
-    
-    const ordenesLinks = screen.getAllByText('Órdenes');
-    expect(ordenesLinks.length).toBeGreaterThan(0);
-    
-    const calendarioLinks = screen.getAllByText('Calendario');
-    expect(calendarioLinks.length).toBeGreaterThan(0);
+    const desktopNavigation = screen.getByRole('navigation', { name: 'Navegación principal' });
+    expect(within(desktopNavigation).getByRole('link', { name: 'Inicio' })).toBeInTheDocument();
+    expect(within(desktopNavigation).getByRole('link', { name: 'Clientes' })).toBeInTheDocument();
+    expect(within(desktopNavigation).getByRole('link', { name: 'Órdenes' })).toBeInTheDocument();
+    expect(within(desktopNavigation).getByRole('link', { name: 'Calendario' })).toBeInTheDocument();
+  });
+
+  it('starts with accessible mobile navigation collapsed', () => {
+    render(
+      <AppShell>
+        <div>Content</div>
+      </AppShell>
+    );
+
+    const trigger = screen.getByRole('button', { name: 'Abrir navegación principal' });
+    expect(trigger).toHaveAttribute('aria-expanded', 'false');
+    expect(trigger).toHaveAttribute('aria-controls', 'mobile-primary-navigation');
+    expect(trigger.className).toMatch(/h-11/);
+    expect(trigger.className).toMatch(/w-11/);
+    expect(trigger.className).toMatch(/focus-visible/);
+    expect(screen.queryByRole('navigation', { name: 'Navegación principal móvil' })).not.toBeInTheDocument();
+  });
+
+  it('opens and closes the mobile navigation from its trigger', () => {
+    render(
+      <AppShell>
+        <div>Content</div>
+      </AppShell>
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Abrir navegación principal' }));
+
+    const trigger = screen.getByRole('button', { name: 'Cerrar navegación principal' });
+    const mobileNavigation = screen.getByRole('navigation', { name: 'Navegación principal móvil' });
+    expect(trigger).toHaveAttribute('aria-expanded', 'true');
+    expect(mobileNavigation).toHaveAttribute('id', 'mobile-primary-navigation');
+
+    for (const label of ['Inicio', 'Clientes', 'Órdenes', 'Calendario']) {
+      const link = within(mobileNavigation).getByRole('link', { name: label });
+      expect(link).toBeInTheDocument();
+      expect(link.className).toMatch(/min-h-11/);
+      expect(link.className).toMatch(/focus-visible/);
+    }
+
+    fireEvent.click(trigger);
+    expect(screen.queryByRole('navigation', { name: 'Navegación principal móvil' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Abrir navegación principal' })).toHaveAttribute('aria-expanded', 'false');
+  });
+
+  it('closes the mobile navigation after a destination is selected', () => {
+    render(
+      <AppShell>
+        <div>Content</div>
+      </AppShell>
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Abrir navegación principal' }));
+    const mobileNavigation = screen.getByRole('navigation', { name: 'Navegación principal móvil' });
+    fireEvent.click(within(mobileNavigation).getByRole('link', { name: 'Clientes' }));
+
+    expect(screen.queryByRole('navigation', { name: 'Navegación principal móvil' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Abrir navegación principal' })).toHaveAttribute('aria-expanded', 'false');
+  });
+
+  it('closes the mobile navigation on Escape and restores trigger focus', () => {
+    render(
+      <AppShell>
+        <div>Content</div>
+      </AppShell>
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Abrir navegación principal' }));
+    const trigger = screen.getByRole('button', { name: 'Cerrar navegación principal' });
+    const mobileNavigation = screen.getByRole('navigation', { name: 'Navegación principal móvil' });
+    within(mobileNavigation).getByRole('link', { name: 'Inicio' }).focus();
+
+    fireEvent.keyDown(document, { key: 'Escape' });
+
+    expect(screen.queryByRole('navigation', { name: 'Navegación principal móvil' })).not.toBeInTheDocument();
+    expect(trigger).toHaveAttribute('aria-expanded', 'false');
+    expect(trigger).toHaveFocus();
   });
 
   it('displays the user email on desktop', () => {
@@ -129,8 +198,7 @@ describe('AppShell', () => {
       </AppShell>
     );
 
-    const navs = screen.getAllByLabelText('Navegación principal');
-    expect(navs.length).toBeGreaterThan(0);
+    expect(screen.getByLabelText('Navegación principal')).toBeInTheDocument();
   });
 
   it('navigation links have focus-visible styling hooks', () => {

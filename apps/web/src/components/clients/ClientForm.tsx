@@ -57,7 +57,7 @@ export function ClientForm({ client, onSaved, onCancel }: ClientFormProps) {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
+    <form onSubmit={handleSubmit} className="space-y-5" data-testid="client-form">
       {errors.general && (
         <Alert type="error" icon="⚠️" onClose={() => setErrors({ ...errors, general: undefined })}>
           {errors.general}
@@ -107,10 +107,11 @@ export function ClientForm({ client, onSaved, onCancel }: ClientFormProps) {
         rows={3}
       />
 
-      <div className="flex justify-end gap-3 pt-4">
+      <div className="flex flex-col-reverse gap-3 border-t border-border-subtle pt-5 sm:flex-row sm:justify-end">
         <Button
           type="button"
-          variant="secondary"
+          variant="ghost"
+          className="min-h-11 rounded-xl border border-[#2f2f2f] bg-[#080808] px-5 text-white transition-colors duration-200 hover:border-[#3a3a3a] hover:bg-[#0f0f0f]"
           onClick={onCancel}
         >
           Cancelar
@@ -118,6 +119,8 @@ export function ClientForm({ client, onSaved, onCancel }: ClientFormProps) {
         <Button
           type="submit"
           isLoading={submitting}
+          variant="ghost"
+          className="min-h-11 shrink-0 whitespace-nowrap rounded-xl border-2 border-[#00d084] bg-[#080808] px-6 text-white transition-all duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] hover:border-[#00c978] hover:bg-[#00c978] hover:text-white hover:shadow-[0_0_0_1px_#00c978,0_10px_28px_rgba(0,201,120,0.45)] active:translate-y-0 active:shadow-[0_0_0_1px_#00c978,0_6px_16px_rgba(0,201,120,0.35)]"
         >
           {submitting ? 'Guardando...' : client ? 'Guardar cambios' : 'Crear cliente'}
         </Button>

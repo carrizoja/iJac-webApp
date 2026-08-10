@@ -4,8 +4,6 @@ import { ValidationPipe } from '@nestjs/common';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 import { ConfigService } from '@nestjs/config';
 import { ApiEnvironment } from './config/env';
-import { FirebaseAuthGuard } from './auth/firebase-auth.guard';
-import { Reflector } from '@nestjs/core';
 
 process.on('unhandledRejection', (reason: unknown) => {
   console.error('Unhandled rejection:', reason);
@@ -18,8 +16,6 @@ async function bootstrap() {
   });
 
   const config = app.get(ConfigService<ApiEnvironment>);
-  const reflector = app.get(Reflector);
-  app.useGlobalGuards(new FirebaseAuthGuard(reflector, config));
   const corsOrigin = config.getOrThrow('CORS_ORIGIN');
 
   // Support both configured origin and localhost on any port for development

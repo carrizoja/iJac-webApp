@@ -44,6 +44,29 @@ The system SHALL allow authenticated users to filter work orders by status, prio
 - **WHEN** an authenticated user selects a status and client filter
 - **THEN** the system returns only work orders satisfying both filters
 
+### Requirement: Work-order list presentation modes
+The system SHALL allow authenticated users to present the current work-order result set as cards or as a semantic table while preserving the same work-order details and available actions.
+
+#### Scenario: Open the work-order list
+- **WHEN** an authenticated user opens the Work Orders view
+- **THEN** the current work-order result set is displayed in table mode by default and both presentation choices are available
+
+#### Scenario: Switch work orders to card mode
+- **WHEN** the user selects card mode while work-order filters are active
+- **THEN** the same filtered result set is displayed as cards without clearing filters or requesting replacement data solely because of the view change
+
+#### Scenario: Inspect work-order details in table mode
+- **WHEN** work orders are displayed as a table
+- **THEN** each row identifies the title, linked client, status, priority, optional due date, and available actions
+
+#### Scenario: Use work-order actions in table mode
+- **WHEN** the user edits or starts deleting a work order from a table row
+- **THEN** the system preserves the existing edit behavior, accessible action names, and deletion confirmation workflow
+
+#### Scenario: View the work-order table on a narrow screen
+- **WHEN** the work-order table is wider than its available list surface
+- **THEN** the table can scroll horizontally within that surface without causing horizontal overflow for the application page
+
 ### Requirement: Work-order update
 The system SHALL allow authenticated users to update mutable work-order fields while preserving the original creation timestamp and validating any changed client reference.
 
@@ -61,3 +84,41 @@ The system SHALL allow authenticated users to delete a work order and SHALL remo
 #### Scenario: Delete a synchronized work order
 - **WHEN** an authenticated user confirms deletion of a work order with an application-managed Google Calendar event
 - **THEN** the system removes the work order and attempts to remove the mapped external event while retaining enough failure state to retry if Google is unavailable
+
+### Requirement: Organization-scoped work-order management
+The system SHALL create, retrieve, list, filter, update, and delete work orders only within the authenticated caller's authorized organization. Every client relationship and client summary used by a work order SHALL resolve within that same organization.
+
+#### Scenario: Create an order for an organization client
+- **WHEN** an authorized organization member submits valid work-order data linked to a client in the same organization
+- **THEN** the system creates the work order in that organization and transactionally updates that client's work-order count
+
+#### Scenario: Link a client from another organization
+- **WHEN** an authorized organization member submits a work order whose `clientId` exists only in another organization
+- **THEN** the system returns a not-found response, creates no work order, and changes no client count
+
+#### Scenario: List organization work orders
+- **WHEN** an authorized organization member lists or filters work orders
+- **THEN** the system returns only work orders in that organization with client summaries resolved from the same organization
+
+#### Scenario: Reassign an order across organizations
+- **WHEN** an authorized organization member attempts to reassign a work order to a client identifier that exists only in another organization
+- **THEN** the system rejects the update and leaves the work order and both organizations' client counts unchanged
+
+#### Scenario: Load organization work orders for calendar behavior
+- **WHEN** the system retrieves work orders for an authorized member's calendar operation
+- **THEN** it considers only work orders and client summaries from that member's authorized organization
+
+### Requirement: Guided work-order form entry
+The work-order form SHALL provide calendar-based due-date selection and SHALL require a valid status and priority before submitting a new or updated work order.
+
+#### Scenario: Open the due-date calendar
+- **WHEN** a user activates the due-date field or its calendar control
+- **THEN** the form presents the browser-supported calendar picker and preserves keyboard-accessible date entry
+
+#### Scenario: Submit without status or priority
+- **WHEN** a user attempts to submit a work order without selecting a status or priority
+- **THEN** the form identifies each missing required field and sends no request
+
+#### Scenario: Submit required work-order choices
+- **WHEN** a user selects a valid status and priority and completes the other required fields
+- **THEN** the form submits the selected values using the established work-order API contract

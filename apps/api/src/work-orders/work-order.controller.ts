@@ -19,13 +19,19 @@ export class WorkOrderController {
   constructor(private readonly service: WorkOrderService) {}
 
   @Post()
-  async create(@CurrentUser() user: UserRequest, @Body() dto: CreateWorkOrderDto) {
-    return this.service.create(user.uid, dto);
+  async create(
+    @CurrentUser() user: UserRequest,
+    @Body() dto: CreateWorkOrderDto,
+  ) {
+    return this.service.create(user.organizationId!, dto);
   }
 
   @Get()
-  async findMany(@CurrentUser() user: UserRequest, @Query() query: WorkOrderListQueryDto) {
-    return this.service.findMany(user.uid, {
+  async findMany(
+    @CurrentUser() user: UserRequest,
+    @Query() query: WorkOrderListQueryDto,
+  ) {
+    return this.service.findMany(user.organizationId!, {
       status: query.status,
       priority: query.priority,
       clientId: query.clientId,
@@ -37,8 +43,11 @@ export class WorkOrderController {
   }
 
   @Get(':id')
-  async findById(@CurrentUser() user: UserRequest, @Param('id') id: string) {
-    const workOrder = await this.service.findById(user.uid, id);
+  async findById(
+    @CurrentUser() user: UserRequest,
+    @Param('id') id: string,
+  ) {
+    const workOrder = await this.service.findById(user.organizationId!, id);
     if (!workOrder) {
       throw new NotFoundException('Work order not found');
     }
@@ -51,11 +60,14 @@ export class WorkOrderController {
     @Param('id') id: string,
     @Body() dto: UpdateWorkOrderDto,
   ) {
-    return this.service.update(user.uid, id, dto);
+    return this.service.update(user.organizationId!, id, dto);
   }
 
   @Delete(':id')
-  async delete(@CurrentUser() user: UserRequest, @Param('id') id: string) {
-    await this.service.delete(user.uid, id);
+  async delete(
+    @CurrentUser() user: UserRequest,
+    @Param('id') id: string,
+  ) {
+    await this.service.delete(user.organizationId!, id);
   }
 }

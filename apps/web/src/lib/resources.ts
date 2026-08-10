@@ -66,7 +66,10 @@ export async function createWorkOrder(
   return withToken((token) => apiPost('/work-orders', input, token));
 }
 
-export async function updateWorkOrder(id: string, input: Partial<WorkOrder>): Promise<WorkOrder> {
+export async function updateWorkOrder(
+  id: string,
+  input: Partial<Omit<WorkOrder, 'dueDate'>> & { dueDate?: string | null },
+): Promise<WorkOrder> {
   return withToken((token) => apiPatch(`/work-orders/${id}`, input, token));
 }
 

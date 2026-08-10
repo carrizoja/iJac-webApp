@@ -3,6 +3,31 @@ service cloud.firestore {
   match /databases/{database}/documents {
     // Deny all direct client access by default.
     // All application reads and writes go through the NestJS API using Firebase Admin.
+
+    // Explicitly deny organization-scoped business data
+    match /organizations/{organizationId}/{collection}/{document} {
+      allow read, write: if false;
+    }
+
+    // Explicitly deny membership locators
+    match /activeOrganizationMemberships/{uid} {
+      allow read, write: if false;
+    }
+
+    // Explicitly deny global legacy collections (accessed only through Admin SDK migration)
+    match /clients/{document} {
+      allow read, write: if false;
+    }
+
+    match /workOrders/{document} {
+      allow read, write: if false;
+    }
+
+    match /calendarEventMappings/{document} {
+      allow read, write: if false;
+    }
+
+    // Default deny
     match /{document=**} {
       allow read, write: if false;
     }

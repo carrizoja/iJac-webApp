@@ -21,21 +21,30 @@ class InMemoryConnectionRepository implements CalendarConnectionRepository {
 }
 
 class InMemoryMappingRepository implements CalendarEventMappingRepository {
-  private mappings: Map<string, import('./event-mapping.repository').CalendarEventMapping> = new Map();
+  private mappings: Map<
+    string,
+    import('./event-mapping.repository').CalendarEventMapping
+  > = new Map();
 
-  async upsert(mapping: import('./event-mapping.repository').CalendarEventMapping): Promise<void> {
+  async upsert(
+    _organizationId: string,
+    mapping: import('./event-mapping.repository').CalendarEventMapping,
+  ): Promise<void> {
     this.mappings.set(mapping.id, mapping);
   }
 
   async findByWorkOrderId(
-    uid: string,
+    _organizationId: string,
     workOrderId: string,
   ): Promise<import('./event-mapping.repository').CalendarEventMapping | null> {
-    return this.mappings.get(`${uid}_${workOrderId}`) ?? null;
+    return this.mappings.get(workOrderId) ?? null;
   }
 
-  async deleteByWorkOrderId(uid: string, workOrderId: string): Promise<void> {
-    this.mappings.delete(`${uid}_${workOrderId}`);
+  async deleteByWorkOrderId(
+    _organizationId: string,
+    workOrderId: string,
+  ): Promise<void> {
+    this.mappings.delete(workOrderId);
   }
 }
 
@@ -105,7 +114,7 @@ describe('CalendarSyncService', () => {
     const events = mockClient.events as unknown as MockedEvents;
     events.insert.mockResolvedValue({ data: { id: 'google-event-1' } });
 
-    const result = await service.syncWorkOrder('uid-1', {
+    const result = await service.syncWorkOrder('uid-1', 'org-1', {
       id: 'wo-1',
       title: 'Work order',
       status: 'open',
@@ -114,7 +123,7 @@ describe('CalendarSyncService', () => {
 
     expect(result.success).toBe(true);
     expect(events.insert).toHaveBeenCalled();
-    const mapping = await mappingRepo.findByWorkOrderId('uid-1', 'wo-1');
+    const mapping = await mappingRepo.findByWorkOrderId('org-1', 'wo-1');
     expect(mapping?.googleEventId).toBe('google-event-1');
     expect(mapping?.status).toBe('synced');
   });
@@ -122,10 +131,14 @@ describe('CalendarSyncService', () => {
   it('updates a Google event when mapping exists', async () => {
     const events = mockClient.events as unknown as MockedEvents;
     events.insert.mockResolvedValue({ data: { id: 'google-event-1' } });
-    await service.syncWorkOrder('uid-1', { id: 'wo-1', title: 'Work order', status: 'open' });
+    await service.syncWorkOrder('uid-1', 'org-1', {
+      id: 'wo-1',
+      title: 'Work order',
+      status: 'open',
+    });
 
     events.update.mockResolvedValue({ data: { id: 'google-event-1' } });
-    const result = await service.syncWorkOrder('uid-1', {
+    const result = await service.syncWorkOrder('uid-1', 'org-1', {
       id: 'wo-1',
       title: 'Work order updated',
       status: 'in-progress',
@@ -139,9 +152,14 @@ describe('CalendarSyncService', () => {
     jest.restoreAllMocks();
     const events = mockClient.events as unknown as MockedEvents;
     events.insert.mockRejectedValue(new Error('API error'));
-    jest.spyOn(service as any, 'getClient').mockResolvedValue({ client: mockClient, accountEmail: 'test@example.com' });
+    jest
+      .spyOn(service as any, 'getClient')
+      .mockResolvedValue({
+        client: mockClient,
+        accountEmail: 'test@example.com',
+      });
 
-    const result = await service.syncWorkOrder('uid-1', {
+    const result = await service.syncWorkOrder('uid-1', 'org-1', {
       id: 'wo-1',
       title: 'Work order',
       status: 'open',
@@ -155,14 +173,18 @@ describe('CalendarSyncService', () => {
   it('deletes a mapped Google event', async () => {
     const events = mockClient.events as unknown as MockedEvents;
     events.insert.mockResolvedValue({ data: { id: 'google-event-1' } });
-    await service.syncWorkOrder('uid-1', { id: 'wo-1', title: 'Work order', status: 'open' });
+    await service.syncWorkOrder('uid-1', 'org-1', {
+      id: 'wo-1',
+      title: 'Work order',
+      status: 'open',
+    });
 
     events.delete.mockResolvedValue({});
-    const result = await service.deleteWorkOrder('uid-1', 'wo-1');
+    const result = await service.deleteWorkOrder('uid-1', 'org-1', 'wo-1');
 
     expect(result.success).toBe(true);
     expect(events.delete).toHaveBeenCalled();
-    const mapping = await mappingRepo.findByWorkOrderId('uid-1', 'wo-1');
+    const mapping = await mappingRepo.findByWorkOrderId('org-1', 'wo-1');
     expect(mapping).toBeNull();
   });
 });

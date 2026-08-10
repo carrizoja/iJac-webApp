@@ -13,6 +13,8 @@ export interface ApiEnvironment {
   GOOGLE_CLIENT_SECRET: string;
   GOOGLE_REDIRECT_URI: string;
   CREDENTIAL_ENCRYPTION_KEY: string;
+  REPOSITORY_MODE: 'global' | 'organization';
+  DEFAULT_ORGANIZATION_ID?: string;
 }
 
 export const apiEnvironmentSchema = Joi.object<ApiEnvironment>({
@@ -28,6 +30,8 @@ export const apiEnvironmentSchema = Joi.object<ApiEnvironment>({
   GOOGLE_CLIENT_SECRET: Joi.string().required(),
   GOOGLE_REDIRECT_URI: Joi.string().uri().required(),
   CREDENTIAL_ENCRYPTION_KEY: Joi.string().required(),
+  REPOSITORY_MODE: Joi.string().valid('global', 'organization').default('global'),
+  DEFAULT_ORGANIZATION_ID: Joi.string().optional(),
 }).unknown();
 
 export function validateApiEnvironment(raw: Record<string, unknown>): ApiEnvironment {

@@ -29,16 +29,23 @@ export interface WorkOrderFilter {
 }
 
 export interface WorkOrderRepository {
-  create(uid: string, input: CreateWorkOrderInput): Promise<WorkOrder>;
-  update(uid: string, id: string, input: UpdateWorkOrderInput): Promise<WorkOrder>;
-  delete(uid: string, id: string): Promise<void>;
-  findById(uid: string, id: string): Promise<WorkOrder | null>;
+  create(
+    organizationId: string,
+    input: CreateWorkOrderInput,
+  ): Promise<WorkOrder>;
+  update(
+    organizationId: string,
+    id: string,
+    input: UpdateWorkOrderInput,
+  ): Promise<WorkOrder>;
+  delete(organizationId: string, id: string): Promise<void>;
+  findById(organizationId: string, id: string): Promise<WorkOrder | null>;
   findMany(
-    uid: string,
+    organizationId: string,
     filter: WorkOrderFilter,
   ): Promise<{ items: WorkOrderClientSummary[]; nextCursor?: string }>;
   findByDueDateRange(
-    uid: string,
+    organizationId: string,
     from: string,
     to: string,
   ): Promise<WorkOrderClientSummary[]>;

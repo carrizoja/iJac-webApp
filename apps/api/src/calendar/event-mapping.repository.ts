@@ -13,7 +13,16 @@ export interface CalendarEventMapping {
 }
 
 export interface CalendarEventMappingRepository {
-  upsert(mapping: CalendarEventMapping): Promise<void>;
-  findByWorkOrderId(uid: string, workOrderId: string): Promise<CalendarEventMapping | null>;
-  deleteByWorkOrderId(uid: string, workOrderId: string): Promise<void>;
+  upsert(
+    organizationId: string,
+    mapping: CalendarEventMapping,
+  ): Promise<void>;
+  findByWorkOrderId(
+    organizationId: string,
+    workOrderId: string,
+  ): Promise<CalendarEventMapping | null>;
+  deleteByWorkOrderId(
+    organizationId: string,
+    workOrderId: string,
+  ): Promise<void>;
 }

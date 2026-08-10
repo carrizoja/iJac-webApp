@@ -19,13 +19,19 @@ export class ClientController {
   constructor(private readonly service: ClientService) {}
 
   @Post()
-  async create(@CurrentUser() user: UserRequest, @Body() dto: CreateClientDto) {
-    return this.service.create(user.uid, dto);
+  async create(
+    @CurrentUser() user: UserRequest,
+    @Body() dto: CreateClientDto,
+  ) {
+    return this.service.create(user.organizationId!, dto);
   }
 
   @Get()
-  async findMany(@CurrentUser() user: UserRequest, @Query() query: ClientListQueryDto) {
-    return this.service.findMany(user.uid, {
+  async findMany(
+    @CurrentUser() user: UserRequest,
+    @Query() query: ClientListQueryDto,
+  ) {
+    return this.service.findMany(user.organizationId!, {
       search: query.search,
       organization: query.organization,
       cursor: query.cursor,
@@ -34,8 +40,11 @@ export class ClientController {
   }
 
   @Get(':id')
-  async findById(@CurrentUser() user: UserRequest, @Param('id') id: string) {
-    const client = await this.service.findById(user.uid, id);
+  async findById(
+    @CurrentUser() user: UserRequest,
+    @Param('id') id: string,
+  ) {
+    const client = await this.service.findById(user.organizationId!, id);
     if (!client) {
       throw new NotFoundException('Client not found');
     }
@@ -43,12 +52,19 @@ export class ClientController {
   }
 
   @Patch(':id')
-  async update(@CurrentUser() user: UserRequest, @Param('id') id: string, @Body() dto: UpdateClientDto) {
-    return this.service.update(user.uid, id, dto);
+  async update(
+    @CurrentUser() user: UserRequest,
+    @Param('id') id: string,
+    @Body() dto: UpdateClientDto,
+  ) {
+    return this.service.update(user.organizationId!, id, dto);
   }
 
   @Delete(':id')
-  async delete(@CurrentUser() user: UserRequest, @Param('id') id: string) {
-    await this.service.delete(user.uid, id);
+  async delete(
+    @CurrentUser() user: UserRequest,
+    @Param('id') id: string,
+  ) {
+    await this.service.delete(user.organizationId!, id);
   }
 }

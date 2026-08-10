@@ -4,6 +4,7 @@ import {
   Injectable,
   UnauthorizedException,
   ForbiddenException,
+  Inject,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { ConfigService } from '@nestjs/config';
@@ -12,12 +13,16 @@ import { getApp } from 'firebase-admin/app';
 import { IS_PUBLIC_KEY } from './public.decorator';
 import { UserRequest } from './user-request';
 import { ApiEnvironment } from '../config/env';
+import { OrganizationMembershipRepository } from './organization-membership.repository';
+import { ORGANIZATION_MEMBERSHIP_REPOSITORY } from './auth.module';
 
 @Injectable()
 export class FirebaseAuthGuard implements CanActivate {
   constructor(
     private readonly reflector: Reflector,
     private readonly config: ConfigService<ApiEnvironment>,
+    @Inject(ORGANIZATION_MEMBERSHIP_REPOSITORY)
+    private readonly membershipRepo: OrganizationMembershipRepository,
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
@@ -50,11 +55,22 @@ export class FirebaseAuthGuard implements CanActivate {
       }
     }
 
+    const repositoryMode = this.config.get('REPOSITORY_MODE') ?? 'global';
+    const membership =
+      repositoryMode === 'organization'
+        ? await this.membershipRepo.findActiveByUid(decoded.uid)
+        : null;
+
     request.user = {
       uid: decoded.uid,
       email: decoded.email ?? null,
       displayName: decoded.name ?? null,
       photoURL: decoded.picture ?? null,
+      organizationId:
+        repositoryMode === 'organization'
+          ? membership?.organizationId
+          : decoded.uid,
+      role: repositoryMode === 'organization' ? membership?.role : undefined,
     } as UserRequest;
 
     return true;

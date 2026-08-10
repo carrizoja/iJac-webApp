@@ -59,6 +59,36 @@ export interface User {
   photoURL: string | null;
 }
 
+export enum OrganizationMemberRole {
+  ADMIN = 'admin',
+  MEMBER = 'member',
+}
+
+export interface OrganizationMembership {
+  uid: string;
+  organizationId: string;
+  role: OrganizationMemberRole;
+  status: 'active' | 'inactive' | 'pending';
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ActiveMembershipLocator {
+  uid: string;
+  organizationId: string;
+  status: 'active' | 'inactive';
+  updatedAt: string;
+}
+
+export interface ActorContext {
+  uid: string;
+  email: string | null;
+  displayName: string | null;
+  photoURL: string | null;
+  organizationId: string;
+  role: OrganizationMemberRole;
+}
+
 export interface CalendarEvent {
   id: string;
   workOrderId: string;

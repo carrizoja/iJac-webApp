@@ -2,16 +2,28 @@ import { Client } from '@ijac/shared';
 import { ClientRepository, CreateClientInput, UpdateClientInput, ClientFilter } from './client.repository';
 import { Firestore, Timestamp } from 'firebase-admin/firestore';
 import { Injectable, Inject } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { FIRESTORE } from '../firebase/firebase.module';
+import { ApiEnvironment } from '../config/env';
 import { toIsoString, nowTimestamp } from '../common/timestamps';
 import { NotFoundError, ConflictError } from '../common/errors';
 
 @Injectable()
 export class FirestoreClientRepository implements ClientRepository {
-  constructor(@Inject(FIRESTORE) private readonly firestore: Firestore) {}
+  constructor(
+    @Inject(FIRESTORE) private readonly firestore: Firestore,
+    private readonly config: ConfigService<ApiEnvironment>,
+  ) {}
 
-  private collection() {
-    return this.firestore.collection('clients');
+  private collection(organizationId: string) {
+    if ((this.config.get('REPOSITORY_MODE') ?? 'global') === 'global') {
+      return this.firestore.collection('clients');
+    }
+
+    return this.firestore
+      .collection('organizations')
+      .doc(organizationId)
+      .collection('clients');
   }
 
   private toClient(doc: FirebaseFirestore.DocumentSnapshot): Client {
@@ -44,9 +56,12 @@ export class FirestoreClientRepository implements ClientRepository {
     return Array.from(terms);
   }
 
-  async create(_uid: string, input: CreateClientInput): Promise<Client> {
+  async create(
+    organizationId: string,
+    input: CreateClientInput,
+  ): Promise<Client> {
     const now = nowTimestamp();
-    const ref = this.collection().doc();
+    const ref = this.collection(organizationId).doc();
     const client: Omit<Client, 'id' | 'createdAt' | 'updatedAt'> & {
       createdAt: Timestamp;
       updatedAt: Timestamp;
@@ -65,8 +80,12 @@ export class FirestoreClientRepository implements ClientRepository {
     return this.toClient(await ref.get());
   }
 
-  async update(_uid: string, id: string, input: UpdateClientInput): Promise<Client> {
-    const ref = this.collection().doc(id);
+  async update(
+    organizationId: string,
+    id: string,
+    input: UpdateClientInput,
+  ): Promise<Client> {
+    const ref = this.collection(organizationId).doc(id);
     const doc = await ref.get();
     if (!doc.exists) {
       throw new NotFoundError('Client');
@@ -75,14 +94,17 @@ export class FirestoreClientRepository implements ClientRepository {
     if (input.name !== undefined) update.name = input.name.trim();
     if (input.email !== undefined) update.email = input.email.trim();
     if (input.phone !== undefined) update.phone = input.phone.trim();
-    if (input.organization !== undefined) update.organization = input.organization.trim();
+    if (input.organization !== undefined)
+      update.organization = input.organization.trim();
     if (input.notes !== undefined) update.notes = input.notes.trim();
     if (Object.keys(input).length > 0) {
       update.searchPrefixes = this.normalizeSearch({
         name: (update.name as string) ?? (doc.get('name') as string),
         email: (update.email as string) ?? (doc.get('email') as string),
         phone: (update.phone as string) ?? (doc.get('phone') as string),
-        organization: (update.organization as string) ?? (doc.get('organization') as string),
+        organization:
+          (update.organization as string) ??
+          (doc.get('organization') as string),
         notes: (update.notes as string) ?? (doc.get('notes') as string),
       });
     }
@@ -90,8 +112,8 @@ export class FirestoreClientRepository implements ClientRepository {
     return this.toClient(await ref.get());
   }
 
-  async delete(_uid: string, id: string): Promise<void> {
-    const ref = this.collection().doc(id);
+  async delete(organizationId: string, id: string): Promise<void> {
+    const ref = this.collection(organizationId).doc(id);
     await this.firestore.runTransaction(async (tx) => {
       const doc = await tx.get(ref);
       if (!doc.exists) {
@@ -105,23 +127,28 @@ export class FirestoreClientRepository implements ClientRepository {
     });
   }
 
-  async findById(_uid: string, id: string): Promise<Client | null> {
-    const doc = await this.collection().doc(id).get();
+  async findById(
+    organizationId: string,
+    id: string,
+  ): Promise<Client | null> {
+    const doc = await this.collection(organizationId).doc(id).get();
     if (!doc.exists) return null;
     return this.toClient(doc);
   }
 
-  async exists(_uid: string, id: string): Promise<boolean> {
-    const doc = await this.collection().doc(id).get();
+  async exists(organizationId: string, id: string): Promise<boolean> {
+    const doc = await this.collection(organizationId).doc(id).get();
     return doc.exists;
   }
 
   async findMany(
-    _uid: string,
+    organizationId: string,
     filter: ClientFilter,
   ): Promise<{ items: Client[]; nextCursor?: string }> {
     const limit = Math.min(100, Math.max(1, filter.limit ?? 20));
-    let query: FirebaseFirestore.Query = this.collection().orderBy('updatedAt', 'desc').limit(limit);
+    let query: FirebaseFirestore.Query = this.collection(organizationId)
+      .orderBy('updatedAt', 'desc')
+      .limit(limit);
 
     if (filter.organization) {
       query = query.where('organization', '==', filter.organization.trim());
@@ -133,7 +160,9 @@ export class FirestoreClientRepository implements ClientRepository {
     }
 
     if (filter.cursor) {
-      const cursorDoc = await this.collection().doc(filter.cursor).get();
+      const cursorDoc = await this.collection(organizationId)
+        .doc(filter.cursor)
+        .get();
       if (cursorDoc.exists) {
         query = query.startAfter(cursorDoc);
       }
@@ -141,7 +170,10 @@ export class FirestoreClientRepository implements ClientRepository {
 
     const snapshot = await query.get();
     const items = snapshot.docs.map((doc) => this.toClient(doc));
-    const nextCursor = snapshot.docs.length === limit ? snapshot.docs[snapshot.docs.length - 1].id : undefined;
+    const nextCursor =
+      snapshot.docs.length === limit
+        ? snapshot.docs[snapshot.docs.length - 1].id
+        : undefined;
     return { items, nextCursor };
   }
 }

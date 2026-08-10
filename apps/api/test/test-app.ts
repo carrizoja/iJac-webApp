@@ -6,7 +6,7 @@ import { UserRequest } from '../src/auth/user-request';
 import request from 'supertest';
 
 export async function createTestApp(
-  authenticatedUser: { uid: string; email: string } | null = { uid: 'test-user', email: 'test@ijac.com.ar' },
+  authenticatedUser: { uid: string; email: string; organizationId?: string; role?: string } | null = { uid: 'test-user', email: 'test@ijac.com.ar', organizationId: 'test-org', role: 'member' },
 ): Promise<{ app: INestApplication; cleanup: () => Promise<void> }> {
   const moduleBuilder = Test.createTestingModule({
     imports: [AppModule],
@@ -16,7 +16,12 @@ export async function createTestApp(
     moduleBuilder.overrideGuard(FirebaseAuthGuard).useValue({
       canActivate: (context: ExecutionContext) => {
         const request = context.switchToHttp().getRequest();
-        request.user = { uid: authenticatedUser.uid, email: authenticatedUser.email } as UserRequest;
+        request.user = {
+          uid: authenticatedUser.uid,
+          email: authenticatedUser.email,
+          organizationId: authenticatedUser.organizationId,
+          role: authenticatedUser.role,
+        } as UserRequest;
         return true;
       },
     });

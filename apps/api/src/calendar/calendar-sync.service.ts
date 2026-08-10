@@ -49,14 +49,30 @@ export class CalendarSyncService {
 
   async syncWorkOrder(
     uid: string,
-    workOrder: { id: string; title: string; description?: string; dueDate?: string; status: string; clientName?: string },
+    organizationId: string,
+    workOrder: {
+      id: string;
+      title: string;
+      description?: string;
+      dueDate?: string;
+      status: string;
+      clientName?: string;
+    },
   ): Promise<SyncResult> {
     const google = await this.getClient(uid);
     if (!google) {
-      return this.failMapping(uid, workOrder.id, 'reconnect_required', 'No active Google Calendar connection');
+      return this.failMapping(
+        organizationId,
+        workOrder.id,
+        'reconnect_required',
+        'No active Google Calendar connection',
+      );
     }
 
-    const existing = await this.mappingRepository.findByWorkOrderId(uid, workOrder.id);
+    const existing = await this.mappingRepository.findByWorkOrderId(
+      organizationId,
+      workOrder.id,
+    );
     const event = this.buildEvent(workOrder);
 
     try {
@@ -66,7 +82,13 @@ export class CalendarSyncService {
           eventId: existing.googleEventId,
           requestBody: event,
         });
-        return this.saveMapping(uid, workOrder.id, existing.googleCalendarId, updated.data.id ?? existing.googleEventId, 'synced');
+        return this.saveMapping(
+          organizationId,
+          workOrder.id,
+          existing.googleCalendarId,
+          updated.data.id ?? existing.googleEventId,
+          'synced',
+        );
       }
 
       const calendarId = 'primary';
@@ -74,21 +96,48 @@ export class CalendarSyncService {
         calendarId,
         requestBody: event,
       });
-      return this.saveMapping(uid, workOrder.id, calendarId, created.data.id ?? undefined, 'synced');
+      return this.saveMapping(
+        organizationId,
+        workOrder.id,
+        calendarId,
+        created.data.id ?? undefined,
+        'synced',
+      );
     } catch (err) {
       const code = this.classifyError(err);
       if (code === 'reconnect_required') {
-        await this.connectionRepository.updateStatus(uid, 'reconnect_required');
+        await this.connectionRepository.updateStatus(
+          uid,
+          'reconnect_required',
+        );
       }
-      return this.failMapping(uid, workOrder.id, code, this.errorMessage(err));
+      return this.failMapping(
+        organizationId,
+        workOrder.id,
+        code,
+        this.errorMessage(err),
+      );
     }
   }
 
-  async deleteWorkOrder(uid: string, workOrderId: string): Promise<SyncResult> {
+  async deleteWorkOrder(
+    uid: string,
+    organizationId: string,
+    workOrderId: string,
+  ): Promise<SyncResult> {
     const google = await this.getClient(uid);
-    const existing = await this.mappingRepository.findByWorkOrderId(uid, workOrderId);
+    const existing = await this.mappingRepository.findByWorkOrderId(
+      organizationId,
+      workOrderId,
+    );
     if (!existing) {
-      return this.saveMapping(uid, workOrderId, undefined, undefined, 'synced');
+      return this.saveMapping(
+        organizationId,
+        workOrderId,
+        undefined,
+        undefined,
+        'synced',
+      );
     }
 
     if (google && existing.googleEventId && existing.googleCalendarId) {
@@ -100,14 +149,30 @@ export class CalendarSyncService {
       } catch (err) {
         const code = this.classifyError(err);
         if (code === 'reconnect_required') {
-          await this.connectionRepository.updateStatus(uid, 'reconnect_required');
+          await this.connectionRepository.updateStatus(
+            uid,
+            'reconnect_required',
+          );
         }
-        return this.failMapping(uid, workOrderId, code, this.errorMessage(err));
+        return this.failMapping(
+          organizationId,
+          workOrderId,
+          code,
+          this.errorMessage(err),
+        );
       }
     }
 
-    await this.mappingRepository.deleteByWorkOrderId(uid, workOrderId);
-    return { success: true, mapping: { id: `${uid}_${workOrderId}`, uid, workOrderId, status: 'synced' } };
+    await this.mappingRepository.deleteByWorkOrderId(organizationId, workOrderId);
+    return {
+      success: true,
+      mapping: {
+        id: workOrderId,
+        uid,
+        workOrderId,
+        status: 'synced',
+      },
+    };
   }
 
   async getSyncStatus(uid: string): Promise<{ connected: boolean; status: string }> {
@@ -144,40 +209,40 @@ export class CalendarSyncService {
   }
 
   private async saveMapping(
-    uid: string,
+    organizationId: string,
     workOrderId: string,
     googleCalendarId: string | undefined,
     googleEventId: string | undefined,
     status: CalendarEventMapping['status'],
   ): Promise<SyncResult> {
     const mapping: CalendarEventMapping = {
-      id: `${uid}_${workOrderId}`,
-      uid,
+      id: workOrderId,
+      uid: '',
       workOrderId,
       googleCalendarId,
       googleEventId,
       status,
       lastSyncedAt: new Date().toISOString(),
     };
-    await this.mappingRepository.upsert(mapping);
+    await this.mappingRepository.upsert(organizationId, mapping);
     return { success: status === 'synced', mapping };
   }
 
   private async failMapping(
-    uid: string,
+    organizationId: string,
     workOrderId: string,
     status: CalendarEventMapping['status'],
     message: string,
   ): Promise<SyncResult> {
     const mapping: CalendarEventMapping = {
-      id: `${uid}_${workOrderId}`,
-      uid,
+      id: workOrderId,
+      uid: '',
       workOrderId,
       status,
       errorMessage: message,
       lastSyncedAt: new Date().toISOString(),
     };
-    await this.mappingRepository.upsert(mapping);
+    await this.mappingRepository.upsert(organizationId, mapping);
     return { success: false, mapping };
   }
 }

@@ -13,39 +13,59 @@ import { ValidationError } from '../common/errors';
 export class WorkOrderService {
   constructor(@Inject(WORK_ORDER_REPOSITORY) private readonly repository: WorkOrderRepository) {}
 
-  async create(uid: string, input: CreateWorkOrderInput): Promise<WorkOrder> {
+  async create(
+    organizationId: string,
+    input: CreateWorkOrderInput,
+  ): Promise<WorkOrder> {
     this.validateWorkOrderInput(input);
-    return this.repository.create(uid, input);
+    return this.repository.create(organizationId, input);
   }
 
-  async update(uid: string, id: string, input: UpdateWorkOrderInput): Promise<WorkOrder> {
+  async update(
+    organizationId: string,
+    id: string,
+    input: UpdateWorkOrderInput,
+  ): Promise<WorkOrder> {
     this.validateWorkOrderInput(input);
-    return this.repository.update(uid, id, input);
+    return this.repository.update(organizationId, id, input);
   }
 
-  private validateWorkOrderInput(input: CreateWorkOrderInput | UpdateWorkOrderInput): void {
+  private validateWorkOrderInput(
+    input: CreateWorkOrderInput | UpdateWorkOrderInput,
+  ): void {
     const validStatuses = ['open', 'in-progress', 'completed', 'cancelled'];
     const validPriorities = ['low', 'normal', 'high', 'urgent'];
-    if (input.status !== undefined && !validStatuses.includes(input.status as string)) {
+    if (
+      input.status !== undefined &&
+      !validStatuses.includes(input.status as string)
+    ) {
       throw new ValidationError(`Invalid work order status: ${input.status}`);
     }
-    if (input.priority !== undefined && !validPriorities.includes(input.priority as string)) {
-      throw new ValidationError(`Invalid work order priority: ${input.priority}`);
+    if (
+      input.priority !== undefined &&
+      !validPriorities.includes(input.priority as string)
+    ) {
+      throw new ValidationError(
+        `Invalid work order priority: ${input.priority}`,
+      );
     }
   }
 
-  async delete(uid: string, id: string): Promise<void> {
-    await this.repository.delete(uid, id);
+  async delete(organizationId: string, id: string): Promise<void> {
+    await this.repository.delete(organizationId, id);
   }
 
-  async findById(uid: string, id: string): Promise<WorkOrder | null> {
-    return this.repository.findById(uid, id);
+  async findById(
+    organizationId: string,
+    id: string,
+  ): Promise<WorkOrder | null> {
+    return this.repository.findById(organizationId, id);
   }
 
   async findMany(
-    uid: string,
+    organizationId: string,
     filter: WorkOrderFilter,
   ): Promise<{ items: WorkOrderClientSummary[]; nextCursor?: string }> {
-    return this.repository.findMany(uid, filter);
+    return this.repository.findMany(organizationId, filter);
   }
 }

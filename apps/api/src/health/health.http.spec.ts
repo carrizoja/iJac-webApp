@@ -24,7 +24,10 @@ describe('GET /api/health (HTTP)', () => {
     app = moduleRef.createNestApplication();
     const reflector = app.get(Reflector);
     const config = app.get(ConfigService) as ConfigService<ApiEnvironment>;
-    app.useGlobalGuards(new FirebaseAuthGuard(reflector, config));
+    const membershipRepo = {
+      findActiveByUid: jest.fn().mockResolvedValue(null),
+    };
+    app.useGlobalGuards(new FirebaseAuthGuard(reflector, config, membershipRepo as any));
     app.setGlobalPrefix('api');
     await app.init();
   });

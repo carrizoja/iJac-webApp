@@ -9,7 +9,10 @@ class InMemoryClientRepository implements ClientRepository {
   private clients: Map<string, Client> = new Map();
   private counter = 0;
 
-  async create(_uid: string, input: CreateClientInput): Promise<Client> {
+  async create(
+    _organizationId: string,
+    input: CreateClientInput,
+  ): Promise<Client> {
     this.counter += 1;
     const client: Client = {
       id: `client-${this.counter}`,
@@ -27,7 +30,11 @@ class InMemoryClientRepository implements ClientRepository {
     return client;
   }
 
-  async update(_uid: string, id: string, input: UpdateClientInput): Promise<Client> {
+  async update(
+    _organizationId: string,
+    id: string,
+    input: UpdateClientInput,
+  ): Promise<Client> {
     const client = this.clients.get(id);
     if (!client) throw new NotFoundError('Client');
     const updated: Client = {
@@ -35,7 +42,9 @@ class InMemoryClientRepository implements ClientRepository {
       ...(input.name !== undefined && { name: input.name }),
       ...(input.email !== undefined && { email: input.email }),
       ...(input.phone !== undefined && { phone: input.phone }),
-      ...(input.organization !== undefined && { organization: input.organization }),
+      ...(input.organization !== undefined && {
+        organization: input.organization,
+      }),
       ...(input.notes !== undefined && { notes: input.notes }),
       updatedAt: new Date().toISOString(),
     };
@@ -43,7 +52,7 @@ class InMemoryClientRepository implements ClientRepository {
     return updated;
   }
 
-  async delete(_uid: string, id: string): Promise<void> {
+  async delete(_organizationId: string, id: string): Promise<void> {
     const client = this.clients.get(id);
     if (!client) throw new NotFoundError('Client');
     if (client.workOrderCount > 0) {
@@ -52,15 +61,20 @@ class InMemoryClientRepository implements ClientRepository {
     this.clients.delete(id);
   }
 
-  async findById(_uid: string, id: string): Promise<Client | null> {
+  async findById(
+    _organizationId: string,
+    id: string,
+  ): Promise<Client | null> {
     return this.clients.get(id) ?? null;
   }
 
-  async findMany(_uid: string,
+  async findMany(
+    _organizationId: string,
     filter: ClientFilter,
   ): Promise<{ items: Client[]; nextCursor?: string }> {
     let items = Array.from(this.clients.values()).sort(
-      (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
+      (a, b) =>
+        new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
     );
     if (filter.organization) {
       items = items.filter((c) => c.organization === filter.organization);
@@ -74,7 +88,7 @@ class InMemoryClientRepository implements ClientRepository {
     return { items: items.slice(0, limit) };
   }
 
-  async exists(_uid: string, id: string): Promise<boolean> {
+  async exists(_organizationId: string, id: string): Promise<boolean> {
     return this.clients.has(id);
   }
 
@@ -105,7 +119,7 @@ describe('ClientService', () => {
   });
 
   it('creates a client with required fields', async () => {
-    const client = await service.create('uid', {
+    const client = await service.create('org-1', {
       name: 'Acme',
       email: 'acme@example.com',
       phone: '+54 9 11 1234 5678',
@@ -116,12 +130,14 @@ describe('ClientService', () => {
   });
 
   it('updates a client and preserves createdAt', async () => {
-    const created = await service.create('uid', {
+    const created = await service.create('org-1', {
       name: 'Acme',
       email: 'acme@example.com',
       phone: '123',
     });
-    const updated = await service.update('uid', created.id, { name: 'Acme Inc' });
+    const updated = await service.update('org-1', created.id, {
+      name: 'Acme Inc',
+    });
     expect(updated.name).toBe('Acme Inc');
     expect(updated.createdAt).toBe(created.createdAt);
     expect(new Date(updated.updatedAt).getTime()).toBeGreaterThanOrEqual(
@@ -130,51 +146,61 @@ describe('ClientService', () => {
   });
 
   it('throws not found when updating unknown client', async () => {
-    await expect(service.update('uid', 'missing', { name: 'X' })).rejects.toBeInstanceOf(NotFoundError);
+    await expect(
+      service.update('org-1', 'missing', { name: 'X' }),
+    ).rejects.toBeInstanceOf(NotFoundError);
   });
 
   it('deletes an unreferenced client', async () => {
-    const created = await service.create('uid', {
+    const created = await service.create('org-1', {
       name: 'Acme',
       email: 'acme@example.com',
       phone: '123',
     });
-    await service.delete('uid', created.id);
-    const found = await service.findById('uid', created.id);
+    await service.delete('org-1', created.id);
+    const found = await service.findById('org-1', created.id);
     expect(found).toBeNull();
   });
 
   it('rejects deleting a referenced client', async () => {
-    const created = await service.create('uid', {
+    const created = await service.create('org-1', {
       name: 'Acme',
       email: 'acme@example.com',
       phone: '123',
     });
     repository.setWorkOrderCount(created.id, 1);
-    await expect(service.delete('uid', created.id)).rejects.toBeInstanceOf(ConflictError);
+    await expect(
+      service.delete('org-1', created.id),
+    ).rejects.toBeInstanceOf(ConflictError);
   });
 
   it('filters clients by organization', async () => {
-    await service.create('uid', {
+    await service.create('org-1', {
       name: 'Acme',
       email: 'acme@example.com',
       phone: '123',
       organization: 'Acme Org',
     });
-    await service.create('uid', {
+    await service.create('org-1', {
       name: 'Other',
       email: 'other@example.com',
       phone: '456',
       organization: 'Other Org',
     });
-    const result = await service.findMany('uid', { organization: 'Acme Org' });
+    const result = await service.findMany('org-1', {
+      organization: 'Acme Org',
+    });
     expect(result.items).toHaveLength(1);
     expect(result.items[0].name).toBe('Acme');
   });
 
   it('returns empty list when search matches nothing', async () => {
-    await service.create('uid', { name: 'Acme', email: 'acme@example.com', phone: '123' });
-    const result = await service.findMany('uid', { search: 'xyz' });
+    await service.create('org-1', {
+      name: 'Acme',
+      email: 'acme@example.com',
+      phone: '123',
+    });
+    const result = await service.findMany('org-1', { search: 'xyz' });
     expect(result.items).toHaveLength(0);
   });
 });

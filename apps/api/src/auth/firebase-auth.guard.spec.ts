@@ -3,6 +3,7 @@ import { Reflector } from '@nestjs/core';
 import { ConfigService } from '@nestjs/config';
 import { ExecutionContext, UnauthorizedException } from '@nestjs/common';
 import { ApiEnvironment } from '../config/env';
+import { OrganizationMembershipRepository } from './organization-membership.repository';
 
 class MockReflector {
   private metadata: Record<string, unknown> = {};
@@ -16,15 +17,26 @@ class MockReflector {
   }
 }
 
+class MockMembershipRepository implements OrganizationMembershipRepository {
+  findActiveByUid = jest.fn();
+  findByUidAndOrganizationId = jest.fn();
+}
+
 describe('FirebaseAuthGuard', () => {
   let guard: FirebaseAuthGuard;
   let reflector: MockReflector;
   let config: ConfigService<ApiEnvironment>;
+  let membershipRepo: MockMembershipRepository;
 
   beforeEach(() => {
     reflector = new MockReflector();
     config = { get: jest.fn() } as unknown as ConfigService<ApiEnvironment>;
-    guard = new FirebaseAuthGuard(reflector as unknown as Reflector, config);
+    membershipRepo = new MockMembershipRepository();
+    guard = new FirebaseAuthGuard(
+      reflector as unknown as Reflector,
+      config,
+      membershipRepo,
+    );
   });
 
   function createContext(headers: Record<string, string>): ExecutionContext {
@@ -45,20 +57,34 @@ describe('FirebaseAuthGuard', () => {
 
   it('rejects missing token', async () => {
     reflector.set('isPublic', false);
-    await expect(guard.canActivate(createContext({}))).rejects.toBeInstanceOf(UnauthorizedException);
+    await expect(
+      guard.canActivate(createContext({})),
+    ).rejects.toBeInstanceOf(UnauthorizedException);
   });
 
   it('rejects malformed token', async () => {
     reflector.set('isPublic', false);
     await expect(
-      guard.canActivate(createContext({ authorization: 'Basic abc' })),
+      guard.canActivate(
+        createContext({ authorization: 'Basic abc' }),
+      ),
     ).rejects.toBeInstanceOf(UnauthorizedException);
   });
 
   it('extracts bearer token from header', () => {
-    const extract = (guard as unknown as { extractToken: (req: { headers: { authorization?: string } }) => string | null }).extractToken;
-    expect(extract({ headers: { authorization: 'Bearer valid-token' } })).toBe('valid-token');
+    const extract = (
+      guard as unknown as {
+        extractToken: (req: {
+          headers: { authorization?: string };
+        }) => string | null;
+      }
+    ).extractToken;
+    expect(
+      extract({ headers: { authorization: 'Bearer valid-token' } }),
+    ).toBe('valid-token');
     expect(extract({ headers: {} })).toBeNull();
-    expect(extract({ headers: { authorization: 'Basic abc' } })).toBeNull();
+    expect(
+      extract({ headers: { authorization: 'Basic abc' } }),
+    ).toBeNull();
   });
 });

@@ -12,6 +12,8 @@ export { cn } from './cn';
 // Interaction Primitives
 export { Button } from './Button';
 export type { ButtonProps, ButtonVariants } from './Button';
+export { ViewModeToggle } from './ViewModeToggle';
+export type { ViewModeToggleProps, ViewMode } from './ViewModeToggle';
 
 // Form Components
 export {

@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { WorkOrderForm } from './WorkOrderForm';
 import type { Client, WorkOrderClientSummary } from '@ijac/shared';
@@ -17,13 +17,53 @@ describe('WorkOrderForm', () => {
     { id: 'c1', name: 'Acme', email: 'a@a.com', phone: '1', organization: '', notes: '', workOrderCount: 0, createdAt: now, updatedAt: now },
   ];
 
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
   it('shows validation errors for empty required fields', async () => {
     render(<WorkOrderForm clients={clients} onSaved={() => {}} onCancel={() => {}} />);
     fireEvent.click(screen.getByRole('button', { name: /crear orden/i }));
     await waitFor(() => {
       expect(screen.getByText(/título es obligatorio/i)).toBeInTheDocument();
       expect(screen.getByText(/cliente es obligatorio/i)).toBeInTheDocument();
+      expect(screen.getByText(/estado es obligatorio/i)).toBeInTheDocument();
+      expect(screen.getByText(/prioridad es obligatoria/i)).toBeInTheDocument();
+      expect(createWorkOrder).not.toHaveBeenCalled();
     });
+  });
+
+  it('opens the native due-date calendar from its explicit control', () => {
+    const originalShowPicker = Object.getOwnPropertyDescriptor(
+      HTMLInputElement.prototype,
+      'showPicker',
+    );
+    const showPicker = vi.fn();
+    Object.defineProperty(HTMLInputElement.prototype, 'showPicker', {
+      configurable: true,
+      value: showPicker,
+    });
+
+    render(<WorkOrderForm clients={clients} onSaved={() => {}} onCancel={() => {}} />);
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: /abrir calendario de fecha de vencimiento/i,
+      }),
+    );
+
+    expect(showPicker).toHaveBeenCalledOnce();
+    expect(document.getElementById('dueDate')).toHaveFocus();
+
+    if (originalShowPicker) {
+      Object.defineProperty(
+        HTMLInputElement.prototype,
+        'showPicker',
+        originalShowPicker,
+      );
+    } else {
+      delete (HTMLInputElement.prototype as { showPicker?: () => void })
+        .showPicker;
+    }
   });
 
   it('calls createWorkOrder with selected client and status', async () => {
@@ -34,11 +74,18 @@ describe('WorkOrderForm', () => {
     fireEvent.change(screen.getByLabelText(/título/i), { target: { value: 'Reparar red' } });
     fireEvent.change(screen.getByLabelText(/cliente/i), { target: { value: 'c1' } });
     fireEvent.change(screen.getByLabelText(/estado/i), { target: { value: 'in-progress' } });
+    fireEvent.change(screen.getByLabelText(/prioridad/i), { target: { value: 'high' } });
     fireEvent.click(screen.getByRole('button', { name: /crear orden/i }));
     await waitFor(() => {
       expect(mockedCreate).toHaveBeenCalledWith(
-        expect.objectContaining({ title: 'Reparar red', clientId: 'c1', status: 'in-progress' }),
+        expect.objectContaining({
+          title: 'Reparar red',
+          clientId: 'c1',
+          status: 'in-progress',
+          priority: 'high',
+        }),
       );
+      expect(mockedCreate.mock.calls[0][0]).not.toHaveProperty('dueDate');
       expect(onSaved).toHaveBeenCalled();
     });
   });
@@ -56,6 +103,7 @@ describe('WorkOrderForm', () => {
     fireEvent.change(screen.getByLabelText(/título/i), { target: { value: 'Reparar red' } });
     fireEvent.change(screen.getByLabelText(/cliente/i), { target: { value: 'c1' } });
     fireEvent.change(screen.getByLabelText(/estado/i), { target: { value: 'in-progress' } });
+    fireEvent.change(screen.getByLabelText(/prioridad/i), { target: { value: 'high' } });
 
     const submitButton = screen.getByRole('button', { name: /crear orden/i });
     fireEvent.click(submitButton);
@@ -77,6 +125,7 @@ describe('WorkOrderForm', () => {
     fireEvent.change(screen.getByLabelText(/título/i), { target: { value: 'Reparar red' } });
     fireEvent.change(screen.getByLabelText(/cliente/i), { target: { value: 'c1' } });
     fireEvent.change(screen.getByLabelText(/estado/i), { target: { value: 'in-progress' } });
+    fireEvent.change(screen.getByLabelText(/prioridad/i), { target: { value: 'high' } });
     fireEvent.click(screen.getByRole('button', { name: /crear orden/i }));
     await waitFor(() => {
       expect(screen.getByText('Failed to create work order')).toBeInTheDocument();

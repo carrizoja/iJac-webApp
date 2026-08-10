@@ -7,20 +7,39 @@ import {
 } from './work-order.repository';
 import { Firestore, FieldValue, Timestamp } from 'firebase-admin/firestore';
 import { Injectable, Inject } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { FIRESTORE } from '../firebase/firebase.module';
+import { ApiEnvironment } from '../config/env';
 import { toIsoString, toTimestamp, nowTimestamp } from '../common/timestamps';
 import { NotFoundError, ValidationError } from '../common/errors';
 
 @Injectable()
 export class FirestoreWorkOrderRepository implements WorkOrderRepository {
-  constructor(@Inject(FIRESTORE) private readonly firestore: Firestore) {}
+  constructor(
+    @Inject(FIRESTORE) private readonly firestore: Firestore,
+    private readonly config: ConfigService<ApiEnvironment>,
+  ) {}
 
-  private collection() {
-    return this.firestore.collection('workOrders');
+  private collection(organizationId: string) {
+    if ((this.config.get('REPOSITORY_MODE') ?? 'global') === 'global') {
+      return this.firestore.collection('workOrders');
+    }
+
+    return this.firestore
+      .collection('organizations')
+      .doc(organizationId)
+      .collection('workOrders');
   }
 
-  private clientsCollection() {
-    return this.firestore.collection('clients');
+  private clientsCollection(organizationId: string) {
+    if ((this.config.get('REPOSITORY_MODE') ?? 'global') === 'global') {
+      return this.firestore.collection('clients');
+    }
+
+    return this.firestore
+      .collection('organizations')
+      .doc(organizationId)
+      .collection('clients');
   }
 
   private toWorkOrder(doc: FirebaseFirestore.DocumentSnapshot): WorkOrder {
@@ -47,11 +66,14 @@ export class FirestoreWorkOrderRepository implements WorkOrderRepository {
     }
   }
 
-  async create(_uid: string, input: CreateWorkOrderInput): Promise<WorkOrder> {
+  async create(
+    organizationId: string,
+    input: CreateWorkOrderInput,
+  ): Promise<WorkOrder> {
     this.validateStatusPriority(input.status, input.priority);
-    const clientRef = this.clientsCollection().doc(input.clientId);
+    const clientRef = this.clientsCollection(organizationId).doc(input.clientId);
     const now = nowTimestamp();
-    const ref = this.collection().doc();
+    const ref = this.collection(organizationId).doc();
     const workOrder = {
       title: input.title.trim(),
       description: input.description?.trim() ?? '',
@@ -69,13 +91,20 @@ export class FirestoreWorkOrderRepository implements WorkOrderRepository {
         throw new NotFoundError('Client');
       }
       tx.create(ref, workOrder);
-      tx.update(clientRef, { workOrderCount: FieldValue.increment(1), updatedAt: now });
+      tx.update(clientRef, {
+        workOrderCount: FieldValue.increment(1),
+        updatedAt: now,
+      });
     });
 
     return this.toWorkOrder(await ref.get());
   }
 
-  async update(_uid: string, id: string, input: UpdateWorkOrderInput): Promise<WorkOrder> {
+  async update(
+    organizationId: string,
+    id: string,
+    input: UpdateWorkOrderInput,
+  ): Promise<WorkOrder> {
     if (input.status !== undefined && input.priority !== undefined) {
       this.validateStatusPriority(input.status, input.priority);
     } else if (input.status !== undefined) {
@@ -84,15 +113,19 @@ export class FirestoreWorkOrderRepository implements WorkOrderRepository {
       this.validateStatusPriority('open', input.priority);
     }
 
-    const ref = this.collection().doc(id);
-    const clientRef = input.clientId ? this.clientsCollection().doc(input.clientId) : null;
+    const ref = this.collection(organizationId).doc(id);
+    const clientRef = input.clientId
+      ? this.clientsCollection(organizationId).doc(input.clientId)
+      : null;
     const now = nowTimestamp();
     const update: Record<string, unknown> = { updatedAt: now };
     if (input.title !== undefined) update.title = input.title.trim();
-    if (input.description !== undefined) update.description = input.description.trim();
+    if (input.description !== undefined)
+      update.description = input.description.trim();
     if (input.status !== undefined) update.status = input.status;
     if (input.priority !== undefined) update.priority = input.priority;
-    if (input.dueDate !== undefined) update.dueDate = input.dueDate ? toTimestamp(input.dueDate) : null;
+    if (input.dueDate !== undefined)
+      update.dueDate = input.dueDate ? toTimestamp(input.dueDate) : null;
 
     await this.firestore.runTransaction(async (tx) => {
       const doc = await tx.get(ref);
@@ -109,10 +142,13 @@ export class FirestoreWorkOrderRepository implements WorkOrderRepository {
           throw new NotFoundError('Client');
         }
         update.clientId = input.clientId;
-        tx.update(this.clientsCollection().doc(previousClientId), {
-          workOrderCount: FieldValue.increment(-1),
-          updatedAt: now,
-        });
+        tx.update(
+          this.clientsCollection(organizationId).doc(previousClientId),
+          {
+            workOrderCount: FieldValue.increment(-1),
+            updatedAt: now,
+          },
+        );
         tx.update(clientRef, {
           workOrderCount: FieldValue.increment(1),
           updatedAt: now,
@@ -124,15 +160,15 @@ export class FirestoreWorkOrderRepository implements WorkOrderRepository {
     return this.toWorkOrder(await ref.get());
   }
 
-  async delete(_uid: string, id: string): Promise<void> {
-    const ref = this.collection().doc(id);
+  async delete(organizationId: string, id: string): Promise<void> {
+    const ref = this.collection(organizationId).doc(id);
     await this.firestore.runTransaction(async (tx) => {
       const doc = await tx.get(ref);
       if (!doc.exists) {
         throw new NotFoundError('Work order');
       }
       const clientId = doc.get('clientId') as string;
-      tx.update(this.clientsCollection().doc(clientId), {
+      tx.update(this.clientsCollection(organizationId).doc(clientId), {
         workOrderCount: FieldValue.increment(-1),
         updatedAt: nowTimestamp(),
       });
@@ -140,22 +176,29 @@ export class FirestoreWorkOrderRepository implements WorkOrderRepository {
     });
   }
 
-  async findById(_uid: string, id: string): Promise<WorkOrder | null> {
-    const doc = await this.collection().doc(id).get();
+  async findById(
+    organizationId: string,
+    id: string,
+  ): Promise<WorkOrder | null> {
+    const doc = await this.collection(organizationId).doc(id).get();
     if (!doc.exists) return null;
     return this.toWorkOrder(doc);
   }
 
   async findMany(
-    _uid: string,
+    organizationId: string,
     filter: WorkOrderFilter,
   ): Promise<{ items: WorkOrderClientSummary[]; nextCursor?: string }> {
     const limit = Math.min(100, Math.max(1, filter.limit ?? 20));
-    let query: FirebaseFirestore.Query = this.collection().orderBy('updatedAt', 'desc').limit(limit);
+    let query: FirebaseFirestore.Query = this.collection(organizationId)
+      .orderBy('updatedAt', 'desc')
+      .limit(limit);
 
     if (filter.status) query = query.where('status', '==', filter.status);
-    if (filter.priority) query = query.where('priority', '==', filter.priority);
-    if (filter.clientId) query = query.where('clientId', '==', filter.clientId);
+    if (filter.priority)
+      query = query.where('priority', '==', filter.priority);
+    if (filter.clientId)
+      query = query.where('clientId', '==', filter.clientId);
     if (filter.dueDateFrom) {
       query = query.where('dueDate', '>=', toTimestamp(filter.dueDateFrom));
     }
@@ -164,22 +207,30 @@ export class FirestoreWorkOrderRepository implements WorkOrderRepository {
     }
 
     if (filter.cursor) {
-      const cursorDoc = await this.collection().doc(filter.cursor).get();
+      const cursorDoc = await this.collection(organizationId)
+        .doc(filter.cursor)
+        .get();
       if (cursorDoc.exists) {
         query = query.startAfter(cursorDoc);
       }
     }
 
     const snapshot = await query.get();
-    const clientIds = new Set(snapshot.docs.map((doc) => doc.get('clientId') as string));
+    const clientIds = new Set(
+      snapshot.docs.map((doc) => doc.get('clientId') as string),
+    );
     const clients = new Map<string, { name: string }>();
     if (clientIds.size > 0) {
       const clientDocs = await this.firestore.getAll(
-        ...Array.from(clientIds).map((id) => this.clientsCollection().doc(id)),
+        ...Array.from(clientIds).map((id) =>
+          this.clientsCollection(organizationId).doc(id),
+        ),
       );
       for (const clientDoc of clientDocs) {
         if (clientDoc.exists) {
-          clients.set(clientDoc.id, { name: clientDoc.get('name') as string });
+          clients.set(clientDoc.id, {
+            name: clientDoc.get('name') as string,
+          });
         }
       }
     }
@@ -199,31 +250,40 @@ export class FirestoreWorkOrderRepository implements WorkOrderRepository {
         updatedAt: order.updatedAt,
       };
     });
-    const nextCursor = snapshot.docs.length === limit ? snapshot.docs[snapshot.docs.length - 1].id : undefined;
+    const nextCursor =
+      snapshot.docs.length === limit
+        ? snapshot.docs[snapshot.docs.length - 1].id
+        : undefined;
     return { items, nextCursor };
   }
 
   async findByDueDateRange(
-    _uid: string,
+    organizationId: string,
     from: string,
     to: string,
   ): Promise<WorkOrderClientSummary[]> {
-    const snapshot = await this.collection()
+    const snapshot = await this.collection(organizationId)
       .where('status', '!=', 'cancelled')
       .where('dueDate', '>=', toTimestamp(from))
       .where('dueDate', '<=', toTimestamp(to))
       .orderBy('dueDate', 'asc')
       .get();
 
-    const clientIds = new Set(snapshot.docs.map((doc) => doc.get('clientId') as string));
+    const clientIds = new Set(
+      snapshot.docs.map((doc) => doc.get('clientId') as string),
+    );
     const clients = new Map<string, { name: string }>();
     if (clientIds.size > 0) {
       const clientDocs = await this.firestore.getAll(
-        ...Array.from(clientIds).map((id) => this.clientsCollection().doc(id)),
+        ...Array.from(clientIds).map((id) =>
+          this.clientsCollection(organizationId).doc(id),
+        ),
       );
       for (const clientDoc of clientDocs) {
         if (clientDoc.exists) {
-          clients.set(clientDoc.id, { name: clientDoc.get('name') as string });
+          clients.set(clientDoc.id, {
+            name: clientDoc.get('name') as string,
+          });
         }
       }
     }

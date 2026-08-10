@@ -1,7 +1,18 @@
 import { auth } from '../../lib/firebase';
 import { GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
 import { useState } from 'react';
-import { Button, Alert, LoadingState } from '../ui';
+import { Button, Alert } from '../ui';
+
+function GoogleMark() {
+  return (
+    <svg aria-hidden="true" viewBox="0 0 24 24" className="h-5 w-5" role="img">
+      <path fill="#4285F4" d="M21.35 12.23c0-.72-.06-1.42-.18-2.09H12v3.96h5.24a4.48 4.48 0 0 1-1.94 2.94v2.45h3.14c1.84-1.7 2.91-4.2 2.91-7.26Z" />
+      <path fill="#34A853" d="M12 21.67c2.63 0 4.84-.87 6.45-2.35l-3.14-2.45c-.87.58-1.98.92-3.31.92-2.54 0-4.69-1.72-5.46-4.03H3.3v2.53A9.74 9.74 0 0 0 12 21.67Z" />
+      <path fill="#FBBC05" d="M6.54 13.76a5.85 5.85 0 0 1 0-3.52V7.71H3.3a9.76 9.76 0 0 0 0 8.58l3.24-2.53Z" />
+      <path fill="#EA4335" d="M12 6.21c1.43 0 2.72.49 3.73 1.45l2.8-2.8C16.84 3.27 14.63 2.33 12 2.33a9.74 9.74 0 0 0-8.7 5.38l3.24 2.53C7.31 7.93 9.46 6.21 12 6.21Z" />
+    </svg>
+  );
+}
 
 export function SignIn() {
   const [isSigningIn, setIsSigningIn] = useState(false);
@@ -16,58 +27,75 @@ export function SignIn() {
     try {
       await signInWithPopup(auth, provider);
     } catch (error) {
-      // eslint-disable-next-line no-console
       console.error('Sign in failed', error);
       setErrorMessage(
-        'No se pudo iniciar sesión. Verifica la configuración de Firebase e inténtalo de nuevo.',
+        'No se pudo iniciar sesión. Verifica la configuración de tu cuenta e inténtalo de nuevo.',
       );
     } finally {
       setIsSigningIn(false);
     }
   };
 
-  if (isSigningIn) {
-    return (
-      <div className="flex min-h-screen flex-col items-center justify-center gap-6 px-4">
-        <LoadingState
-          variant="spinner"
-          message="Iniciando sesión..."
-          size="md"
-        />
-      </div>
-    );
-  }
-
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center gap-6 px-4">
-      <div className="text-center">
-        <h1 className="text-3xl font-semibold tracking-tight text-fg-primary">
-          iJac Operaciones
-        </h1>
-        <p className="mt-2 text-fg-secondary">
-          Gestión interna de clientes y órdenes de trabajo
-        </p>
+    <main className="relative isolate flex min-h-screen flex-col overflow-hidden bg-bg-primary px-4 py-8 text-fg-primary sm:px-6 lg:py-12" data-testid="sign-in-page">
+      <div className="pointer-events-none absolute inset-0 -z-10 overflow-hidden" aria-hidden="true">
+        <div className="login-orb login-orb-cyan" />
+        <div className="login-orb login-orb-purple" />
       </div>
 
-      <Button
-        onClick={handleSignIn}
-        disabled={isSigningIn}
-        variant="primary"
-        size="lg"
-      >
-        {isSigningIn ? 'Iniciando sesión…' : 'Iniciar sesión con Google'}
-      </Button>
+      <section className="mx-auto flex w-full max-w-3xl flex-1 items-center justify-center">
+        <div className="login-reveal mx-auto w-full max-w-sm text-center">
+          <a href="/" className="inline-flex rounded-xl p-2 transition-opacity hover:opacity-80" aria-label="Ir al inicio de iJac">
+            <img src="/ijac/logo.png" alt="iJac IT Solutions" className="h-14 w-auto object-contain" />
+          </a>
+          <p className="mt-6 text-xs font-semibold uppercase tracking-[0.28em] text-accent-light">Operaciones internas</p>
+          <h1 className="mt-3 font-heading text-3xl font-semibold tracking-tight text-fg-primary sm:text-4xl">Ingresar a iJac</h1>
+          <p className="mt-3 text-sm leading-6 text-fg-secondary">Acceso seguro para gestionar clientes, órdenes de trabajo y calendario.</p>
 
-      {errorMessage && (
-        <Alert
-          type="error"
-          icon="⚠️"
-          onClose={() => setErrorMessage(null)}
-          className="max-w-md"
-        >
-          {errorMessage}
-        </Alert>
-      )}
-    </div>
+          <div className="glass-surface login-panel mt-8 rounded-2xl p-5 text-left sm:p-6">
+            <div className="mb-5">
+              <p className="text-sm font-semibold text-fg-primary">Acceso al panel</p>
+              <p className="mt-1 text-xs leading-5 text-fg-tertiary">Usá tu cuenta autorizada de Google para continuar.</p>
+            </div>
+
+            <Button
+              onClick={handleSignIn}
+              disabled={isSigningIn}
+              isLoading={isSigningIn}
+              variant="primary"
+              size="xl"
+              className="min-h-12 w-full rounded-xl shadow-glow-cyan"
+              startIcon={<GoogleMark />}
+            >
+              {isSigningIn ? 'Conectando…' : 'Continuar con Google'}
+            </Button>
+
+            <div className="mt-5 flex items-center gap-3 text-[11px] text-fg-tertiary">
+              <span className="h-px flex-1 bg-border-subtle" />
+              <span>Acceso protegido</span>
+              <span className="h-px flex-1 bg-border-subtle" />
+            </div>
+
+            {errorMessage && (
+              <Alert
+                type="error"
+                icon="!"
+                onClose={() => setErrorMessage(null)}
+                className="mt-5"
+              >
+                {errorMessage}
+              </Alert>
+            )}
+          </div>
+
+          <p className="mt-6 text-xs text-fg-tertiary">Al continuar, confirmás que tenés autorización para acceder a este panel.</p>
+        </div>
+      </section>
+
+      <footer className="mx-auto flex w-full max-w-3xl items-center justify-between gap-4 border-t border-border-subtle/60 pt-5 text-xs text-fg-tertiary">
+        <span className="font-brand text-sm text-fg-secondary">iJac</span>
+        <span>IT Solutions · Buenos Aires</span>
+      </footer>
+    </main>
   );
 }

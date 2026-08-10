@@ -8,11 +8,30 @@ import { ClientManager } from '../../components/clients/ClientManager';
 <Layout title="Clientes | iJac Operations">
   <Protected client:load>
     <AppShell client:load>
-      <h1 class="text-2xl font-semibold text-fg-primary">Clientes</h1>
-      <p class="mt-2 text-fg-secondary">Gestiona los clientes de iJac.</p>
-      <div class="mt-6">
-        <ClientManager client:load />
-      </div>
+      <main class="space-y-8 py-4 sm:py-8" data-testid="clients-page">
+        <nav class="flex items-center gap-2 text-sm text-fg-tertiary" aria-label="Breadcrumb">
+          <a href="/" class="transition-colors hover:text-accent-brand">Inicio</a>
+          <span aria-hidden="true">›</span>
+          <span class="text-fg-primary" aria-current="page">Clientes</span>
+        </nav>
+
+        <section class="clients-hero rounded-2xl border border-border-default px-6 py-10 sm:px-10 sm:py-14" aria-labelledby="clients-heading">
+          <p class="inline-flex rounded-full border border-accent-brand/60 px-4 py-1.5 text-xs font-medium text-accent-brand">
+            Gestión de relaciones y oportunidades
+          </p>
+          <h1 id="clients-heading" class="mt-6 max-w-4xl font-heading text-4xl font-semibold leading-[1.05] tracking-tight text-fg-primary sm:text-6xl">
+            Clientes organizados para hacer crecer tu operación
+          </h1>
+          <p class="mt-6 max-w-3xl text-base leading-7 text-fg-secondary sm:text-lg">
+            Centralizá contactos, organizaciones y notas para que cada conversación tenga contexto y cada próximo paso sea claro.
+          </p>
+        </section>
+
+        <section class="clients-workspace rounded-2xl border border-border-default bg-bg-secondary/80 p-4 sm:p-6" aria-labelledby="clients-workspace-heading">
+          <h2 id="clients-workspace-heading" class="sr-only">Directorio de clientes</h2>
+          <ClientManager client:load />
+        </section>
+      </main>
     </AppShell>
   </Protected>
 </Layout>

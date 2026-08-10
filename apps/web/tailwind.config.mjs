@@ -32,6 +32,7 @@ export default {
         
         /* Focus shadow */
         'focus-ring': '0 0 0 2px #020617, 0 0 0 4px #60a5fa',
+        'glow-cyan': 'var(--shadow-glow-cyan)',
         
         /* Inner shadow for inset effects */
         'inset-sm': 'inset 0 1px 2px 0 rgba(0, 0, 0, 0.5)',
@@ -69,6 +70,7 @@ export default {
         /* Accent */
         'accent-primary': 'var(--color-accent-primary)',
         'accent-light': 'var(--color-accent-light)',
+        'accent-brand': 'var(--color-accent-brand)',
 
         /* Status */
         'status-open': 'var(--color-status-open)',

@@ -21,16 +21,30 @@ export class CalendarController {
   ) {}
 
   @Get('events')
-  async events(@CurrentUser() user: UserRequest, @Query() query: CalendarRangeQueryDto) {
-    return this.service.findEventsInRange(user.uid, query.from, query.to);
+  async events(
+    @CurrentUser() user: UserRequest,
+    @Query() query: CalendarRangeQueryDto,
+  ) {
+    return this.service.findEventsInRange(
+      user.organizationId!,
+      query.from,
+      query.to,
+    );
   }
 
   @Post('sync')
-  async sync(@CurrentUser() user: UserRequest, @Query() query: CalendarRangeQueryDto) {
-    const events = await this.service.findEventsInRange(user.uid, query.from, query.to);
+  async sync(
+    @CurrentUser() user: UserRequest,
+    @Query() query: CalendarRangeQueryDto,
+  ) {
+    const events = await this.service.findEventsInRange(
+      user.organizationId!,
+      query.from,
+      query.to,
+    );
     const results = await Promise.all(
       events.map((event) =>
-        this.syncService.syncWorkOrder(user.uid, {
+        this.syncService.syncWorkOrder(user.uid, user.organizationId!, {
           id: event.workOrderId,
           title: event.title,
           status: event.status,

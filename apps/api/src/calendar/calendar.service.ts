@@ -9,8 +9,16 @@ export class CalendarService {
     @Inject(WORK_ORDER_REPOSITORY) private readonly workOrderRepository: WorkOrderRepository,
   ) {}
 
-  async findEventsInRange(uid: string, from: string, to: string): Promise<CalendarEvent[]> {
-    const workOrders = await this.workOrderRepository.findByDueDateRange(uid, from, to);
+  async findEventsInRange(
+    organizationId: string,
+    from: string,
+    to: string,
+  ): Promise<CalendarEvent[]> {
+    const workOrders = await this.workOrderRepository.findByDueDateRange(
+      organizationId,
+      from,
+      to,
+    );
     return workOrders.map((wo) => ({
       id: wo.id,
       workOrderId: wo.id,

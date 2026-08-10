@@ -1,3 +1,4 @@
+import { forwardRef } from 'react';
 import { cn } from './cn';
 
 /**
@@ -76,18 +77,21 @@ interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
   wrapperClassName?: string;
 }
 
-export function Input({
-  className,
-  wrapperClassName,
-  label,
-  helpText,
-  error,
-  required,
-  id,
-  disabled,
-  type = 'text',
-  ...props
-}: InputProps) {
+export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
+  {
+    className,
+    wrapperClassName,
+    label,
+    helpText,
+    error,
+    required,
+    id,
+    disabled,
+    type = 'text',
+    ...props
+  },
+  ref,
+) {
   // Generate stable ID if not provided
   const inputId = id || `input-${Math.random().toString(36).substr(2, 9)}`;
 
@@ -99,6 +103,7 @@ export function Input({
         </Label>
       )}
       <input
+        ref={ref}
         id={inputId}
         type={type}
         disabled={disabled}
@@ -128,7 +133,7 @@ export function Input({
       {helpText && <HelpText id={`${inputId}-help`}>{helpText}</HelpText>}
     </div>
   );
-}
+});
 
 /**
  * Textarea component with integrated label, help text, and error messaging

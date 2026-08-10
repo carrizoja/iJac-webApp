@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import type { CalendarEvent } from '@ijac/shared';
 import { listCalendarEvents, syncCalendar } from '../../lib/calendar';
-import { Button, Alert, EmptyState, LoadingState } from '../ui';
+import { Button, Alert, EmptyState, LoadingState, Panel } from '../ui';
 
 function startOfMonth(date: Date): Date {
   return new Date(date.getFullYear(), date.getMonth(), 1);
@@ -29,6 +29,10 @@ const statusColorClass: Record<string, string> = {
 };
 
 export function CalendarView() {
+  const neutralControlButtonClass =
+    'rounded-lg border border-[#2f2f2f] bg-[#080808] text-white transition-colors duration-200 hover:border-[#3a3a3a] hover:bg-[#0f0f0f]';
+  const primaryActionButtonClass =
+    'rounded-lg border-2 border-[#00d084] bg-[#080808] text-white transition-all duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] hover:border-[#00c978] hover:bg-[#00c978] hover:text-white hover:shadow-[0_0_0_1px_#00c978,0_10px_28px_rgba(0,201,120,0.45)] active:translate-y-0 active:shadow-[0_0_0_1px_#00c978,0_6px_16px_rgba(0,201,120,0.35)]';
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [loading, setLoading] = useState(true);
@@ -94,41 +98,52 @@ export function CalendarView() {
     }
   };
 
-  if (loading) return <LoadingState>Cargando calendario...</LoadingState>;
+  if (loading) {
+    return (
+      <Panel className="calendar-state-panel" data-testid="calendar-loading-state">
+        <LoadingState message="Cargando calendario..." />
+      </Panel>
+    );
+  }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-5" data-testid="calendar-view">
       {error && !syncResult && (
         <Alert type="error" icon="⚠️" onClose={() => setError(null)} role="alert" aria-live="assertive">
           {error}
         </Alert>
       )}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col gap-4 rounded-xl border border-border-subtle bg-bg-primary/60 p-3 sm:flex-row sm:items-center sm:justify-between">
         <h2 className="text-lg font-medium capitalize text-fg-primary">{monthLabel}</h2>
         <div className="flex flex-wrap items-center gap-2">
           <Button
-            variant="secondary"
+            variant="ghost"
             size="sm"
+            className={neutralControlButtonClass}
             onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1))}
           >
             Anterior
           </Button>
           <Button
-            variant="secondary"
+            variant="ghost"
             size="sm"
+            className={neutralControlButtonClass}
             onClick={() => setCurrentMonth(new Date())}
           >
             Hoy
           </Button>
           <Button
-            variant="secondary"
+            variant="ghost"
             size="sm"
+            className={neutralControlButtonClass}
             onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1))}
           >
             Siguiente
           </Button>
           <Button
+            variant="ghost"
             size="sm"
+            className={primaryActionButtonClass}
             onClick={handleSync}
             isLoading={syncing}
             aria-busy={syncing}
@@ -187,11 +202,13 @@ export function CalendarView() {
       )}
 
       {events.length === 0 && (
-        <EmptyState
-          icon="📅"
-          title="Sin eventos"
-          description="No hay órdenes con fecha de vencimiento este mes"
-        />
+        <Panel className="calendar-state-panel">
+          <EmptyState
+            icon="📅"
+            title="Sin eventos"
+            description="No hay órdenes con fecha de vencimiento este mes"
+          />
+        </Panel>
       )}
     </div>
   );

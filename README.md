@@ -104,6 +104,39 @@ node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"
 
 To develop against the Firebase emulator, set `FIRESTORE_EMULATOR_HOST=localhost:8080` in `apps/api/.env` and start the emulator suite from your Firebase project.
 
+## Firestore resource deployment
+
+The client search query requires the composite index declared in `firestore.indexes.json`. Deploy Firestore resources to an explicit project so local Firebase aliases cannot target the wrong environment:
+
+```bash
+# Confirm the intended project ID first
+firebase projects:list
+
+# Deploy the versioned rules and indexes
+firebase deploy --only firestore:rules,firestore:indexes --project <project-id>
+
+# Confirm the default database contains the deployed index definitions
+firebase firestore:indexes --project <project-id>
+```
+
+Composite index creation is asynchronous. In the Firebase console, open **Firestore Database > Indexes** for `<project-id>` and wait until the `clients` index with `searchPrefixes` (`CONTAINS`) and `updatedAt` (`DESCENDING`) reports **Enabled**. Do not verify client search while the index is still building.
+
+After the API is using that Firebase project, verify matching and empty searches with a current Firebase ID token:
+
+```bash
+export FIREBASE_ID_TOKEN='<current-id-token>'
+
+curl --fail-with-body \
+  --header "Authorization: Bearer ${FIREBASE_ID_TOKEN}" \
+  "http://localhost:3001/api/clients?search=acme"
+
+curl --fail-with-body \
+  --header "Authorization: Bearer ${FIREBASE_ID_TOKEN}" \
+  "http://localhost:3001/api/clients?search=no-client-should-match-this"
+```
+
+Both requests must return HTTP 200. Matching results remain ordered by `updatedAt` descending; a non-matching search returns an empty `items` array.
+
 ## Google Calendar integration
 
 The MVP uses one-way, user-initiated synchronization from iJac work orders to the connected user's Google Calendar. Two-way sync is intentionally out of scope for this change.

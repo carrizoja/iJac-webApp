@@ -7,23 +7,36 @@ import { CLIENT_REPOSITORY } from './client.constants';
 export class ClientService {
   constructor(@Inject(CLIENT_REPOSITORY) private readonly repository: ClientRepository) {}
 
-  async create(uid: string, input: CreateClientInput): Promise<Client> {
-    return this.repository.create(uid, input);
+  async create(
+    organizationId: string,
+    input: CreateClientInput,
+  ): Promise<Client> {
+    return this.repository.create(organizationId, input);
   }
 
-  async update(uid: string, id: string, input: UpdateClientInput): Promise<Client> {
-    return this.repository.update(uid, id, input);
+  async update(
+    organizationId: string,
+    id: string,
+    input: UpdateClientInput,
+  ): Promise<Client> {
+    return this.repository.update(organizationId, id, input);
   }
 
-  async delete(uid: string, id: string): Promise<void> {
-    await this.repository.delete(uid, id);
+  async delete(organizationId: string, id: string): Promise<void> {
+    await this.repository.delete(organizationId, id);
   }
 
-  async findById(uid: string, id: string): Promise<Client | null> {
-    return this.repository.findById(uid, id);
+  async findById(
+    organizationId: string,
+    id: string,
+  ): Promise<Client | null> {
+    return this.repository.findById(organizationId, id);
   }
 
-  async findMany(uid: string, filter: ClientFilter): Promise<{ items: Client[]; nextCursor?: string }> {
-    return this.repository.findMany(uid, filter);
+  async findMany(
+    organizationId: string,
+    filter: ClientFilter,
+  ): Promise<{ items: Client[]; nextCursor?: string }> {
+    return this.repository.findMany(organizationId, filter);
   }
 }

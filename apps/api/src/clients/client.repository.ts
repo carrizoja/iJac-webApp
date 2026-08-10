@@ -24,10 +24,13 @@ export interface ClientFilter {
 }
 
 export interface ClientRepository {
-  create(uid: string, input: CreateClientInput): Promise<Client>;
-  update(uid: string, id: string, input: UpdateClientInput): Promise<Client>;
-  delete(uid: string, id: string): Promise<void>;
-  findById(uid: string, id: string): Promise<Client | null>;
-  findMany(uid: string, filter: ClientFilter): Promise<{ items: Client[]; nextCursor?: string }>;
-  exists(uid: string, id: string): Promise<boolean>;
+  create(organizationId: string, input: CreateClientInput): Promise<Client>;
+  update(organizationId: string, id: string, input: UpdateClientInput): Promise<Client>;
+  delete(organizationId: string, id: string): Promise<void>;
+  findById(organizationId: string, id: string): Promise<Client | null>;
+  findMany(
+    organizationId: string,
+    filter: ClientFilter,
+  ): Promise<{ items: Client[]; nextCursor?: string }>;
+  exists(organizationId: string, id: string): Promise<boolean>;
 }
