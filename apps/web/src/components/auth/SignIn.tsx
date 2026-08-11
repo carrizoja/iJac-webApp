@@ -1,4 +1,4 @@
-import { auth } from '../../lib/firebase';
+import { getFirebaseAuth } from '../../lib/firebase';
 import { GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
 import { useState } from 'react';
 import { Button, Alert } from '../ui';
@@ -40,7 +40,7 @@ export function SignIn() {
     setErrorMessage(null);
 
     try {
-      await signInWithPopup(auth, provider);
+      await signInWithPopup(getFirebaseAuth(), provider);
     } catch (error) {
       console.error('Sign in failed', error);
       setErrorMessage(t('signin.error'));

@@ -1,4 +1,4 @@
-import { initializeApp } from 'firebase/app';
+import { getApp, getApps, initializeApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
 
 const firebaseConfig = {
@@ -8,5 +8,11 @@ const firebaseConfig = {
   appId: import.meta.env.PUBLIC_FIREBASE_APP_ID,
 };
 
-const app = initializeApp(firebaseConfig);
-export const auth = getAuth(app);
+export function getFirebaseAuth() {
+  if (typeof window === 'undefined') {
+    throw new Error('Firebase Auth is only available in the browser');
+  }
+
+  const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
+  return getAuth(app);
+}

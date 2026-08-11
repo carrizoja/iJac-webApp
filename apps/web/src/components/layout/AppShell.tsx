@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useAuth } from '../../hooks/useAuth';
 import { signOut } from 'firebase/auth';
-import { auth } from '../../lib/firebase';
+import { getFirebaseAuth } from '../../lib/firebase';
 import { ThemeToggle } from './ThemeToggle';
 import { LanguageToggle } from './LanguageToggle';
 import { useLanguage } from '../../hooks/useLanguage';
@@ -78,7 +78,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 <LanguageToggle />
                 <button
                   type="button"
-                  onClick={() => signOut(auth)}
+                  onClick={() => signOut(getFirebaseAuth())}
                   className="navbar-control rounded-lg px-3 py-2 text-sm transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-focus"
                 >
                   {t('nav.signOut')}

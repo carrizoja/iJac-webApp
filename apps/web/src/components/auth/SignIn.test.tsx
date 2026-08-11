@@ -6,7 +6,9 @@ const { signInWithPopup, addScope } = vi.hoisted(() => ({
   addScope: vi.fn(),
 }));
 
-vi.mock('../../lib/firebase', () => ({ auth: { name: 'test-auth' } }));
+vi.mock('../../lib/firebase', () => ({
+  getFirebaseAuth: vi.fn(() => ({ name: 'test-auth' })),
+}));
 
 vi.mock('firebase/auth', () => ({
   GoogleAuthProvider: vi.fn(() => ({ addScope })),

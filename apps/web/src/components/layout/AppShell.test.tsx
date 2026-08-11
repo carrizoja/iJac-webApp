@@ -7,7 +7,7 @@ vi.mock('../../hooks/useAuth', () => ({
 }));
 
 vi.mock('../../lib/firebase', () => ({
-  auth: {},
+  getFirebaseAuth: vi.fn(() => ({})),
 }));
 
 vi.mock('firebase/auth', () => ({
