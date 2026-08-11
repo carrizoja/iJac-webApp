@@ -15,9 +15,7 @@ describe('Dialog', () => {
   });
 
   it('does not render when isOpen is false', () => {
-    const { container } = render(
-      <Dialog {...defaultProps} isOpen={false} />
-    );
+    const { container } = render(<Dialog {...defaultProps} isOpen={false} />);
     const dialog = container.querySelector('[role="alertdialog"]');
     expect(dialog).not.toBeInTheDocument();
   });
@@ -44,9 +42,7 @@ describe('Dialog', () => {
 
   it('closes when backdrop is clicked', () => {
     const handleClose = vi.fn();
-    const { container } = render(
-      <Dialog {...defaultProps} onClose={handleClose} />
-    );
+    const { container } = render(<Dialog {...defaultProps} onClose={handleClose} />);
     const backdrop = container.querySelector('[role="presentation"]');
     fireEvent.click(backdrop!);
     expect(handleClose).toHaveBeenCalledOnce();
@@ -57,7 +53,7 @@ describe('Dialog', () => {
     render(
       <Dialog {...defaultProps} onClose={handleClose}>
         <div data-testid="content">Content</div>
-      </Dialog>
+      </Dialog>,
     );
     const content = screen.getByTestId('content');
     fireEvent.click(content);
@@ -73,38 +69,28 @@ describe('Dialog', () => {
 
   it('shows close button by default', () => {
     render(<Dialog {...defaultProps} />);
-    const closeBtn = screen.getByLabelText(/close dialog/i);
+    const closeBtn = screen.getByLabelText(/cerrar diálogo/i);
     expect(closeBtn).toBeInTheDocument();
   });
 
   it('hides close button when showCloseButton is false', () => {
     render(<Dialog {...defaultProps} showCloseButton={false} />);
-    const closeBtn = screen.queryByLabelText(/close dialog/i);
+    const closeBtn = screen.queryByLabelText(/cerrar diálogo/i);
     expect(closeBtn).not.toBeInTheDocument();
   });
 
   it('closes dialog when close button is clicked', () => {
     const handleClose = vi.fn();
-    render(
-      <Dialog {...defaultProps} onClose={handleClose} showCloseButton />
-    );
-    const closeBtn = screen.getByLabelText(/close dialog/i);
+    render(<Dialog {...defaultProps} onClose={handleClose} showCloseButton />);
+    const closeBtn = screen.getByLabelText(/cerrar diálogo/i);
     fireEvent.click(closeBtn);
     expect(handleClose).toHaveBeenCalledOnce();
   });
 
   it('renders with description for accessibility', () => {
-    render(
-      <Dialog
-        {...defaultProps}
-        description="This action cannot be undone"
-      />
-    );
+    render(<Dialog {...defaultProps} description="This action cannot be undone" />);
     const dialog = screen.getByRole('alertdialog');
-    expect(dialog).toHaveAttribute(
-      'aria-describedby',
-      'dialog-description'
-    );
+    expect(dialog).toHaveAttribute('aria-describedby', 'dialog-description');
     const description = screen.getByText(/this action cannot be undone/i);
     expect(description).toHaveAttribute('id', 'dialog-description');
   });
@@ -117,7 +103,7 @@ describe('Dialog', () => {
           label: 'Submit',
           onClick: vi.fn(),
         }}
-      />
+      />,
     );
     const btn = screen.getByRole('button', { name: /submit/i });
     expect(btn).toBeInTheDocument();
@@ -132,7 +118,7 @@ describe('Dialog', () => {
           label: 'Submit',
           onClick: handleAction,
         }}
-      />
+      />,
     );
     const btn = screen.getByRole('button', { name: /submit/i });
     fireEvent.click(btn);
@@ -148,7 +134,7 @@ describe('Dialog', () => {
           onClick: vi.fn(),
           destructive: true,
         }}
-      />
+      />,
     );
     const btn = screen.getByRole('button', { name: /delete/i });
     expect(btn).toHaveClass('bg-destructive');
@@ -163,7 +149,7 @@ describe('Dialog', () => {
           onClick: vi.fn(),
           isLoading: true,
         }}
-      />
+      />,
     );
     const btn = screen.getByRole('button', { name: /save/i }) as HTMLButtonElement;
     expect(btn).toBeDisabled();
@@ -178,7 +164,7 @@ describe('Dialog', () => {
           label: 'Cancel',
           onClick: vi.fn(),
         }}
-      />
+      />,
     );
     const btn = screen.getByText(/cancel/i);
     expect(btn).toBeInTheDocument();
@@ -193,7 +179,7 @@ describe('Dialog', () => {
           label: 'Cancel',
           onClick: handleCancel,
         }}
-      />
+      />,
     );
     const btn = screen.getByText(/cancel/i);
     fireEvent.click(btn);
@@ -209,7 +195,7 @@ describe('Dialog', () => {
         secondaryAction={{
           label: 'Cancel',
         }}
-      />
+      />,
     );
     const btn = screen.getByText(/cancel/i);
     fireEvent.click(btn);
@@ -217,9 +203,7 @@ describe('Dialog', () => {
   });
 
   it('renders with different sizes', () => {
-    const { rerender, container } = render(
-      <Dialog {...defaultProps} size="sm" />
-    );
+    const { rerender, container } = render(<Dialog {...defaultProps} size="sm" />);
     let dialog = container.querySelector('[role="alertdialog"]');
     expect(dialog).toHaveClass('max-w-sm');
 
@@ -233,7 +217,7 @@ describe('Dialog', () => {
       <Dialog {...defaultProps}>
         <button data-testid="first-btn">First</button>
         <button data-testid="second-btn">Second</button>
-      </Dialog>
+      </Dialog>,
     );
     const firstBtn = screen.getByTestId('first-btn');
     // Just verify that the button exists and can be focused

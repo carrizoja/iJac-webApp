@@ -21,27 +21,37 @@ test.describe('Clients route boundary', () => {
         body: `export async function getCurrentToken() { return 'e2e-token'; }`,
       }),
     );
-    await page.route('**/api/clients**', (route) =>
-      route.fulfill({ json: { items: [] } }),
-    );
+    await page.route('**/api/clients**', (route) => route.fulfill({ json: { items: [] } }));
 
     await page.setViewportSize({ width: 375, height: 812 });
     await page.goto('/clients');
 
     const trigger = page.getByRole('button', { name: 'Abrir navegación principal' });
-    const triggerBounds = await trigger.boundingBox();
-    expect(triggerBounds).not.toBeNull();
-    expect(triggerBounds!.width).toBeGreaterThanOrEqual(44);
-    expect(triggerBounds!.height).toBeGreaterThanOrEqual(44);
+    await expect(trigger).toBeVisible();
+    await expect
+      .poll(() => trigger.evaluate((element) => element.getBoundingClientRect().width))
+      .toBeGreaterThanOrEqual(44);
+    await expect
+      .poll(() => trigger.evaluate((element) => element.getBoundingClientRect().height))
+      .toBeGreaterThanOrEqual(44);
     await expect(trigger).toHaveAttribute('aria-expanded', 'false');
     await expect(trigger).toHaveAttribute('aria-controls', 'mobile-primary-navigation');
+
+    await expect
+      .poll(() =>
+        trigger.evaluate((element) => !element.closest('astro-island')?.hasAttribute('ssr')),
+      )
+      .toBe(true);
 
     await trigger.focus();
     await page.keyboard.press('Enter');
 
     const mobileNavigation = page.getByRole('navigation', { name: 'Navegación principal móvil' });
     await expect(mobileNavigation).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Cerrar navegación principal' })).toHaveAttribute('aria-expanded', 'true');
+    await expect(page.getByRole('button', { name: 'Cerrar navegación principal' })).toHaveAttribute(
+      'aria-expanded',
+      'true',
+    );
 
     for (const label of ['Inicio', 'Clientes', 'Órdenes', 'Calendario']) {
       await expect(mobileNavigation.getByRole('link', { name: label })).toBeVisible();
@@ -54,10 +64,14 @@ test.describe('Clients route boundary', () => {
     await expect(mobileNavigation).toBeHidden();
     await expect(trigger).toBeFocused();
     await expect(trigger).toHaveAttribute('aria-expanded', 'false');
-    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(375);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(
+      375,
+    );
   });
 
-  test('keeps search focused and non-blocking while requesting the complete term', async ({ page }) => {
+  test('keeps search focused and non-blocking while requesting the complete term', async ({
+    page,
+  }) => {
     const requestedSearches: string[] = [];
     const client = {
       id: 'client-1',
@@ -111,7 +125,9 @@ test.describe('Clients route boundary', () => {
     await expect(page.getByRole('status')).toBeHidden();
   });
 
-  test('renders table view by default without document overflow on mobile width', async ({ page }) => {
+  test('renders table view by default without document overflow on mobile width', async ({
+    page,
+  }) => {
     const client = {
       id: 'client-1',
       name: 'Acme Inc',
@@ -143,9 +159,7 @@ test.describe('Clients route boundary', () => {
         body: `export async function getCurrentToken() { return 'e2e-token'; }`,
       }),
     );
-    await page.route('**/api/clients**', (route) =>
-      route.fulfill({ json: { items: [client] } }),
-    );
+    await page.route('**/api/clients**', (route) => route.fulfill({ json: { items: [client] } }));
 
     await page.setViewportSize({ width: 375, height: 812 });
     await page.goto('/clients');
@@ -172,7 +186,9 @@ test.describe('Clients route boundary', () => {
     await page.goto('/clients');
 
     await expect(page).toHaveTitle(/Clientes \| iJac Operations/);
-    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(375);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(
+      375,
+    );
   });
 
   test('signed-out users receive the accessible authentication boundary', async ({ page }) => {
@@ -180,6 +196,9 @@ test.describe('Clients route boundary', () => {
 
     await expect(page.getByRole('heading', { name: 'Ingresar a iJac' })).toBeVisible();
     await expect(page.getByRole('button', { name: 'Continuar con Google' })).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Continuar con Google' })).toHaveAttribute('aria-busy', 'false');
+    await expect(page.getByRole('button', { name: 'Continuar con Google' })).toHaveAttribute(
+      'aria-busy',
+      'false',
+    );
   });
 });

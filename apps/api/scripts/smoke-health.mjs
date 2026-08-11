@@ -42,6 +42,7 @@ function smokeEnvironment(port) {
     PORT: String(port),
     NODE_ENV: 'development',
     CORS_ORIGIN: 'http://localhost:4321',
+    WEB_APP_URL: 'http://localhost:4321',
     ALLOWED_DOMAIN: '',
     FIREBASE_PROJECT_ID: 'ijac-smoke-test',
     FIREBASE_CLIENT_EMAIL: 'smoke@ijac-smoke-test.iam.gserviceaccount.com',

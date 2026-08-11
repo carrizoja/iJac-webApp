@@ -64,21 +64,25 @@ describe('WorkOrderList', () => {
   it('applies status, priority, and client filters', async () => {
     render(<WorkOrderList clients={[sampleClient]} onCreate={vi.fn()} onEdit={vi.fn()} />);
 
-    await waitFor(() => expect(listWorkOrders).toHaveBeenCalledWith({
-      status: undefined,
-      priority: undefined,
-      clientId: undefined,
-    }));
+    await waitFor(() =>
+      expect(listWorkOrders).toHaveBeenCalledWith({
+        status: undefined,
+        priority: undefined,
+        clientId: undefined,
+      }),
+    );
 
     fireEvent.change(screen.getAllByRole('combobox')[0], {
       target: { value: 'open' },
     });
 
-    await waitFor(() => expect(listWorkOrders).toHaveBeenLastCalledWith({
-      status: 'open',
-      priority: undefined,
-      clientId: undefined,
-    }));
+    await waitFor(() =>
+      expect(listWorkOrders).toHaveBeenLastCalledWith({
+        status: 'open',
+        priority: undefined,
+        clientId: undefined,
+      }),
+    );
   });
 
   it('renders table mode by default and supports card switching, details, and actions', async () => {
@@ -109,7 +113,9 @@ describe('WorkOrderList', () => {
     expect(onEdit).toHaveBeenCalledWith(sampleWorkOrder);
 
     fireEvent.click(screen.getByRole('button', { name: 'Eliminar Reparación de Servidor' }));
-    expect(screen.getByTestId('delete-confirmation')).toHaveTextContent('¿Eliminar orden "Reparación de Servidor"?');
+    expect(screen.getByTestId('delete-confirmation')).toHaveTextContent(
+      '¿Eliminar orden "Reparación de Servidor"?',
+    );
   });
 
   it('shows request error alert when fetch fails', async () => {
@@ -117,7 +123,8 @@ describe('WorkOrderList', () => {
     render(<WorkOrderList clients={[sampleClient]} onCreate={vi.fn()} onEdit={vi.fn()} />);
 
     const alert = await screen.findByRole('alert');
-    expect(alert).toHaveTextContent('Fallo al conectar');
-    expect(screen.getByRole('button', { name: 'Dismiss alert' })).toBeInTheDocument();
+    expect(alert).toHaveTextContent('No se pudieron cargar las órdenes. Intentá nuevamente.');
+    expect(alert).not.toHaveTextContent('Fallo al conectar');
+    expect(screen.getByRole('button', { name: 'Cerrar alerta' })).toBeInTheDocument();
   });
 });

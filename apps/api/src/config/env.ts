@@ -4,6 +4,7 @@ export interface ApiEnvironment {
   PORT: number;
   NODE_ENV: string;
   CORS_ORIGIN: string;
+  WEB_APP_URL: string;
   ALLOWED_DOMAIN: string;
   FIREBASE_PROJECT_ID: string;
   FIREBASE_CLIENT_EMAIL: string;
@@ -21,6 +22,9 @@ export const apiEnvironmentSchema = Joi.object<ApiEnvironment>({
   PORT: Joi.number().default(3001),
   NODE_ENV: Joi.string().valid('development', 'production', 'test').default('development'),
   CORS_ORIGIN: Joi.string().uri().required(),
+  WEB_APP_URL: Joi.string()
+    .uri({ scheme: ['http', 'https'] })
+    .required(),
   ALLOWED_DOMAIN: Joi.string().allow('').default(''),
   FIREBASE_PROJECT_ID: Joi.string().required(),
   FIREBASE_CLIENT_EMAIL: Joi.string().email().required(),

@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useCallback } from 'react';
 import { cn } from './cn';
 import { Button } from './Button';
+import { useLanguage } from '../../hooks/useLanguage';
 
 /**
  * Dialog/Modal component with accessible focus management and Escape key support
@@ -41,10 +42,12 @@ export function Dialog({
   description,
   children,
   primaryAction,
-  secondaryAction = { label: 'Cancel' },
+  secondaryAction,
   size = 'md',
   showCloseButton = true,
 }: DialogProps) {
+  const { t } = useLanguage();
+  const resolvedSecondaryAction = secondaryAction ?? { label: t('common.cancel') };
   const dialogRef = useRef<HTMLDivElement>(null);
   const previousActiveElement = useRef<HTMLElement | null>(null);
   const contentRef = useRef<HTMLDivElement>(null);
@@ -59,7 +62,7 @@ export function Dialog({
         onClose();
       }
     },
-    [onClose]
+    [onClose],
   );
 
   /**
@@ -86,7 +89,7 @@ export function Dialog({
     // Move focus to dialog or first focusable element
     if (contentRef.current) {
       const firstFocusable = contentRef.current.querySelector(
-        'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+        'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
       ) as HTMLElement;
 
       if (firstFocusable) {
@@ -141,7 +144,7 @@ export function Dialog({
           'relative z-10 rounded-lg bg-panel-default border border-border-default',
           'shadow-lg p-6 space-y-4',
           'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus',
-          sizeClasses[size]
+          sizeClasses[size],
         )}
         tabIndex={-1}
       >
@@ -150,17 +153,14 @@ export function Dialog({
           <button
             onClick={onClose}
             className="absolute top-4 right-4 text-fg-muted hover:text-fg-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus rounded"
-            aria-label="Close dialog"
+            aria-label={t('common.closeDialog')}
           >
             ✕
           </button>
         )}
 
         {/* Title */}
-        <h2
-          id="dialog-title"
-          className="text-lg font-semibold text-fg-primary pr-6"
-        >
+        <h2 id="dialog-title" className="text-lg font-semibold text-fg-primary pr-6">
           {title}
         </h2>
 
@@ -172,19 +172,17 @@ export function Dialog({
         )}
 
         {/* Content */}
-        <div className="text-sm text-fg-secondary space-y-3">
-          {children}
-        </div>
+        <div className="text-sm text-fg-secondary space-y-3">{children}</div>
 
         {/* Action Buttons */}
         <div className="flex gap-3 justify-end pt-4">
-          {secondaryAction && (
+          {resolvedSecondaryAction && (
             <Button
               variant="secondary"
               size="base"
-              onClick={secondaryAction.onClick || onClose}
+              onClick={resolvedSecondaryAction.onClick || onClose}
             >
-              {secondaryAction.label}
+              {resolvedSecondaryAction.label}
             </Button>
           )}
 

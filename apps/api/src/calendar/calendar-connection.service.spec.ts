@@ -5,7 +5,10 @@ import { CalendarConnectionService } from './calendar-connection.service';
 import { OAuthTransactionRepository, OAuthTransaction } from './oauth-transaction.repository';
 import { CalendarConnectionRepository } from './connection.repository';
 import { OAUTH_TRANSACTION_REPOSITORY } from './oauth-transaction.constants';
-import { CALENDAR_CONNECTION_REPOSITORY, GOOGLE_OAUTH_CLIENT } from './calendar-connection.constants';
+import {
+  CALENDAR_CONNECTION_REPOSITORY,
+  GOOGLE_OAUTH_CLIENT,
+} from './calendar-connection.constants';
 
 class InMemoryOAuthTransactionRepository implements OAuthTransactionRepository {
   private transactions: Map<string, OAuthTransaction> = new Map();
@@ -22,13 +25,16 @@ class InMemoryOAuthTransactionRepository implements OAuthTransactionRepository {
 }
 
 class InMemoryCalendarConnectionRepository implements CalendarConnectionRepository {
-  private connections: Map<string, import('./connection.repository').CalendarConnection> = new Map();
+  private connections: Map<string, import('./connection.repository').CalendarConnection> =
+    new Map();
 
   async save(connection: import('./connection.repository').CalendarConnection): Promise<void> {
     this.connections.set(connection.uid, connection);
   }
 
-  async findByUid(uid: string): Promise<import('./connection.repository').CalendarConnection | null> {
+  async findByUid(
+    uid: string,
+  ): Promise<import('./connection.repository').CalendarConnection | null> {
     return this.connections.get(uid) ?? null;
   }
 
@@ -47,7 +53,7 @@ function createMockOAuthClient(
       }
       return { tokens: getTokenResult } as any;
     },
-} as unknown as OAuth2Client;
+  } as unknown as OAuth2Client;
 }
 
 describe('CalendarConnectionService', () => {
@@ -59,7 +65,10 @@ describe('CalendarConnectionService', () => {
   beforeEach(async () => {
     oauthRepo = new InMemoryOAuthTransactionRepository();
     connectionRepo = new InMemoryCalendarConnectionRepository();
-    mockOAuthClient = createMockOAuthClient({ refresh_token: 'refresh-token', scope: 'https://www.googleapis.com/auth/calendar' });
+    mockOAuthClient = createMockOAuthClient({
+      refresh_token: 'refresh-token',
+      scope: 'https://www.googleapis.com/auth/calendar',
+    });
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         CalendarConnectionService,
@@ -119,10 +128,32 @@ describe('CalendarConnectionService', () => {
     expect(connection?.credential).toBeDefined();
     expect(connection?.credential.encrypted).not.toBe('refresh-token');
     expect(connection?.grantedScopes).toContain('https://www.googleapis.com/auth/calendar');
+    expect(Object.prototype.hasOwnProperty.call(connection, 'accountEmail')).toBe(false);
+  });
+
+  it('exchanges the code with the redirect URI captured by the transaction', async () => {
+    const transactionRedirectUri = 'https://api.example.com/api/calendar/connection/oauth/callback';
+    await oauthRepo.create({
+      nonce: 'transaction-nonce',
+      uid: 'uid-1',
+      codeChallenge: 'challenge',
+      redirectUri: transactionRedirectUri,
+      expiresAt: new Date(Date.now() + 60_000),
+    });
+    const getToken = jest.spyOn(mockOAuthClient, 'getToken');
+
+    await service.handleCallback('transaction-nonce', 'auth-code');
+
+    expect(getToken).toHaveBeenCalledWith({
+      code: 'auth-code',
+      redirect_uri: transactionRedirectUri,
+    });
   });
 
   it('rejects a callback with an unknown nonce', async () => {
-    await expect(service.handleCallback('unknown-nonce', 'code')).rejects.toThrow('Invalid or expired OAuth transaction');
+    await expect(service.handleCallback('unknown-nonce', 'code')).rejects.toThrow(
+      'Invalid or expired OAuth transaction',
+    );
   });
 
   it('rejects a callback with an expired transaction', async () => {
@@ -134,7 +165,9 @@ describe('CalendarConnectionService', () => {
       redirectUri: 'http://localhost/callback',
       expiresAt: new Date(Date.now() - 1000),
     });
-    await expect(service.handleCallback(nonce, 'code')).rejects.toThrow('Invalid or expired OAuth transaction');
+    await expect(service.handleCallback(nonce, 'code')).rejects.toThrow(
+      'Invalid or expired OAuth transaction',
+    );
   });
 
   it('rejects a callback when no refresh token is returned', async () => {
@@ -172,7 +205,9 @@ describe('CalendarConnectionService', () => {
     }).compile();
     const testService = module.get(CalendarConnectionService);
     const start = await testService.startConnection('uid-1');
-    await expect(testService.handleCallback(start.nonce, 'code')).rejects.toThrow('No refresh token received');
+    await expect(testService.handleCallback(start.nonce, 'code')).rejects.toThrow(
+      'No refresh token received',
+    );
   });
 
   it('rejects a callback when token exchange fails', async () => {
@@ -210,6 +245,8 @@ describe('CalendarConnectionService', () => {
     }).compile();
     const testService = module.get(CalendarConnectionService);
     const start = await testService.startConnection('uid-1');
-    await expect(testService.handleCallback(start.nonce, 'code')).rejects.toThrow('Token exchange failed');
+    await expect(testService.handleCallback(start.nonce, 'code')).rejects.toThrow(
+      'Token exchange failed',
+    );
   });
 });

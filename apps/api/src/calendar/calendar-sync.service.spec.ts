@@ -4,7 +4,10 @@ import { calendar_v3 } from 'googleapis';
 import { CalendarSyncService } from './calendar-sync.service';
 import { CalendarConnectionRepository, CalendarConnection } from './connection.repository';
 import { CalendarEventMappingRepository } from './event-mapping.repository';
-import { CALENDAR_CONNECTION_REPOSITORY, CALENDAR_EVENT_MAPPING_REPOSITORY } from './calendar-connection.constants';
+import {
+  CALENDAR_CONNECTION_REPOSITORY,
+  CALENDAR_EVENT_MAPPING_REPOSITORY,
+} from './calendar-connection.constants';
 
 class InMemoryConnectionRepository implements CalendarConnectionRepository {
   private connections: Map<string, CalendarConnection> = new Map();
@@ -21,10 +24,8 @@ class InMemoryConnectionRepository implements CalendarConnectionRepository {
 }
 
 class InMemoryMappingRepository implements CalendarEventMappingRepository {
-  private mappings: Map<
-    string,
-    import('./event-mapping.repository').CalendarEventMapping
-  > = new Map();
+  private mappings: Map<string, import('./event-mapping.repository').CalendarEventMapping> =
+    new Map();
 
   async upsert(
     _organizationId: string,
@@ -40,10 +41,7 @@ class InMemoryMappingRepository implements CalendarEventMappingRepository {
     return this.mappings.get(workOrderId) ?? null;
   }
 
-  async deleteByWorkOrderId(
-    _organizationId: string,
-    workOrderId: string,
-  ): Promise<void> {
+  async deleteByWorkOrderId(_organizationId: string, workOrderId: string): Promise<void> {
     this.mappings.delete(workOrderId);
   }
 }
@@ -101,7 +99,9 @@ describe('CalendarSyncService', () => {
       ],
     }).compile();
     service = module.get(CalendarSyncService);
-    jest.spyOn(service as any, 'getClient').mockResolvedValue({ client: mockClient, accountEmail: 'test@example.com' });
+    jest
+      .spyOn(service as any, 'getClient')
+      .mockResolvedValue({ client: mockClient, accountEmail: 'test@example.com' });
   });
 
   it('returns null client when no connection exists', async () => {
@@ -128,6 +128,32 @@ describe('CalendarSyncService', () => {
     expect(mapping?.status).toBe('synced');
   });
 
+  it.each([
+    ['2026-08-31T23:30:00-03:00', '2026-08-31', '2026-09-01'],
+    ['2026-12-31', '2026-12-31', '2027-01-01'],
+  ])(
+    'creates an all-day event with an exclusive end for %s',
+    async (dueDate, startDate, endDate) => {
+      const events = mockClient.events as unknown as MockedEvents;
+      events.insert.mockResolvedValue({ data: { id: 'google-event-1' } });
+
+      await service.syncWorkOrder('uid-1', 'org-1', {
+        id: 'wo-1',
+        title: 'Work order',
+        status: 'open',
+        dueDate,
+      });
+
+      expect(events.insert).toHaveBeenCalledWith({
+        calendarId: 'primary',
+        requestBody: expect.objectContaining({
+          start: { date: startDate },
+          end: { date: endDate },
+        }),
+      });
+    },
+  );
+
   it('updates a Google event when mapping exists', async () => {
     const events = mockClient.events as unknown as MockedEvents;
     events.insert.mockResolvedValue({ data: { id: 'google-event-1' } });
@@ -152,12 +178,10 @@ describe('CalendarSyncService', () => {
     jest.restoreAllMocks();
     const events = mockClient.events as unknown as MockedEvents;
     events.insert.mockRejectedValue(new Error('API error'));
-    jest
-      .spyOn(service as any, 'getClient')
-      .mockResolvedValue({
-        client: mockClient,
-        accountEmail: 'test@example.com',
-      });
+    jest.spyOn(service as any, 'getClient').mockResolvedValue({
+      client: mockClient,
+      accountEmail: 'test@example.com',
+    });
 
     const result = await service.syncWorkOrder('uid-1', 'org-1', {
       id: 'wo-1',

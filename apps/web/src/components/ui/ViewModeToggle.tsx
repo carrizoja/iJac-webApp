@@ -1,4 +1,5 @@
 import { cn } from './cn';
+import { useLanguage } from '../../hooks/useLanguage';
 
 export type ViewMode = 'cards' | 'table';
 
@@ -45,18 +46,14 @@ function TableIcon() {
   );
 }
 
-export function ViewModeToggle({
-  value,
-  onChange,
-  ariaLabel = 'Modo de visualización',
-  className,
-}: ViewModeToggleProps) {
+export function ViewModeToggle({ value, onChange, ariaLabel, className }: ViewModeToggleProps) {
+  const { t } = useLanguage();
   return (
     <div
       role="group"
-      aria-label={ariaLabel}
+      aria-label={ariaLabel ?? t('common.viewMode')}
       className={cn(
-        'inline-flex items-center gap-1 rounded-xl border border-border-subtle bg-[#080808] p-1 text-fg-primary',
+        'view-mode-surface inline-flex items-center gap-1 rounded-xl border border-border-subtle p-1 text-fg-primary',
         className,
       )}
     >
@@ -65,28 +62,28 @@ export function ViewModeToggle({
         aria-pressed={value === 'cards'}
         onClick={() => onChange('cards')}
         className={cn(
-          'inline-flex min-h-9 items-center gap-2 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00d084]',
+          'view-mode-option inline-flex min-h-9 items-center gap-2 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus',
           value === 'cards'
-            ? 'border border-[#00d084]/40 bg-[#121212] text-white shadow-sm'
-            : 'text-fg-muted hover:bg-[#121212]/60 hover:text-fg-primary',
+            ? 'view-mode-option-active border shadow-sm'
+            : 'text-fg-muted hover:text-fg-primary',
         )}
       >
         <CardsIcon />
-        <span>Tarjetas</span>
+        <span>{t('common.cards')}</span>
       </button>
       <button
         type="button"
         aria-pressed={value === 'table'}
         onClick={() => onChange('table')}
         className={cn(
-          'inline-flex min-h-9 items-center gap-2 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00d084]',
+          'view-mode-option inline-flex min-h-9 items-center gap-2 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus',
           value === 'table'
-            ? 'border border-[#00d084]/40 bg-[#121212] text-white shadow-sm'
-            : 'text-fg-muted hover:bg-[#121212]/60 hover:text-fg-primary',
+            ? 'view-mode-option-active border shadow-sm'
+            : 'text-fg-muted hover:text-fg-primary',
         )}
       >
         <TableIcon />
-        <span>Tabla</span>
+        <span>{t('common.table')}</span>
       </button>
     </div>
   );

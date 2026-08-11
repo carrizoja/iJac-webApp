@@ -6,11 +6,11 @@ import { CalendarView } from '../../components/calendar/CalendarView';
 import { CalendarConnection } from '../../components/calendar/CalendarConnection';
 ---
 
-<Layout title="Calendario | iJac Operations">
+<Layout titleKey="title.calendar">
   <Protected client:load>
     <AppShell client:load>
-      <h1 class="text-2xl font-semibold text-fg-primary">Calendario</h1>
-      <p class="mt-2 text-fg-muted">Visualiza las órdenes por fecha de vencimiento.</p>
+      <h1 class="text-2xl font-semibold text-fg-primary" data-i18n="calendar.pageHeading">Calendario</h1>
+      <p class="mt-2 text-fg-muted" data-i18n="calendar.pageDescription">Visualizá las órdenes por fecha de vencimiento.</p>
       <div class="mt-6">
         <CalendarConnection client:load />
       </div>

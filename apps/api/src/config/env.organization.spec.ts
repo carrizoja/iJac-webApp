@@ -4,6 +4,7 @@ describe('Organization-scoped configuration', () => {
   it('defaults to global repository mode until migration cutover', () => {
     const env = validateApiEnvironment({
       CORS_ORIGIN: 'http://localhost:3000',
+      WEB_APP_URL: 'http://localhost:4321',
       FIREBASE_PROJECT_ID: 'test',
       FIREBASE_CLIENT_EMAIL: 'test@test.com',
       FIREBASE_PRIVATE_KEY: 'key',
@@ -19,6 +20,7 @@ describe('Organization-scoped configuration', () => {
   it('accepts global repository mode', () => {
     const env = validateApiEnvironment({
       CORS_ORIGIN: 'http://localhost:3000',
+      WEB_APP_URL: 'http://localhost:4321',
       FIREBASE_PROJECT_ID: 'test',
       FIREBASE_CLIENT_EMAIL: 'test@test.com',
       FIREBASE_PRIVATE_KEY: 'key',
@@ -36,6 +38,7 @@ describe('Organization-scoped configuration', () => {
     expect(() =>
       validateApiEnvironment({
         CORS_ORIGIN: 'http://localhost:3000',
+        WEB_APP_URL: 'http://localhost:4321',
         FIREBASE_PROJECT_ID: 'test',
         FIREBASE_CLIENT_EMAIL: 'test@test.com',
         FIREBASE_PRIVATE_KEY: 'key',
@@ -51,6 +54,7 @@ describe('Organization-scoped configuration', () => {
   it('accepts default organization id', () => {
     const env = validateApiEnvironment({
       CORS_ORIGIN: 'http://localhost:3000',
+      WEB_APP_URL: 'http://localhost:4321',
       FIREBASE_PROJECT_ID: 'test',
       FIREBASE_CLIENT_EMAIL: 'test@test.com',
       FIREBASE_PRIVATE_KEY: 'key',

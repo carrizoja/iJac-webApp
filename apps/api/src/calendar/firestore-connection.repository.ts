@@ -12,12 +12,21 @@ export class FirestoreCalendarConnectionRepository implements CalendarConnection
   }
 
   async save(connection: CalendarConnection): Promise<void> {
-    const { credential, ...safe } = connection;
-    await this.collection().doc(connection.uid).set({
-      ...safe,
-      credential,
+    const document = {
+      uid: connection.uid,
+      connected: connection.connected,
+      ...(connection.accountEmail !== undefined ? { accountEmail: connection.accountEmail } : {}),
+      grantedScopes: connection.grantedScopes,
+      credential: {
+        encrypted: connection.credential.encrypted,
+        version: connection.credential.version,
+        iv: connection.credential.iv,
+        tag: connection.credential.tag,
+      },
+      status: connection.status,
       updatedAt: new Date().toISOString(),
-    });
+    };
+    await this.collection().doc(connection.uid).set(document);
   }
 
   async findByUid(uid: string): Promise<CalendarConnection | null> {
@@ -27,10 +36,12 @@ export class FirestoreCalendarConnectionRepository implements CalendarConnection
   }
 
   async updateStatus(uid: string, status: CalendarConnection['status']): Promise<void> {
-    await this.collection().doc(uid).update({
-      status,
-      connected: status === 'active',
-      updatedAt: new Date().toISOString(),
-    });
+    await this.collection()
+      .doc(uid)
+      .update({
+        status,
+        connected: status === 'active',
+        updatedAt: new Date().toISOString(),
+      });
   }
 }

@@ -5,30 +5,30 @@ import { AppShell } from '../../components/layout/AppShell';
 import { ClientManager } from '../../components/clients/ClientManager';
 ---
 
-<Layout title="Clientes | iJac Operations">
+<Layout titleKey="title.clients">
   <Protected client:load>
     <AppShell client:load>
       <main class="space-y-8 py-4 sm:py-8" data-testid="clients-page">
-        <nav class="flex items-center gap-2 text-sm text-fg-tertiary" aria-label="Breadcrumb">
-          <a href="/" class="transition-colors hover:text-accent-brand">Inicio</a>
+        <nav class="flex items-center gap-2 text-sm text-fg-tertiary" aria-label="Ruta de navegación" data-i18n-attr="aria-label:clients.breadcrumb">
+          <a href="/" class="transition-colors hover:text-accent-brand" data-i18n="nav.home">Inicio</a>
           <span aria-hidden="true">›</span>
-          <span class="text-fg-primary" aria-current="page">Clientes</span>
+          <span class="text-fg-primary" aria-current="page" data-i18n="nav.clients">Clientes</span>
         </nav>
 
         <section class="clients-hero rounded-2xl border border-border-default px-6 py-10 sm:px-10 sm:py-14" aria-labelledby="clients-heading">
-          <p class="inline-flex rounded-full border border-accent-brand/60 px-4 py-1.5 text-xs font-medium text-accent-brand">
+          <p class="inline-flex rounded-full border border-accent-brand/60 px-4 py-1.5 text-xs font-medium text-accent-brand" data-i18n="clients.heroEyebrow">
             Gestión de relaciones y oportunidades
           </p>
-          <h1 id="clients-heading" class="mt-6 max-w-4xl font-heading text-4xl font-semibold leading-[1.05] tracking-tight text-fg-primary sm:text-6xl">
+          <h1 id="clients-heading" class="mt-6 max-w-4xl font-heading text-4xl font-semibold leading-[1.05] tracking-tight text-fg-primary sm:text-6xl" data-i18n="clients.heroTitle">
             Clientes organizados para hacer crecer tu operación
           </h1>
-          <p class="mt-6 max-w-3xl text-base leading-7 text-fg-secondary sm:text-lg">
+          <p class="mt-6 max-w-3xl text-base leading-7 text-fg-secondary sm:text-lg" data-i18n="clients.heroDescription">
             Centralizá contactos, organizaciones y notas para que cada conversación tenga contexto y cada próximo paso sea claro.
           </p>
         </section>
 
         <section class="clients-workspace rounded-2xl border border-border-default bg-bg-secondary/80 p-4 sm:p-6" aria-labelledby="clients-workspace-heading">
-          <h2 id="clients-workspace-heading" class="sr-only">Directorio de clientes</h2>
+          <h2 id="clients-workspace-heading" class="sr-only" data-i18n="clients.workspace">Directorio de clientes</h2>
           <ClientManager client:load />
         </section>
       </main>

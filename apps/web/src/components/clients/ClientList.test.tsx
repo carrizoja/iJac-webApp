@@ -166,7 +166,7 @@ describe('ClientList', () => {
     render(<ClientList onCreate={onCreate} onEdit={vi.fn()} />);
 
     await waitFor(() => expect(screen.getByText('No hay clientes')).toBeInTheDocument());
-    fireEvent.click(screen.getByRole('button', { name: 'Nuevo Cliente' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Nuevo cliente' }));
 
     expect(onCreate).toHaveBeenCalledOnce();
     expect(screen.getByTestId('client-list')).toBeInTheDocument();
@@ -182,7 +182,9 @@ describe('ClientList', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Eliminar Acme Inc' }));
 
     expect(onEdit).toHaveBeenCalledWith(client);
-    expect(screen.getByTestId('delete-confirmation')).toHaveTextContent('¿Eliminar cliente "Acme Inc"?');
+    expect(screen.getByTestId('delete-confirmation')).toHaveTextContent(
+      '¿Eliminar cliente "Acme Inc"?',
+    );
     expect(screen.getByRole('button', { name: 'Cancelar' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Eliminar' })).toBeInTheDocument();
   });
@@ -192,8 +194,9 @@ describe('ClientList', () => {
     render(<ClientList onCreate={vi.fn()} onEdit={vi.fn()} />);
 
     const alert = await screen.findByRole('alert');
-    expect(alert).toHaveTextContent('No se pudo cargar');
-    expect(screen.getByRole('button', { name: 'Dismiss alert' })).toBeInTheDocument();
+    expect(alert).toHaveTextContent('No se pudieron cargar los clientes. Intentá nuevamente.');
+    expect(alert).not.toHaveTextContent('Old request failed');
+    expect(screen.getByRole('button', { name: 'Cerrar alerta' })).toBeInTheDocument();
   });
 
   it('renders table mode by default, preserves search and records when switching to cards, and supports actions', async () => {
@@ -222,6 +225,8 @@ describe('ClientList', () => {
     expect(onEdit).toHaveBeenCalledWith(client);
 
     fireEvent.click(screen.getByRole('button', { name: 'Eliminar Acme Inc' }));
-    expect(screen.getByTestId('delete-confirmation')).toHaveTextContent('¿Eliminar cliente "Acme Inc"?');
+    expect(screen.getByTestId('delete-confirmation')).toHaveTextContent(
+      '¿Eliminar cliente "Acme Inc"?',
+    );
   });
 });

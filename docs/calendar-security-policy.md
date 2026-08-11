@@ -16,6 +16,7 @@ This document records the MVP decisions for Google Calendar authorization and cr
 ## OAuth redirect URLs
 
 - Local development: `http://localhost:3001/api/calendar/connection/oauth/callback`
+- Set `WEB_APP_URL` to the absolute frontend origin used after the callback (local development: `http://localhost:4321`).
 - Production/staging URLs must be added to the Google Cloud Console OAuth client.
 - The API validates the OAuth `state` nonce against a short-lived server-side transaction before exchanging the authorization code.
 

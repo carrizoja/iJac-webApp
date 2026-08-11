@@ -4,6 +4,7 @@ const validEnv: Record<string, unknown> = {
   PORT: 3001,
   NODE_ENV: 'development',
   CORS_ORIGIN: 'http://localhost:4321',
+  WEB_APP_URL: 'http://localhost:4321',
   ALLOWED_DOMAIN: 'ijacitsolutions.com',
   FIREBASE_PROJECT_ID: 'ijac-test-project',
   FIREBASE_CLIENT_EMAIL: 'service@ijac-test-project.iam.gserviceaccount.com',
@@ -25,6 +26,7 @@ describe('validateApiEnvironment', () => {
     const result = validateApiEnvironment({ ...validEnv });
     expect(result.FIREBASE_PROJECT_ID).toBe('ijac-test-project');
     expect(result.CORS_ORIGIN).toBe('http://localhost:4321');
+    expect(result.WEB_APP_URL).toBe('http://localhost:4321');
   });
 
   it('applies defaults for PORT, NODE_ENV, and ALLOWED_DOMAIN', () => {
@@ -40,6 +42,7 @@ describe('validateApiEnvironment', () => {
 
   it.each([
     'CORS_ORIGIN',
+    'WEB_APP_URL',
     'FIREBASE_PROJECT_ID',
     'FIREBASE_CLIENT_EMAIL',
     'FIREBASE_PRIVATE_KEY',
@@ -60,8 +63,14 @@ describe('validateApiEnvironment', () => {
   });
 
   it('rejects a non-URI GOOGLE_REDIRECT_URI', () => {
-    expect(() =>
-      validateApiEnvironment({ ...validEnv, GOOGLE_REDIRECT_URI: 'not a uri' }),
-    ).toThrow(/GOOGLE_REDIRECT_URI/);
+    expect(() => validateApiEnvironment({ ...validEnv, GOOGLE_REDIRECT_URI: 'not a uri' })).toThrow(
+      /GOOGLE_REDIRECT_URI/,
+    );
+  });
+
+  it('rejects a non-HTTP WEB_APP_URL', () => {
+    expect(() => validateApiEnvironment({ ...validEnv, WEB_APP_URL: 'ftp://example.com' })).toThrow(
+      /WEB_APP_URL/,
+    );
   });
 });

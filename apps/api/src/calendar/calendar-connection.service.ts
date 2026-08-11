@@ -1,4 +1,4 @@
-import { Injectable, Inject } from '@nestjs/common';
+import { Injectable, Inject, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { OAuth2Client } from 'google-auth-library';
 import { OAuthTransactionRepository } from './oauth-transaction.repository';
@@ -6,7 +6,10 @@ import { CalendarConnectionRepository } from './connection.repository';
 import { CredentialEncryption } from './credential-encryption';
 import { ApiEnvironment } from '../config/env';
 import { OAUTH_TRANSACTION_REPOSITORY } from './oauth-transaction.constants';
-import { CALENDAR_CONNECTION_REPOSITORY, GOOGLE_OAUTH_CLIENT } from './calendar-connection.constants';
+import {
+  CALENDAR_CONNECTION_REPOSITORY,
+  GOOGLE_OAUTH_CLIENT,
+} from './calendar-connection.constants';
 import { randomUUID } from 'crypto';
 
 export interface OAuthStartResult {
@@ -16,12 +19,15 @@ export interface OAuthStartResult {
 
 @Injectable()
 export class CalendarConnectionService {
+  private readonly logger = new Logger(CalendarConnectionService.name);
   private readonly encryption: CredentialEncryption;
 
   constructor(
     private readonly config: ConfigService<ApiEnvironment>,
-    @Inject(OAUTH_TRANSACTION_REPOSITORY) private readonly oauthTransactionRepository: OAuthTransactionRepository,
-    @Inject(CALENDAR_CONNECTION_REPOSITORY) private readonly connectionRepository: CalendarConnectionRepository,
+    @Inject(OAUTH_TRANSACTION_REPOSITORY)
+    private readonly oauthTransactionRepository: OAuthTransactionRepository,
+    @Inject(CALENDAR_CONNECTION_REPOSITORY)
+    private readonly connectionRepository: CalendarConnectionRepository,
     @Inject(GOOGLE_OAUTH_CLIENT) private readonly oauthClient: OAuth2Client,
   ) {
     this.encryption = new CredentialEncryption(config.getOrThrow('CREDENTIAL_ENCRYPTION_KEY'));
@@ -52,28 +58,56 @@ export class CalendarConnectionService {
   }
 
   async handleCallback(nonce: string, code: string): Promise<void> {
-    const transaction = await this.oauthTransactionRepository.findAndDelete(nonce);
-    if (!transaction || transaction.expiresAt < new Date()) {
-      throw new Error('Invalid or expired OAuth transaction');
-    }
+    const transaction = await this.runCallbackStage('transaction', async () => {
+      const storedTransaction = await this.oauthTransactionRepository.findAndDelete(nonce);
+      if (!storedTransaction || storedTransaction.expiresAt < new Date()) {
+        throw new Error('Invalid or expired OAuth transaction');
+      }
+      return storedTransaction;
+    });
 
-    const redirectUri = this.config.getOrThrow('GOOGLE_REDIRECT_URI');
-    const { tokens } = await this.oauthClient.getToken({ code, redirect_uri: redirectUri });
+    const { tokens } = await this.runCallbackStage('token_exchange', () =>
+      this.oauthClient.getToken({
+        code,
+        redirect_uri: transaction.redirectUri,
+      }),
+    );
 
-    if (!tokens.refresh_token) {
+    const refreshToken = tokens.refresh_token;
+    if (!refreshToken) {
+      this.logCallbackFailure('refresh_token');
       throw new Error('No refresh token received');
     }
 
-    const encrypted = this.encryption.encrypt(tokens.refresh_token);
-    await this.connectionRepository.save({
-      uid: transaction.uid,
-      connected: true,
-      accountEmail: tokens.refresh_token ? undefined : undefined,
-      grantedScopes: tokens.scope?.split(' ') ?? [],
-      credential: encrypted,
-      status: 'active',
-      updatedAt: new Date().toISOString(),
-    });
+    const encrypted = await this.runCallbackStage('encryption', () =>
+      this.encryption.encrypt(refreshToken),
+    );
+    await this.runCallbackStage('persistence', () =>
+      this.connectionRepository.save({
+        uid: transaction.uid,
+        connected: true,
+        grantedScopes: tokens.scope?.split(' ') ?? [],
+        credential: encrypted,
+        status: 'active',
+        updatedAt: new Date().toISOString(),
+      }),
+    );
+  }
+
+  private async runCallbackStage<T>(
+    stage: CallbackStage,
+    operation: () => T | Promise<T>,
+  ): Promise<T> {
+    try {
+      return await operation();
+    } catch (error) {
+      this.logCallbackFailure(stage);
+      throw error;
+    }
+  }
+
+  private logCallbackFailure(stage: CallbackStage): void {
+    this.logger.error(`Google Calendar OAuth callback failed at stage: ${stage}`);
   }
 
   async getStatus(uid: string): Promise<{ connected: boolean; status: string }> {
@@ -84,3 +118,6 @@ export class CalendarConnectionService {
     return { connected: connection.status === 'active', status: connection.status };
   }
 }
+
+type CallbackStage =
+  'transaction' | 'token_exchange' | 'refresh_token' | 'encryption' | 'persistence';

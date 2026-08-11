@@ -1,5 +1,5 @@
 import { Injectable, Inject } from '@nestjs/common';
-import { Firestore } from 'firebase-admin/firestore';
+import { Firestore, Timestamp } from 'firebase-admin/firestore';
 import { FIRESTORE } from '../firebase/firebase.module';
 import { OAuthTransactionRepository, OAuthTransaction } from './oauth-transaction.repository';
 
@@ -24,8 +24,14 @@ export class FirestoreOAuthTransactionRepository implements OAuthTransactionRepo
     const ref = this.collection().doc(nonce);
     const doc = await ref.get();
     if (!doc.exists) return null;
-    const data = doc.data() as Omit<OAuthTransaction, 'nonce'>;
+    const data = doc.data() as Omit<OAuthTransaction, 'nonce' | 'expiresAt'> & {
+      expiresAt: Date | Timestamp;
+    };
     await ref.delete();
-    return { nonce, ...data };
+    return {
+      nonce,
+      ...data,
+      expiresAt: data.expiresAt instanceof Date ? data.expiresAt : data.expiresAt.toDate(),
+    };
   }
 }

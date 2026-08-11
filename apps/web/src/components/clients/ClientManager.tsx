@@ -2,8 +2,10 @@ import { useState } from 'react';
 import type { Client } from '@ijac/shared';
 import { ClientList } from './ClientList';
 import { ClientForm } from './ClientForm';
+import { useLanguage } from '../../hooks/useLanguage';
 
 export function ClientManager() {
+  const { t } = useLanguage();
   const [editing, setEditing] = useState<Client | null>(null);
   const [creating, setCreating] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
@@ -16,11 +18,13 @@ export function ClientManager() {
 
   return (
     <div className="space-y-6" data-testid="clients-manager">
-
       {(creating || editing) && (
-        <div className="rounded-xl border border-border-subtle bg-bg-primary/70 p-4 sm:p-6" data-testid="client-form-panel">
+        <div
+          className="rounded-xl border border-border-subtle bg-bg-primary/70 p-4 sm:p-6"
+          data-testid="client-form-panel"
+        >
           <h3 className="mb-5 font-heading text-xl font-semibold text-fg-primary">
-            {editing ? 'Editar cliente' : 'Nuevo cliente'}
+            {editing ? t('clients.edit') : t('clients.new')}
           </h3>
           <ClientForm
             client={editing ?? undefined}
@@ -33,11 +37,7 @@ export function ClientManager() {
         </div>
       )}
 
-      <ClientList
-        key={refreshKey}
-        onCreate={() => setCreating(true)}
-        onEdit={setEditing}
-      />
+      <ClientList key={refreshKey} onCreate={() => setCreating(true)} onEdit={setEditing} />
     </div>
   );
 }

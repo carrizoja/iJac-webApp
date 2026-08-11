@@ -17,6 +17,7 @@ vi.mock('firebase/auth', () => ({
 import { AppShell } from './AppShell';
 import * as useAuthModule from '../../hooks/useAuth';
 import * as FirebaseAuth from 'firebase/auth';
+import { setLanguage } from '../../i18n/language';
 
 describe('AppShell', () => {
   const mockUser = {
@@ -26,6 +27,9 @@ describe('AppShell', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    setLanguage('es');
+    document.documentElement.className = 'dark';
+    document.documentElement.style.colorScheme = 'dark';
     vi.mocked(useAuthModule.useAuth).mockReturnValue({
       user: mockUser,
       token: 'id-token-123',
@@ -38,7 +42,7 @@ describe('AppShell', () => {
     render(
       <AppShell>
         <div>Content</div>
-      </AppShell>
+      </AppShell>,
     );
 
     const logo = screen.getByText('iJac');
@@ -49,7 +53,7 @@ describe('AppShell', () => {
     render(
       <AppShell>
         <div>Content</div>
-      </AppShell>
+      </AppShell>,
     );
 
     const desktopNavigation = screen.getByRole('navigation', { name: 'Navegación principal' });
@@ -63,7 +67,7 @@ describe('AppShell', () => {
     render(
       <AppShell>
         <div>Content</div>
-      </AppShell>
+      </AppShell>,
     );
 
     const trigger = screen.getByRole('button', { name: 'Abrir navegación principal' });
@@ -72,14 +76,47 @@ describe('AppShell', () => {
     expect(trigger.className).toMatch(/h-11/);
     expect(trigger.className).toMatch(/w-11/);
     expect(trigger.className).toMatch(/focus-visible/);
-    expect(screen.queryByRole('navigation', { name: 'Navegación principal móvil' })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('navigation', { name: 'Navegación principal móvil' }),
+    ).not.toBeInTheDocument();
+  });
+
+  it('keeps the theme toggle in the visible navbar controls outside the mobile menu', () => {
+    render(
+      <AppShell>
+        <div>Content</div>
+      </AppShell>,
+    );
+
+    const themeToggle = screen.getByRole('button', { name: 'Cambiar a tema claro' });
+    const mobileMenu = screen.queryByRole('navigation', { name: 'Navegación principal móvil' });
+
+    expect(themeToggle.closest('header')).toBeInTheDocument();
+    expect(themeToggle).toHaveClass('h-11', 'w-11');
+    expect(mobileMenu).not.toBeInTheDocument();
+  });
+
+  it('switches all navbar copy to English from the always-visible language control', () => {
+    render(
+      <AppShell>
+        <div>Content</div>
+      </AppShell>,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Cambiar a inglés' }));
+
+    const navigation = screen.getByRole('navigation', { name: 'Primary navigation' });
+    expect(within(navigation).getByRole('link', { name: 'Home' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Sign out' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Switch to light theme' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Switch to Spanish' })).toBeInTheDocument();
   });
 
   it('opens and closes the mobile navigation from its trigger', () => {
     render(
       <AppShell>
         <div>Content</div>
-      </AppShell>
+      </AppShell>,
     );
 
     fireEvent.click(screen.getByRole('button', { name: 'Abrir navegación principal' }));
@@ -97,30 +134,40 @@ describe('AppShell', () => {
     }
 
     fireEvent.click(trigger);
-    expect(screen.queryByRole('navigation', { name: 'Navegación principal móvil' })).not.toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Abrir navegación principal' })).toHaveAttribute('aria-expanded', 'false');
+    expect(
+      screen.queryByRole('navigation', { name: 'Navegación principal móvil' }),
+    ).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Abrir navegación principal' })).toHaveAttribute(
+      'aria-expanded',
+      'false',
+    );
   });
 
   it('closes the mobile navigation after a destination is selected', () => {
     render(
       <AppShell>
         <div>Content</div>
-      </AppShell>
+      </AppShell>,
     );
 
     fireEvent.click(screen.getByRole('button', { name: 'Abrir navegación principal' }));
     const mobileNavigation = screen.getByRole('navigation', { name: 'Navegación principal móvil' });
     fireEvent.click(within(mobileNavigation).getByRole('link', { name: 'Clientes' }));
 
-    expect(screen.queryByRole('navigation', { name: 'Navegación principal móvil' })).not.toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Abrir navegación principal' })).toHaveAttribute('aria-expanded', 'false');
+    expect(
+      screen.queryByRole('navigation', { name: 'Navegación principal móvil' }),
+    ).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Abrir navegación principal' })).toHaveAttribute(
+      'aria-expanded',
+      'false',
+    );
   });
 
   it('closes the mobile navigation on Escape and restores trigger focus', () => {
     render(
       <AppShell>
         <div>Content</div>
-      </AppShell>
+      </AppShell>,
     );
 
     fireEvent.click(screen.getByRole('button', { name: 'Abrir navegación principal' }));
@@ -130,7 +177,9 @@ describe('AppShell', () => {
 
     fireEvent.keyDown(document, { key: 'Escape' });
 
-    expect(screen.queryByRole('navigation', { name: 'Navegación principal móvil' })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('navigation', { name: 'Navegación principal móvil' }),
+    ).not.toBeInTheDocument();
     expect(trigger).toHaveAttribute('aria-expanded', 'false');
     expect(trigger).toHaveFocus();
   });
@@ -139,7 +188,7 @@ describe('AppShell', () => {
     render(
       <AppShell>
         <div>Content</div>
-      </AppShell>
+      </AppShell>,
     );
 
     const email = screen.getByText('test@example.com');
@@ -150,7 +199,7 @@ describe('AppShell', () => {
     render(
       <AppShell>
         <div>My Custom Content</div>
-      </AppShell>
+      </AppShell>,
     );
 
     expect(screen.getByText('My Custom Content')).toBeInTheDocument();
@@ -160,7 +209,7 @@ describe('AppShell', () => {
     render(
       <AppShell>
         <div>Content</div>
-      </AppShell>
+      </AppShell>,
     );
 
     const signOutButton = screen.getByText('Salir');
@@ -183,7 +232,7 @@ describe('AppShell', () => {
     render(
       <AppShell>
         <div>Content</div>
-      </AppShell>
+      </AppShell>,
     );
 
     // Should not crash and email field should be empty or have some default
@@ -195,7 +244,7 @@ describe('AppShell', () => {
     render(
       <AppShell>
         <div>Content</div>
-      </AppShell>
+      </AppShell>,
     );
 
     expect(screen.getByLabelText('Navegación principal')).toBeInTheDocument();
@@ -205,7 +254,7 @@ describe('AppShell', () => {
     const { container } = render(
       <AppShell>
         <div>Content</div>
-      </AppShell>
+      </AppShell>,
     );
 
     // Get navigation links (not the logo link)

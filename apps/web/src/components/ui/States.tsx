@@ -1,4 +1,5 @@
 import { cn } from './cn';
+import { useLanguage } from '../../hooks/useLanguage';
 
 /**
  * Panel component for grouped content with consistent styling
@@ -35,7 +36,7 @@ export function Panel({
         'rounded-lg transition-fast',
         variantClasses[variant],
         sizeClasses[size],
-        className
+        className,
       )}
       {...props}
     >
@@ -49,14 +50,7 @@ export function Panel({
  */
 interface BadgeProps extends React.HTMLAttributes<HTMLSpanElement> {
   /** Visual variant */
-  variant?:
-    | 'default'
-    | 'success'
-    | 'warning'
-    | 'error'
-    | 'info'
-    | 'purple'
-    | 'neutral';
+  variant?: 'default' | 'success' | 'warning' | 'error' | 'info' | 'purple' | 'neutral';
   /** Size of badge (xs, sm, md) */
   size?: 'xs' | 'sm' | 'md';
   /** Removable badge with close button */
@@ -71,20 +65,15 @@ export function Badge({
   children,
   ...props
 }: BadgeProps) {
+  const { t } = useLanguage();
   const variantClasses = {
-    default:
-      'bg-gradient-primary text-white border border-transparent',
-    success:
-      'bg-status-completed bg-opacity-20 text-status-completed border border-status-completed border-opacity-20',
-    warning:
-      'bg-priority-high bg-opacity-20 text-priority-high border border-priority-high border-opacity-20',
-    error:
-      'bg-destructive bg-opacity-20 text-destructive border border-destructive border-opacity-20',
-    info: 'bg-status-open bg-opacity-20 text-status-open border border-status-open border-opacity-20',
-    purple:
-      'bg-accent-primary bg-opacity-20 text-accent-primary border border-accent-primary border-opacity-20',
-    neutral:
-      'bg-panel-default text-fg-primary border border-border-default',
+    default: 'bg-gradient-primary text-white border border-transparent',
+    success: 'status-success text-status-completed bg-opacity-20',
+    warning: 'status-warning text-priority-high bg-opacity-20',
+    error: 'status-error text-destructive bg-opacity-20',
+    info: 'status-info text-status-open bg-opacity-20',
+    purple: 'status-purple text-accent-primary bg-opacity-20',
+    neutral: 'bg-panel-default text-fg-primary border border-border-default',
   };
 
   const sizeClasses = {
@@ -99,7 +88,7 @@ export function Badge({
         'inline-flex items-center gap-1.5 whitespace-nowrap',
         variantClasses[variant],
         sizeClasses[size],
-        className
+        className,
       )}
       {...props}
     >
@@ -108,7 +97,7 @@ export function Badge({
         <button
           onClick={onRemove}
           className="ml-1 hover:opacity-70 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-offset-1 rounded"
-          aria-label="Remove badge"
+          aria-label={t('common.removeBadge')}
         >
           ✕
         </button>
@@ -143,24 +132,18 @@ export function Alert({
   children,
   ...props
 }: AlertProps) {
+  const { t } = useLanguage();
   const typeClasses = {
-    info: 'bg-status-open bg-opacity-10 border border-status-open border-opacity-20 text-status-open',
-    success:
-      'bg-status-completed bg-opacity-10 border border-status-completed border-opacity-20 text-status-completed',
-    warning:
-      'bg-priority-high bg-opacity-10 border border-priority-high border-opacity-20 text-priority-high',
-    error:
-      'bg-destructive bg-opacity-10 border border-destructive border-opacity-20 text-destructive',
+    info: 'status-info text-status-open',
+    success: 'status-success text-status-completed',
+    warning: 'status-warning text-priority-high',
+    error: 'status-error text-destructive',
   };
 
   return (
     <div
       role="alert"
-      className={cn(
-        'rounded-lg p-4 flex gap-3 items-start',
-        typeClasses[type],
-        className
-      )}
+      className={cn('rounded-lg p-4 flex gap-3 items-start', typeClasses[type], className)}
       {...props}
     >
       {icon && <div className="flex-shrink-0 mt-0.5">{icon}</div>}
@@ -181,7 +164,7 @@ export function Alert({
         <button
           onClick={onClose}
           className="flex-shrink-0 hover:opacity-70 focus-visible:outline-none focus-visible:ring-1 rounded"
-          aria-label="Dismiss alert"
+          aria-label={t('common.dismissAlert')}
         >
           ✕
         </button>
@@ -205,10 +188,12 @@ interface LoadingStateProps extends React.HTMLAttributes<HTMLDivElement> {
 export function LoadingState({
   className,
   variant = 'spinner',
-  message = 'Loading...',
+  message,
   size = 'md',
   ...props
 }: LoadingStateProps) {
+  const { t } = useLanguage();
+  const visibleMessage = message === undefined ? t('common.loading') : message;
   const sizeClasses = {
     sm: 'w-4 h-4',
     md: 'w-8 h-8',
@@ -216,7 +201,12 @@ export function LoadingState({
   };
 
   const spinnerContent = (
-    <div className={cn('rounded-full border-2 border-fg-tertiary border-t-accent-primary animate-spin', sizeClasses[size])} />
+    <div
+      className={cn(
+        'rounded-full border-2 border-fg-tertiary border-t-accent-primary animate-spin',
+        sizeClasses[size],
+      )}
+    />
   );
 
   const skeletonContent = (
@@ -234,12 +224,9 @@ export function LoadingState({
   };
 
   return (
-    <div
-      className={cn('flex flex-col items-center justify-center gap-3', className)}
-      {...props}
-    >
+    <div className={cn('flex flex-col items-center justify-center gap-3', className)} {...props}>
       {renderContent[variant]}
-      {message && <p className="text-sm text-fg-tertiary font-medium">{message}</p>}
+      {visibleMessage && <p className="text-sm text-fg-tertiary font-medium">{visibleMessage}</p>}
     </div>
   );
 }
@@ -273,19 +260,15 @@ export function EmptyState({
     <div
       className={cn(
         'flex flex-col items-center justify-center gap-4 py-12 px-6 text-center',
-        className
+        className,
       )}
       {...props}
     >
-      {icon && (
-        <div className="text-4xl text-fg-tertiary opacity-50">{icon}</div>
-      )}
+      {icon && <div className="text-4xl text-fg-tertiary opacity-50">{icon}</div>}
 
       <div className="space-y-2">
         <h3 className="text-lg font-semibold text-fg-primary">{title}</h3>
-        {description && (
-          <p className="text-sm text-fg-tertiary max-w-sm">{description}</p>
-        )}
+        {description && <p className="text-sm text-fg-tertiary max-w-sm">{description}</p>}
       </div>
 
       {action && (

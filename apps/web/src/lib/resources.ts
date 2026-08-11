@@ -29,7 +29,13 @@ export async function listClients(filter?: {
   return withToken((token) => apiGet(`/clients${query ? `?${query}` : ''}`, token));
 }
 
-export async function createClient(input: Omit<Client, 'id' | 'createdAt' | 'updatedAt' | 'workOrderCount'>): Promise<Client> {
+export async function getClient(id: string): Promise<Client> {
+  return withToken((token) => apiGet(`/clients/${encodeURIComponent(id)}`, token));
+}
+
+export async function createClient(
+  input: Omit<Client, 'id' | 'createdAt' | 'updatedAt' | 'workOrderCount'>,
+): Promise<Client> {
   return withToken((token) => apiPost('/clients', input, token));
 }
 
@@ -64,6 +70,10 @@ export async function createWorkOrder(
   input: Omit<WorkOrder, 'id' | 'createdAt' | 'updatedAt'>,
 ): Promise<WorkOrder> {
   return withToken((token) => apiPost('/work-orders', input, token));
+}
+
+export async function getWorkOrder(id: string): Promise<WorkOrder> {
+  return withToken((token) => apiGet(`/work-orders/${encodeURIComponent(id)}`, token));
 }
 
 export async function updateWorkOrder(

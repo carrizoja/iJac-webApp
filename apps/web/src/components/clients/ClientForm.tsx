@@ -2,6 +2,7 @@ import { useState } from 'react';
 import type { Client } from '@ijac/shared';
 import { createClient, updateClient } from '../../lib/resources';
 import { Input, Textarea, Button, Alert } from '../ui';
+import { useLanguage } from '../../hooks/useLanguage';
 
 interface ClientFormProps {
   client?: Client;
@@ -17,6 +18,7 @@ interface FormErrors {
 }
 
 export function ClientForm({ client, onSaved, onCancel }: ClientFormProps) {
+  const { t } = useLanguage();
   const [form, setForm] = useState({
     name: client?.name ?? '',
     email: client?.email ?? '',
@@ -29,10 +31,11 @@ export function ClientForm({ client, onSaved, onCancel }: ClientFormProps) {
 
   const validate = (): boolean => {
     const next: FormErrors = {};
-    if (!form.name.trim()) next.name = 'El nombre es obligatorio';
-    if (!form.email.trim()) next.email = 'El email es obligatorio';
-    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) next.email = 'Email inválido';
-    if (!form.phone.trim()) next.phone = 'El teléfono es obligatorio';
+    if (!form.name.trim()) next.name = t('clients.validation.name');
+    if (!form.email.trim()) next.email = t('clients.validation.email');
+    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email))
+      next.email = t('clients.validation.emailInvalid');
+    if (!form.phone.trim()) next.phone = t('clients.validation.phone');
     setErrors(next);
     return Object.keys(next).length === 0;
   };
@@ -49,8 +52,8 @@ export function ClientForm({ client, onSaved, onCancel }: ClientFormProps) {
         await createClient(form);
       }
       onSaved();
-    } catch (err) {
-      setErrors({ general: err instanceof Error ? err.message : 'Error al guardar' });
+    } catch {
+      setErrors({ general: t('clients.saveError') });
     } finally {
       setSubmitting(false);
     }
@@ -66,7 +69,7 @@ export function ClientForm({ client, onSaved, onCancel }: ClientFormProps) {
 
       <Input
         id="name"
-        label="Nombre"
+        label={t('clients.name')}
         value={form.name}
         onChange={(e) => setForm({ ...form, name: e.target.value })}
         error={errors.name}
@@ -76,7 +79,7 @@ export function ClientForm({ client, onSaved, onCancel }: ClientFormProps) {
       <Input
         id="email"
         type="email"
-        label="Email"
+        label={t('clients.email')}
         value={form.email}
         onChange={(e) => setForm({ ...form, email: e.target.value })}
         error={errors.email}
@@ -85,7 +88,7 @@ export function ClientForm({ client, onSaved, onCancel }: ClientFormProps) {
 
       <Input
         id="phone"
-        label="Teléfono"
+        label={t('clients.phone')}
         value={form.phone}
         onChange={(e) => setForm({ ...form, phone: e.target.value })}
         error={errors.phone}
@@ -94,14 +97,14 @@ export function ClientForm({ client, onSaved, onCancel }: ClientFormProps) {
 
       <Input
         id="organization"
-        label="Organización"
+        label={t('clients.organization')}
         value={form.organization}
         onChange={(e) => setForm({ ...form, organization: e.target.value })}
       />
 
       <Textarea
         id="notes"
-        label="Notas"
+        label={t('clients.notes')}
         value={form.notes}
         onChange={(e) => setForm({ ...form, notes: e.target.value })}
         rows={3}
@@ -111,18 +114,18 @@ export function ClientForm({ client, onSaved, onCancel }: ClientFormProps) {
         <Button
           type="button"
           variant="ghost"
-          className="min-h-11 rounded-xl border border-[#2f2f2f] bg-[#080808] px-5 text-white transition-colors duration-200 hover:border-[#3a3a3a] hover:bg-[#0f0f0f]"
+          className="action-surface min-h-11 rounded-xl border px-5 transition-colors duration-200"
           onClick={onCancel}
         >
-          Cancelar
+          {t('common.cancel')}
         </Button>
         <Button
           type="submit"
           isLoading={submitting}
           variant="ghost"
-          className="min-h-11 shrink-0 whitespace-nowrap rounded-xl border-2 border-[#00d084] bg-[#080808] px-6 text-white transition-all duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] hover:border-[#00c978] hover:bg-[#00c978] hover:text-white hover:shadow-[0_0_0_1px_#00c978,0_10px_28px_rgba(0,201,120,0.45)] active:translate-y-0 active:shadow-[0_0_0_1px_#00c978,0_6px_16px_rgba(0,201,120,0.35)]"
+          className="action-brand min-h-11 shrink-0 whitespace-nowrap rounded-xl border-2 px-6 transition-all duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] active:translate-y-0"
         >
-          {submitting ? 'Guardando...' : client ? 'Guardar cambios' : 'Crear cliente'}
+          {submitting ? t('common.saving') : client ? t('common.saveChanges') : t('clients.create')}
         </Button>
       </div>
     </form>

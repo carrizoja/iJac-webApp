@@ -14,7 +14,17 @@ import { createWorkOrder, updateWorkOrder } from '../../lib/resources';
 describe('WorkOrderForm', () => {
   const now = new Date().toISOString();
   const clients: Client[] = [
-    { id: 'c1', name: 'Acme', email: 'a@a.com', phone: '1', organization: '', notes: '', workOrderCount: 0, createdAt: now, updatedAt: now },
+    {
+      id: 'c1',
+      name: 'Acme',
+      email: 'a@a.com',
+      phone: '1',
+      organization: '',
+      notes: '',
+      workOrderCount: 0,
+      createdAt: now,
+      updatedAt: now,
+    },
   ];
 
   beforeEach(() => {
@@ -55,14 +65,9 @@ describe('WorkOrderForm', () => {
     expect(document.getElementById('dueDate')).toHaveFocus();
 
     if (originalShowPicker) {
-      Object.defineProperty(
-        HTMLInputElement.prototype,
-        'showPicker',
-        originalShowPicker,
-      );
+      Object.defineProperty(HTMLInputElement.prototype, 'showPicker', originalShowPicker);
     } else {
-      delete (HTMLInputElement.prototype as { showPicker?: () => void })
-        .showPicker;
+      delete (HTMLInputElement.prototype as { showPicker?: () => void }).showPicker;
     }
   });
 
@@ -128,7 +133,10 @@ describe('WorkOrderForm', () => {
     fireEvent.change(screen.getByLabelText(/prioridad/i), { target: { value: 'high' } });
     fireEvent.click(screen.getByRole('button', { name: /crear orden/i }));
     await waitFor(() => {
-      expect(screen.getByText('Failed to create work order')).toBeInTheDocument();
+      expect(
+        screen.getByText('No se pudo guardar la orden. Intentá nuevamente.'),
+      ).toBeInTheDocument();
+      expect(screen.queryByText('Failed to create work order')).not.toBeInTheDocument();
       expect(onSaved).not.toHaveBeenCalled();
     });
   });
@@ -156,18 +164,30 @@ describe('WorkOrderForm', () => {
     const mockedUpdate = updateWorkOrder as unknown as ReturnType<typeof vi.fn>;
     mockedUpdate.mockResolvedValueOnce(existingWO);
 
-    render(<WorkOrderForm clients={clients} workOrder={existingWO} onSaved={onSaved} onCancel={() => {}} />);
+    render(
+      <WorkOrderForm
+        clients={clients}
+        workOrder={existingWO}
+        onSaved={onSaved}
+        onCancel={() => {}}
+      />,
+    );
 
     // Form should be pre-populated
     expect((screen.getByLabelText(/título/i) as HTMLInputElement).value).toBe('Fix network');
     expect((screen.getByLabelText(/estado/i) as HTMLSelectElement).value).toBe('open');
 
     // Change title and submit
-    fireEvent.change(screen.getByLabelText(/título/i), { target: { value: 'Fix network - URGENT' } });
+    fireEvent.change(screen.getByLabelText(/título/i), {
+      target: { value: 'Fix network - URGENT' },
+    });
     fireEvent.click(screen.getByRole('button', { name: /guardar cambios/i }));
 
     await waitFor(() => {
-      expect(mockedUpdate).toHaveBeenCalledWith('wo1', expect.objectContaining({ title: 'Fix network - URGENT' }));
+      expect(mockedUpdate).toHaveBeenCalledWith(
+        'wo1',
+        expect.objectContaining({ title: 'Fix network - URGENT' }),
+      );
       expect(onSaved).toHaveBeenCalled();
     });
   });

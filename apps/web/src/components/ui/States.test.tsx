@@ -1,12 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
-import {
-  Panel,
-  Badge,
-  Alert,
-  LoadingState,
-  EmptyState,
-} from './States';
+import { Panel, Badge, Alert, LoadingState, EmptyState } from './States';
 
 describe('Panel', () => {
   it('renders with default variant', () => {
@@ -82,7 +76,7 @@ describe('Badge', () => {
 
   it('shows remove button when onRemove is provided', () => {
     render(<Badge onRemove={() => {}}>Removable</Badge>);
-    const removeBtn = screen.getByLabelText(/remove badge/i);
+    const removeBtn = screen.getByLabelText(/quitar etiqueta/i);
     expect(removeBtn).toBeInTheDocument();
     expect(removeBtn).toHaveTextContent('✕');
   });
@@ -90,7 +84,7 @@ describe('Badge', () => {
   it('calls onRemove handler when remove button is clicked', () => {
     const handleRemove = vi.fn();
     render(<Badge onRemove={handleRemove}>Removable</Badge>);
-    const removeBtn = screen.getByLabelText(/remove badge/i);
+    const removeBtn = screen.getByLabelText(/quitar etiqueta/i);
     fireEvent.click(removeBtn);
     expect(handleRemove).toHaveBeenCalledOnce();
   });
@@ -134,18 +128,14 @@ describe('Alert', () => {
   });
 
   it('shows action button when provided', () => {
-    render(
-      <Alert action={{ label: 'Undo', onClick: () => {} }}>Action alert</Alert>
-    );
+    render(<Alert action={{ label: 'Undo', onClick: () => {} }}>Action alert</Alert>);
     const actionBtn = screen.getByText(/undo/i);
     expect(actionBtn).toBeInTheDocument();
   });
 
   it('calls action handler when button is clicked', () => {
     const handleAction = vi.fn();
-    render(
-      <Alert action={{ label: 'Click', onClick: handleAction }}>Alert</Alert>
-    );
+    render(<Alert action={{ label: 'Click', onClick: handleAction }}>Alert</Alert>);
     const actionBtn = screen.getByText(/click/i);
     fireEvent.click(actionBtn);
     expect(handleAction).toHaveBeenCalledOnce();
@@ -153,14 +143,14 @@ describe('Alert', () => {
 
   it('shows close button when onClose is provided', () => {
     render(<Alert onClose={() => {}}>Closeable</Alert>);
-    const closeBtn = screen.getByLabelText(/dismiss alert/i);
+    const closeBtn = screen.getByLabelText(/cerrar alerta/i);
     expect(closeBtn).toBeInTheDocument();
   });
 
   it('calls onClose handler when close button is clicked', () => {
     const handleClose = vi.fn();
     render(<Alert onClose={handleClose}>Closeable</Alert>);
-    const closeBtn = screen.getByLabelText(/dismiss alert/i);
+    const closeBtn = screen.getByLabelText(/cerrar alerta/i);
     fireEvent.click(closeBtn);
     expect(handleClose).toHaveBeenCalledOnce();
   });
@@ -169,22 +159,19 @@ describe('Alert', () => {
 describe('LoadingState', () => {
   it('renders spinner by default', () => {
     render(<LoadingState />);
-    const spinner = screen.getByText(/loading.../i)
-      .previousElementSibling;
+    const spinner = screen.getByText(/cargando.../i).previousElementSibling;
     expect(spinner).toHaveClass('animate-spin');
   });
 
   it('renders skeleton variant', () => {
     render(<LoadingState variant="skeleton" />);
-    const skeleton = screen.getByText(/loading.../i)
-      .previousElementSibling;
+    const skeleton = screen.getByText(/cargando.../i).previousElementSibling;
     expect(skeleton).toHaveClass('animate-pulse', 'bg-panel-default');
   });
 
   it('renders pulse variant', () => {
     render(<LoadingState variant="pulse" />);
-    const pulse = screen.getByText(/loading.../i)
-      .previousElementSibling;
+    const pulse = screen.getByText(/cargando.../i).previousElementSibling;
     expect(pulse).toHaveClass('animate-pulse', 'rounded-full');
   });
 
@@ -202,11 +189,11 @@ describe('LoadingState', () => {
 
   it('renders with different sizes', () => {
     const { rerender } = render(<LoadingState size="sm" />);
-    let loader = screen.getByText(/loading.../i).previousElementSibling;
+    let loader = screen.getByText(/cargando.../i).previousElementSibling;
     expect(loader).toHaveClass('w-4', 'h-4');
 
     rerender(<LoadingState size="lg" />);
-    loader = screen.getByText(/loading.../i).previousElementSibling;
+    loader = screen.getByText(/cargando.../i).previousElementSibling;
     expect(loader).toHaveClass('w-12', 'h-12');
   });
 });
@@ -226,44 +213,27 @@ describe('EmptyState', () => {
   });
 
   it('displays icon when provided', () => {
-    render(
-      <EmptyState
-        title="Empty"
-        icon={<span data-testid="empty-icon">📭</span>}
-      />
-    );
+    render(<EmptyState title="Empty" icon={<span data-testid="empty-icon">📭</span>} />);
     const icon = screen.getByTestId('empty-icon');
     expect(icon).toBeInTheDocument();
   });
 
   it('shows action button when provided', () => {
-    render(
-      <EmptyState
-        title="Empty"
-        action={{ label: 'Create', onClick: () => {} }}
-      />
-    );
+    render(<EmptyState title="Empty" action={{ label: 'Create', onClick: () => {} }} />);
     const actionBtn = screen.getByText(/create/i);
     expect(actionBtn).toBeInTheDocument();
   });
 
   it('calls action handler when button is clicked', () => {
     const handleAction = vi.fn();
-    render(
-      <EmptyState
-        title="Empty"
-        action={{ label: 'Add', onClick: handleAction }}
-      />
-    );
+    render(<EmptyState title="Empty" action={{ label: 'Add', onClick: handleAction }} />);
     const actionBtn = screen.getByText(/add/i);
     fireEvent.click(actionBtn);
     expect(handleAction).toHaveBeenCalledOnce();
   });
 
   it('applies custom className', () => {
-    const { container } = render(
-      <EmptyState title="Custom" className="custom-class" />
-    );
+    const { container } = render(<EmptyState title="Custom" className="custom-class" />);
     const emptyState = container.firstChild;
     expect(emptyState).toHaveClass('custom-class');
   });

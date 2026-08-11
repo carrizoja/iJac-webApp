@@ -5,7 +5,10 @@ import { google, calendar_v3 } from 'googleapis';
 import { CalendarConnectionRepository } from './connection.repository';
 import { CalendarEventMappingRepository, CalendarEventMapping } from './event-mapping.repository';
 import { CredentialEncryption } from './credential-encryption';
-import { CALENDAR_CONNECTION_REPOSITORY, CALENDAR_EVENT_MAPPING_REPOSITORY } from './calendar-connection.constants';
+import {
+  CALENDAR_CONNECTION_REPOSITORY,
+  CALENDAR_EVENT_MAPPING_REPOSITORY,
+} from './calendar-connection.constants';
 import { ApiEnvironment } from '../config/env';
 
 export interface GoogleCalendarClient {
@@ -24,8 +27,10 @@ export class CalendarSyncService {
 
   constructor(
     private readonly config: ConfigService<ApiEnvironment>,
-    @Inject(CALENDAR_CONNECTION_REPOSITORY) private readonly connectionRepository: CalendarConnectionRepository,
-    @Inject(CALENDAR_EVENT_MAPPING_REPOSITORY) private readonly mappingRepository: CalendarEventMappingRepository,
+    @Inject(CALENDAR_CONNECTION_REPOSITORY)
+    private readonly connectionRepository: CalendarConnectionRepository,
+    @Inject(CALENDAR_EVENT_MAPPING_REPOSITORY)
+    private readonly mappingRepository: CalendarEventMappingRepository,
   ) {
     this.encryption = new CredentialEncryption(config.getOrThrow('CREDENTIAL_ENCRYPTION_KEY'));
   }
@@ -69,10 +74,7 @@ export class CalendarSyncService {
       );
     }
 
-    const existing = await this.mappingRepository.findByWorkOrderId(
-      organizationId,
-      workOrder.id,
-    );
+    const existing = await this.mappingRepository.findByWorkOrderId(organizationId, workOrder.id);
     const event = this.buildEvent(workOrder);
 
     try {
@@ -106,17 +108,9 @@ export class CalendarSyncService {
     } catch (err) {
       const code = this.classifyError(err);
       if (code === 'reconnect_required') {
-        await this.connectionRepository.updateStatus(
-          uid,
-          'reconnect_required',
-        );
+        await this.connectionRepository.updateStatus(uid, 'reconnect_required');
       }
-      return this.failMapping(
-        organizationId,
-        workOrder.id,
-        code,
-        this.errorMessage(err),
-      );
+      return this.failMapping(organizationId, workOrder.id, code, this.errorMessage(err));
     }
   }
 
@@ -126,18 +120,9 @@ export class CalendarSyncService {
     workOrderId: string,
   ): Promise<SyncResult> {
     const google = await this.getClient(uid);
-    const existing = await this.mappingRepository.findByWorkOrderId(
-      organizationId,
-      workOrderId,
-    );
+    const existing = await this.mappingRepository.findByWorkOrderId(organizationId, workOrderId);
     if (!existing) {
-      return this.saveMapping(
-        organizationId,
-        workOrderId,
-        undefined,
-        undefined,
-        'synced',
-      );
+      return this.saveMapping(organizationId, workOrderId, undefined, undefined, 'synced');
     }
 
     if (google && existing.googleEventId && existing.googleCalendarId) {
@@ -149,17 +134,9 @@ export class CalendarSyncService {
       } catch (err) {
         const code = this.classifyError(err);
         if (code === 'reconnect_required') {
-          await this.connectionRepository.updateStatus(
-            uid,
-            'reconnect_required',
-          );
+          await this.connectionRepository.updateStatus(uid, 'reconnect_required');
         }
-        return this.failMapping(
-          organizationId,
-          workOrderId,
-          code,
-          this.errorMessage(err),
-        );
+        return this.failMapping(organizationId, workOrderId, code, this.errorMessage(err));
       }
     }
 
@@ -183,21 +160,41 @@ export class CalendarSyncService {
     return { connected: connection.status === 'active', status: connection.status };
   }
 
-  private buildEvent(workOrder: { title: string; description?: string; dueDate?: string; status: string; clientName?: string }): calendar_v3.Schema$Event {
-    const description = [workOrder.description, workOrder.status, workOrder.clientName ? `Cliente: ${workOrder.clientName}` : undefined]
+  private buildEvent(workOrder: {
+    title: string;
+    description?: string;
+    dueDate?: string;
+    status: string;
+    clientName?: string;
+  }): calendar_v3.Schema$Event {
+    const description = [
+      workOrder.description,
+      workOrder.status,
+      workOrder.clientName ? `Cliente: ${workOrder.clientName}` : undefined,
+    ]
       .filter(Boolean)
       .join(' | ');
+    const startDate = workOrder.dueDate?.slice(0, 10);
+    let endDate: string | undefined;
+    if (startDate) {
+      const [year, month, day] = startDate.split('-').map(Number);
+      endDate = new Date(Date.UTC(year, month - 1, day + 1)).toISOString().slice(0, 10);
+    }
     return {
       summary: workOrder.title,
       description,
-      start: workOrder.dueDate ? { dateTime: workOrder.dueDate } : undefined,
-      end: workOrder.dueDate ? { dateTime: workOrder.dueDate } : undefined,
+      start: startDate ? { date: startDate } : undefined,
+      end: endDate ? { date: endDate } : undefined,
     };
   }
 
   private classifyError(err: unknown): CalendarEventMapping['status'] {
     const message = this.errorMessage(err).toLowerCase();
-    if (message.includes('invalid_grant') || message.includes('token') || message.includes('unauthorized')) {
+    if (
+      message.includes('invalid_grant') ||
+      message.includes('token') ||
+      message.includes('unauthorized')
+    ) {
       return 'reconnect_required';
     }
     return 'failed';

@@ -1,8 +1,15 @@
 import { useRef, useState } from 'react';
 import type { Client, WorkOrderClientSummary } from '@ijac/shared';
-import { WORK_ORDER_STATUSES, WORK_ORDER_PRIORITIES, WorkOrderStatus, WorkOrderPriority } from '@ijac/shared';
+import {
+  WORK_ORDER_STATUSES,
+  WORK_ORDER_PRIORITIES,
+  WorkOrderStatus,
+  WorkOrderPriority,
+} from '@ijac/shared';
 import { createWorkOrder, updateWorkOrder } from '../../lib/resources';
 import { Input, Textarea, Select, Button, Alert } from '../ui';
+import { useLanguage } from '../../hooks/useLanguage';
+import { priorityLabel, statusLabel } from '../../i18n/format';
 
 interface WorkOrderFormProps {
   clients: Client[];
@@ -20,6 +27,7 @@ interface FormErrors {
 }
 
 export function WorkOrderForm({ clients, workOrder, onSaved, onCancel }: WorkOrderFormProps) {
+  const { language, t } = useLanguage();
   const [form, setForm] = useState({
     title: workOrder?.title ?? '',
     description: '',
@@ -34,10 +42,10 @@ export function WorkOrderForm({ clients, workOrder, onSaved, onCancel }: WorkOrd
 
   const validate = (): boolean => {
     const next: FormErrors = {};
-    if (!form.title.trim()) next.title = 'El título es obligatorio';
-    if (!form.clientId) next.clientId = 'El cliente es obligatorio';
-    if (!form.status) next.status = 'El estado es obligatorio';
-    if (!form.priority) next.priority = 'La prioridad es obligatoria';
+    if (!form.title.trim()) next.title = t('workOrders.validation.title');
+    if (!form.clientId) next.clientId = t('workOrders.validation.client');
+    if (!form.status) next.status = t('workOrders.validation.status');
+    if (!form.priority) next.priority = t('workOrders.validation.priority');
     setErrors(next);
     return Object.keys(next).length === 0;
   };
@@ -67,8 +75,8 @@ export function WorkOrderForm({ clients, workOrder, onSaved, onCancel }: WorkOrd
         });
       }
       onSaved();
-    } catch (err) {
-      setErrors({ general: err instanceof Error ? err.message : 'Error al guardar' });
+    } catch {
+      setErrors({ general: t('workOrders.saveError') });
     } finally {
       setSubmitting(false);
     }
@@ -84,7 +92,7 @@ export function WorkOrderForm({ clients, workOrder, onSaved, onCancel }: WorkOrd
 
       <Input
         id="title"
-        label="Título"
+        label={t('workOrders.title')}
         value={form.title}
         onChange={(e) => setForm({ ...form, title: e.target.value })}
         error={errors.title}
@@ -93,13 +101,13 @@ export function WorkOrderForm({ clients, workOrder, onSaved, onCancel }: WorkOrd
 
       <Select
         id="clientId"
-        label="Cliente"
+        label={t('workOrders.client')}
         value={form.clientId}
         onChange={(e) => setForm({ ...form, clientId: e.target.value })}
         error={errors.clientId}
         required
       >
-        <option value="">Seleccionar cliente</option>
+        <option value="">{t('workOrders.selectClient')}</option>
         {clients.map((c) => (
           <option key={c.id} value={c.id}>
             {c.name}
@@ -110,36 +118,36 @@ export function WorkOrderForm({ clients, workOrder, onSaved, onCancel }: WorkOrd
       <div className="grid gap-4 sm:grid-cols-2">
         <Select
           id="status"
-          label="Estado"
+          label={t('workOrders.status')}
           value={form.status}
           onChange={(e) => setForm({ ...form, status: e.target.value })}
           error={errors.status}
           required
         >
           <option value="" disabled>
-            Seleccionar estado
+            {t('workOrders.selectStatus')}
           </option>
           {WORK_ORDER_STATUSES.map((s) => (
             <option key={s} value={s}>
-              {s}
+              {statusLabel(s, language)}
             </option>
           ))}
         </Select>
 
         <Select
           id="priority"
-          label="Prioridad"
+          label={t('workOrders.priority')}
           value={form.priority}
           onChange={(e) => setForm({ ...form, priority: e.target.value })}
           error={errors.priority}
           required
         >
           <option value="" disabled>
-            Seleccionar prioridad
+            {t('workOrders.selectPriority')}
           </option>
           {WORK_ORDER_PRIORITIES.map((p) => (
             <option key={p} value={p}>
-              {p}
+              {priorityLabel(p, language)}
             </option>
           ))}
         </Select>
@@ -150,15 +158,13 @@ export function WorkOrderForm({ clients, workOrder, onSaved, onCancel }: WorkOrd
           ref={dueDateRef}
           id="dueDate"
           type="date"
-          label="Fecha de vencimiento"
+          label={t('workOrders.dueDate')}
           wrapperClassName="flex-1"
           value={form.dueDate ? form.dueDate.slice(0, 10) : ''}
           onChange={(e) =>
             setForm({
               ...form,
-              dueDate: e.target.value
-                ? new Date(e.target.value).toISOString()
-                : '',
+              dueDate: e.target.value ? `${e.target.value}T00:00:00.000Z` : '',
             })
           }
         />
@@ -169,7 +175,7 @@ export function WorkOrderForm({ clients, workOrder, onSaved, onCancel }: WorkOrd
             dueDateRef.current?.focus();
             dueDateRef.current?.showPicker?.();
           }}
-          aria-label="Abrir calendario de fecha de vencimiento"
+          aria-label={t('workOrders.openDueDate')}
         >
           <svg
             aria-hidden="true"
@@ -181,13 +187,13 @@ export function WorkOrderForm({ clients, workOrder, onSaved, onCancel }: WorkOrd
           >
             <path d="M7 2v3M17 2v3M3 9h18M5 4h14a2 2 0 0 1 2 2v13a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2Z" />
           </svg>
-          Abrir calendario
+          {t('workOrders.openCalendar')}
         </button>
       </div>
 
       <Textarea
         id="description"
-        label="Descripción"
+        label={t('workOrders.description')}
         value={form.description}
         onChange={(e) => setForm({ ...form, description: e.target.value })}
         rows={3}
@@ -197,17 +203,17 @@ export function WorkOrderForm({ clients, workOrder, onSaved, onCancel }: WorkOrd
         <Button
           type="button"
           variant="ghost"
-          className="min-h-11 rounded-xl border border-[#2f2f2f] bg-[#080808] px-5 text-white transition-colors duration-200 hover:border-[#3a3a3a] hover:bg-[#0f0f0f]"
+          className="action-surface min-h-11 rounded-xl border px-5 transition-colors duration-200"
           onClick={onCancel}
         >
-          Cancelar
+          {t('common.cancel')}
         </Button>
-        <Button
-          type="submit"
-          isLoading={submitting}
-          className="min-h-11 rounded-xl px-5"
-        >
-          {submitting ? 'Guardando...' : workOrder ? 'Guardar cambios' : 'Crear orden'}
+        <Button type="submit" isLoading={submitting} className="min-h-11 rounded-xl px-5">
+          {submitting
+            ? t('common.saving')
+            : workOrder
+              ? t('common.saveChanges')
+              : t('workOrders.create')}
         </Button>
       </div>
     </form>

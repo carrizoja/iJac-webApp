@@ -1,39 +1,56 @@
 import { useState, useEffect } from 'react';
 import { getCalendarConnectionStatus, startCalendarConnection } from '../../lib/calendar';
 import { Button, Alert, Panel, LoadingState } from '../ui';
+import { useLanguage } from '../../hooks/useLanguage';
+import type { TranslationKey } from '../../i18n/translations';
 
 export function CalendarConnection() {
+  const { t } = useLanguage();
   const primaryActionButtonClass =
-    'rounded-xl border-2 border-[#00d084] bg-[#080808] px-6 text-white transition-all duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] hover:border-[#00c978] hover:bg-[#00c978] hover:text-white hover:shadow-[0_0_0_1px_#00c978,0_10px_28px_rgba(0,201,120,0.45)] active:translate-y-0 active:shadow-[0_0_0_1px_#00c978,0_6px_16px_rgba(0,201,120,0.35)]';
+    'action-brand rounded-xl border-2 px-6 transition-all duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] active:translate-y-0';
   const [status, setStatus] = useState<{ connected: boolean; status: string } | null>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [errorKey, setErrorKey] = useState<TranslationKey | null>(null);
   const [connecting, setConnecting] = useState(false);
+  const [connectionFeedback, setConnectionFeedback] = useState<'success' | 'error' | null>(null);
 
   const loadStatus = async () => {
     try {
       setLoading(true);
       const result = await getCalendarConnectionStatus();
       setStatus(result);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Error al consultar estado');
+    } catch {
+      setErrorKey('calendar.statusError');
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const url = new URL(window.location.href);
+      const connection = url.searchParams.get('connection');
+      if (connection === 'success' || connection === 'error') {
+        setConnectionFeedback(connection);
+        url.searchParams.delete('connection');
+        window.history.replaceState(
+          window.history.state,
+          '',
+          `${url.pathname}${url.search}${url.hash}`,
+        );
+      }
+    }
     loadStatus();
   }, []);
 
   const handleConnect = async () => {
     setConnecting(true);
-    setError(null);
+    setErrorKey(null);
     try {
       const result = await startCalendarConnection();
       window.location.href = result.authorizationUrl;
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Error al iniciar conexión');
+    } catch {
+      setErrorKey('calendar.connectionStartError');
       setConnecting(false);
     }
   };
@@ -41,14 +58,17 @@ export function CalendarConnection() {
   if (loading) {
     return (
       <Panel className="calendar-state-panel" data-testid="calendar-connection-loading-state">
-        <LoadingState message="Consultando estado de Google Calendar..." />
+        <LoadingState message={t('calendar.checking')} />
       </Panel>
     );
   }
 
   return (
-    <Panel className="rounded-xl border border-border-subtle bg-bg-primary/70 p-4 sm:p-6" data-testid="calendar-connection-panel">
-      <h2 className="text-lg font-medium text-fg-primary">Conexión con Google Calendar</h2>
+    <Panel
+      className="rounded-xl border border-border-subtle bg-bg-primary/70 p-4 sm:p-6"
+      data-testid="calendar-connection-panel"
+    >
+      <h2 className="text-lg font-medium text-fg-primary">{t('calendar.connectionTitle')}</h2>
       <div className="mt-2 flex items-center gap-2 text-sm">
         <span
           className={`inline-block h-2 w-2 rounded-full ${
@@ -57,12 +77,29 @@ export function CalendarConnection() {
           aria-hidden="true"
         />
         <span className="text-fg-muted">
-          {status?.connected ? 'Conectado' : 'Desconectado'}
+          {status?.connected ? t('calendar.connected') : t('calendar.disconnected')}
         </span>
       </div>
-      {error && (
-        <Alert type="error" icon="⚠️" onClose={() => setError(null)} className="mt-2" role="alert" aria-live="assertive">
-          {error}
+      {connectionFeedback === 'success' && (
+        <Alert type="success" icon="✓" className="mt-2" role="status" aria-live="polite">
+          {t('calendar.connectionSuccess')}
+        </Alert>
+      )}
+      {connectionFeedback === 'error' && (
+        <Alert type="error" icon="⚠️" className="mt-2" role="alert" aria-live="assertive">
+          {t('calendar.connectionError')}
+        </Alert>
+      )}
+      {errorKey && (
+        <Alert
+          type="error"
+          icon="⚠️"
+          onClose={() => setErrorKey(null)}
+          className="mt-2"
+          role="alert"
+          aria-live="assertive"
+        >
+          {t(errorKey)}
         </Alert>
       )}
       {!status?.connected && (
@@ -73,7 +110,7 @@ export function CalendarConnection() {
           className={`mt-4 min-h-11 ${primaryActionButtonClass}`}
           variant="ghost"
         >
-          {connecting ? 'Conectando...' : 'Conectar con Google Calendar'}
+          {connecting ? t('calendar.connecting') : t('calendar.connect')}
         </Button>
       )}
     </Panel>

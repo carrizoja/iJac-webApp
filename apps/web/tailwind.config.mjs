@@ -26,14 +26,14 @@ export default {
         base: '0 4px 6px -1px rgba(0, 0, 0, 0.5), 0 2px 4px -1px rgba(0, 0, 0, 0.3)',
         md: '0 10px 15px -3px rgba(0, 0, 0, 0.5), 0 4px 6px -2px rgba(0, 0, 0, 0.3)',
         lg: '0 20px 25px -5px rgba(0, 0, 0, 0.5), 0 10px 10px -5px rgba(0, 0, 0, 0.2)',
-        
+
         /* Glass surface shadow (subtle) */
         glass: '0 8px 32px 0 rgba(0, 0, 0, 0.3)',
-        
+
         /* Focus shadow */
         'focus-ring': '0 0 0 2px #020617, 0 0 0 4px #60a5fa',
         'glow-cyan': 'var(--shadow-glow-cyan)',
-        
+
         /* Inner shadow for inset effects */
         'inset-sm': 'inset 0 1px 2px 0 rgba(0, 0, 0, 0.5)',
         'inset-base': 'inset 0 2px 4px 0 rgba(0, 0, 0, 0.5)',
@@ -48,11 +48,15 @@ export default {
         'panel-default': 'var(--color-panel-default)',
         'panel-hover': 'var(--color-panel-hover)',
         'panel-active': 'var(--color-panel-active)',
+        'panel-elevated': 'var(--color-panel-elevated)',
 
         /* Borders */
         'border-default': 'var(--color-border-default)',
         'border-subtle': 'var(--color-border-subtle)',
         'border-strong': 'var(--color-border-strong)',
+        'border-active': 'var(--color-border-active)',
+        'border-primary': 'var(--color-border-primary)',
+        'border-muted': 'var(--color-border-muted)',
 
         /* Foreground */
         'fg-primary': 'var(--color-fg-primary)',
@@ -62,6 +66,7 @@ export default {
         /* Muted */
         'muted-bg': 'var(--color-muted-bg)',
         'muted-fg': 'var(--color-muted-fg)',
+        'bg-accent': 'var(--color-bg-accent)',
 
         /* Gradients as background colors */
         'gradient-primary-start': 'var(--color-gradient-start)',

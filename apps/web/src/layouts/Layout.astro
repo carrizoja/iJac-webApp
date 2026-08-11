@@ -1,11 +1,12 @@
 ---
 import '../styles/global.css';
+import { translate, type TranslationKey } from '../i18n/translations';
 
 export interface Props {
-  title: string;
+  titleKey: TranslationKey;
 }
 
-const { title } = Astro.props;
+const { titleKey } = Astro.props;
 ---
 
 <!doctype html>
@@ -14,10 +15,40 @@ const { title } = Astro.props;
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <meta name="description" content="iJac IT Solutions internal operations" />
-    <title>{title}</title>
+    <meta
+      name="description"
+      content={translate('es', 'meta.description')}
+      data-i18n-attr="content:meta.description"
+    />
+    <style is:inline>html[lang='en']:not([data-language-ready]) body { visibility: hidden; }</style>
+    <script is:inline>
+      (() => {
+        let theme = 'dark';
+        let language = 'es';
+
+        try {
+          const storedTheme = window.localStorage.getItem('ijac-theme');
+          if (storedTheme === 'dark' || storedTheme === 'light') theme = storedTheme;
+          const storedLanguage = window.localStorage.getItem('ijac-language');
+          if (storedLanguage === 'es' || storedLanguage === 'en') language = storedLanguage;
+        } catch {
+          // Dark and Spanish remain the safe defaults when storage cannot be read.
+        }
+
+        const root = document.documentElement;
+        root.lang = language;
+        root.classList.remove('dark', 'light');
+        root.classList.add(theme);
+        root.style.colorScheme = theme;
+      })();
+    </script>
+    <title data-i18n={titleKey}>{translate('es', titleKey)}</title>
+    <script>
+      import { initializeDomTranslations } from '../i18n/dom';
+      initializeDomTranslations();
+    </script>
   </head>
-  <body class="min-h-screen bg-black text-slate-100">
+  <body class="min-h-screen bg-bg-primary text-fg-primary">
     <slot />
   </body>
 </html>

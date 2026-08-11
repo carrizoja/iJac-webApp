@@ -21,8 +21,6 @@ describe('ClientForm', () => {
     });
   });
 
-
-
   it('calls createClient with valid data', async () => {
     const onSaved = vi.fn();
     const mockedCreate = createClient as unknown as ReturnType<typeof vi.fn>;
@@ -79,7 +77,10 @@ describe('ClientForm', () => {
     fireEvent.change(screen.getByLabelText(/teléfono/i), { target: { value: '123' } });
     fireEvent.click(screen.getByRole('button', { name: /crear cliente/i }));
     await waitFor(() => {
-      expect(screen.getByText('Server error')).toBeInTheDocument();
+      expect(
+        screen.getByText('No se pudo guardar el cliente. Intentá nuevamente.'),
+      ).toBeInTheDocument();
+      expect(screen.queryByText('Server error')).not.toBeInTheDocument();
       expect(onSaved).not.toHaveBeenCalled();
     });
   });
@@ -118,7 +119,10 @@ describe('ClientForm', () => {
     fireEvent.click(screen.getByRole('button', { name: /guardar cambios/i }));
 
     await waitFor(() => {
-      expect(mockedUpdate).toHaveBeenCalledWith('c1', expect.objectContaining({ name: 'Acme Inc Updated' }));
+      expect(mockedUpdate).toHaveBeenCalledWith(
+        'c1',
+        expect.objectContaining({ name: 'Acme Inc Updated' }),
+      );
       expect(onSaved).toHaveBeenCalled();
     });
   });
