@@ -80,7 +80,7 @@ Turborepo orchestrates the task graph and caches outputs across workspaces.
 
 ### `apps/web`
 
-See `apps/web/.env.example`. All variables are browser-safe and prefixed with `PUBLIC_`.
+Copy `apps/web/.env.example` to `apps/web/.env` and replace every placeholder. All variables are browser-safe and prefixed with `PUBLIC_`. Production builds fail before generating output when a required value is missing, empty, or invalid.
 
 ### `apps/api`
 

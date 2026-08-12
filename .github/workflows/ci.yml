@@ -10,6 +10,12 @@ jobs:
   quality:
     name: Lint, typecheck, test, and build
     runs-on: ubuntu-latest
+    env:
+      PUBLIC_FIREBASE_API_KEY: ci-firebase-web-api-key
+      PUBLIC_FIREBASE_AUTH_DOMAIN: ci.example.test
+      PUBLIC_FIREBASE_PROJECT_ID: ci-firebase-project
+      PUBLIC_FIREBASE_APP_ID: ci-firebase-web-app
+      PUBLIC_API_URL: https://api.example.test/api
     steps:
       - name: Checkout
         uses: actions/checkout@v6

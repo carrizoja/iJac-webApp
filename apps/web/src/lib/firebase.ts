@@ -1,11 +1,17 @@
 import { getApp, getApps, initializeApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
+import {
+  PUBLIC_FIREBASE_API_KEY,
+  PUBLIC_FIREBASE_APP_ID,
+  PUBLIC_FIREBASE_AUTH_DOMAIN,
+  PUBLIC_FIREBASE_PROJECT_ID,
+} from 'astro:env/client';
 
 const firebaseConfig = {
-  apiKey: import.meta.env.PUBLIC_FIREBASE_API_KEY,
-  authDomain: import.meta.env.PUBLIC_FIREBASE_AUTH_DOMAIN,
-  projectId: import.meta.env.PUBLIC_FIREBASE_PROJECT_ID,
-  appId: import.meta.env.PUBLIC_FIREBASE_APP_ID,
+  apiKey: PUBLIC_FIREBASE_API_KEY,
+  authDomain: PUBLIC_FIREBASE_AUTH_DOMAIN,
+  projectId: PUBLIC_FIREBASE_PROJECT_ID,
+  appId: PUBLIC_FIREBASE_APP_ID,
 };
 
 export function getFirebaseAuth() {

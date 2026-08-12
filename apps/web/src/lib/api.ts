@@ -1,3 +1,5 @@
+import { PUBLIC_API_URL } from 'astro:env/client';
+
 interface ApiError {
   code: string;
   message: string;
@@ -29,12 +31,7 @@ function isApiError(value: unknown): value is ApiError {
 }
 
 function buildApiUrl(path: string): URL {
-  const baseUrl = import.meta.env.PUBLIC_API_URL;
-  const fallbackBaseUrl = 'http://localhost:3001/api';
-  const resolvedBaseUrl = baseUrl && baseUrl !== 'undefined' ? baseUrl : fallbackBaseUrl;
-  const normalizedBaseUrl = resolvedBaseUrl.endsWith('/')
-    ? resolvedBaseUrl
-    : `${resolvedBaseUrl}/`;
+  const normalizedBaseUrl = PUBLIC_API_URL.endsWith('/') ? PUBLIC_API_URL : `${PUBLIC_API_URL}/`;
   const normalizedPath = path.startsWith('/') ? path.slice(1) : path;
 
   return new URL(normalizedPath, normalizedBaseUrl);
