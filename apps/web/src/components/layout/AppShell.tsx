@@ -41,7 +41,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="min-h-screen">
-      <header className="px-4 pt-4">
+      <header className="app-shell-header px-4 pt-4">
         <div className="mx-auto max-w-7xl">
           <div className="navbar-surface rounded-2xl border px-3 py-2 backdrop-blur">
             <div className="flex flex-wrap items-center justify-between gap-3">
@@ -133,7 +133,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </div>
         </div>
       </header>
-      <main className="mx-auto max-w-7xl p-4">{children}</main>
+      <main className="app-shell-main mx-auto max-w-7xl p-4">{children}</main>
     </div>
   );
 }

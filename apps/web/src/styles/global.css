@@ -624,3 +624,63 @@
     }
   }
 }
+
+@media print {
+  @page {
+    margin: 16mm;
+  }
+
+  html,
+  html.light,
+  html.dark {
+    color-scheme: light;
+  }
+
+  body:has(.work-order-print-document) {
+    min-width: 0;
+    background: #fff !important;
+    color: #111827 !important;
+  }
+
+  body:has(.work-order-print-document) .app-shell-header,
+  .work-order-print-document .work-order-print-hidden {
+    display: none !important;
+  }
+
+  body:has(.work-order-print-document) .app-shell-main {
+    width: auto;
+    max-width: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  body:has(.work-order-print-document) .work-order-details-page {
+    padding: 0;
+  }
+
+  .work-order-print-document,
+  .work-order-print-document > header,
+  .work-order-print-document [data-print-panel] {
+    background: #fff !important;
+    background-image: none !important;
+    box-shadow: none !important;
+    color: #111827 !important;
+    text-shadow: none !important;
+  }
+
+  .work-order-print-document > header,
+  .work-order-print-document [data-print-panel] {
+    border-color: #d1d5db !important;
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  .work-order-print-document > header span {
+    background: transparent !important;
+    box-shadow: none !important;
+  }
+
+  .work-order-print-document :is(h1, h2, p, span, dt, dd) {
+    color: #111827 !important;
+  }
+}

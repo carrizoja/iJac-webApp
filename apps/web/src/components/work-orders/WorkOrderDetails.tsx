@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import type { Client, WorkOrder } from '@ijac/shared';
+import { FileDown, MessageCircle } from 'lucide-react';
 import { getClient, getWorkOrder } from '../../lib/resources';
-import { Alert, Badge, LoadingState, Panel } from '../ui';
+import { Alert, Badge, Button, LoadingState, Panel } from '../ui';
 import { useLanguage } from '../../hooks/useLanguage';
 import { formatDateOnly, formatDateTime, priorityLabel, statusLabel } from '../../i18n/format';
 
@@ -16,7 +17,7 @@ function BackToOrders() {
   return (
     <a
       href="/work-orders"
-      className="action-surface inline-flex min-h-11 items-center rounded-lg border px-4 text-sm font-medium transition-colors hover:border-accent-brand hover:text-accent-brand focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
+      className="work-order-print-hidden action-surface inline-flex min-h-11 items-center rounded-lg border px-4 text-sm font-medium transition-colors hover:border-accent-brand hover:text-accent-brand focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
     >
       {t('workOrders.back')}
     </a>
@@ -93,10 +94,58 @@ export function WorkOrderDetails() {
   }
 
   const { workOrder, client } = state;
+  const organization = client.organization?.trim();
+  const clientDisplayName = organization ? `${client.name} (${organization})` : client.name;
+  const dueDate = formatDateOnly(workOrder.dueDate, language);
+  const detailsUrl = window.location.href;
+  const whatsAppMessage = [
+    t('workOrders.shareMessageTitle', { title: workOrder.title }),
+    t('workOrders.shareMessageClient', { client: clientDisplayName }),
+    t('workOrders.statusValue', { value: statusLabel(workOrder.status, language) }),
+    t('workOrders.priorityValue', { value: priorityLabel(workOrder.priority, language) }),
+    t('workOrders.shareMessageDue', { value: dueDate }),
+    t('workOrders.shareMessageUrl', { url: detailsUrl }),
+  ].join('\n');
+  const whatsAppHref = `https://wa.me/?text=${encodeURIComponent(whatsAppMessage)}`;
 
   return (
-    <article className="space-y-6" aria-labelledby="work-order-title">
+    <article
+      className="work-order-print-document space-y-6"
+      aria-labelledby="work-order-title"
+    >
       <BackToOrders />
+
+      <div
+        className="work-order-print-hidden rounded-xl border border-border-default bg-bg-secondary/60 p-4 sm:p-5"
+        role="group"
+        aria-label={t('workOrders.documentActions')}
+      >
+        <div className="flex flex-wrap gap-3">
+          <Button
+            type="button"
+            variant="secondary"
+            size="lg"
+            onClick={() => window.print()}
+            startIcon={<FileDown aria-hidden="true" focusable="false" className="h-5 w-5" />}
+          >
+            {t('workOrders.savePdf')}
+          </Button>
+          <a
+            href={whatsAppHref}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="action-brand inline-flex min-h-11 items-center justify-center rounded-md border px-6 text-base font-medium transition-fast active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2"
+          >
+            <MessageCircle
+              aria-hidden="true"
+              focusable="false"
+              className="mr-2 h-5 w-5"
+            />
+            {t('workOrders.shareWhatsApp')}
+          </a>
+        </div>
+        <p className="mt-3 text-sm leading-6 text-fg-muted">{t('workOrders.pdfHelper')}</p>
+      </div>
 
       <header className="rounded-2xl border border-border-default bg-bg-secondary/80 px-6 py-8 sm:px-8 sm:py-10">
         <p className="text-xs font-semibold uppercase tracking-[0.2em] text-accent-brand">
@@ -119,7 +168,7 @@ export function WorkOrderDetails() {
       </header>
 
       <div className="grid gap-5 lg:grid-cols-[minmax(0,1.5fr)_minmax(18rem,0.7fr)]">
-        <Panel size="lg" className="border border-border-default">
+        <Panel size="lg" className="border border-border-default" data-print-panel>
           <h2 className="text-sm font-semibold uppercase tracking-wider text-fg-muted">
             {t('workOrders.description')}
           </h2>
@@ -128,7 +177,7 @@ export function WorkOrderDetails() {
           </p>
         </Panel>
 
-        <Panel size="lg" className="border border-border-default">
+        <Panel size="lg" className="border border-border-default" data-print-panel>
           <h2 className="text-sm font-semibold uppercase tracking-wider text-fg-muted">
             {t('workOrders.client')}
           </h2>
@@ -139,14 +188,14 @@ export function WorkOrderDetails() {
         </Panel>
       </div>
 
-      <Panel size="lg" className="border border-border-default">
+      <Panel size="lg" className="border border-border-default" data-print-panel>
         <dl className="grid gap-6 sm:grid-cols-3">
           <div>
             <dt className="text-xs font-semibold uppercase tracking-wider text-fg-muted">
               {t('workOrders.due')}
             </dt>
             <dd className="mt-2 text-sm text-fg-primary">
-              {formatDateOnly(workOrder.dueDate, language)}
+              {dueDate}
             </dd>
           </div>
           <div>
