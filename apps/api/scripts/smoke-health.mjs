@@ -3,7 +3,7 @@
  *
  * Starts `node dist/main.js` on an ephemeral port with local-only
  * configuration, polls GET /api/health until it responds or the
- * deadline expires, and always terminates the child process.
+ * deadline expires, and proves graceful SIGTERM termination.
  * No Firebase or Google network calls are made.
  */
 import { spawn } from 'node:child_process';
@@ -95,16 +95,25 @@ async function main() {
   child.stdout.on('data', (chunk) => (output += chunk));
   child.stderr.on('data', (chunk) => (output += chunk));
 
+  let terminated = false;
   try {
     const body = await waitForHealth(port, child, () => output);
-    console.log(`Smoke check passed: GET /api/health on port ${port} ->`, body);
-  } finally {
     child.kill('SIGTERM');
-    await Promise.race([
-      new Promise((resolve) => child.once('exit', resolve)),
-      new Promise((resolve) => setTimeout(resolve, 5000)),
+    const exit = await Promise.race([
+      new Promise((resolve) => child.once('exit', (code, signal) => resolve({ code, signal }))),
+      new Promise((resolve) => setTimeout(() => resolve(null), 5000)),
     ]);
-    if (child.exitCode === null) {
+    if (!exit) {
+      throw new Error('API did not terminate within 5000ms after SIGTERM');
+    }
+    terminated = true;
+    console.log(
+      `Smoke check passed: GET /api/health on port ${port} ->`,
+      body,
+      `SIGTERM -> ${JSON.stringify(exit)}`,
+    );
+  } finally {
+    if (!terminated && child.exitCode === null) {
       child.kill('SIGKILL');
     }
   }

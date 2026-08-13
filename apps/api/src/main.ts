@@ -20,9 +20,7 @@ async function bootstrap() {
 
   // Support both configured origin and localhost on any port for development
   const corsOriginValue =
-    process.env.NODE_ENV === 'development'
-      ? /^http:\/\/localhost:\d+$/
-      : corsOrigin;
+    process.env.NODE_ENV === 'development' ? /^http:\/\/localhost:\d+$/ : corsOrigin;
 
   app.enableCors({
     origin: corsOriginValue,
@@ -41,6 +39,7 @@ async function bootstrap() {
     }),
   );
   app.useGlobalFilters(new HttpExceptionFilter());
+  app.enableShutdownHooks(['SIGTERM']);
 
   app.use((req: Record<string, unknown>, _res: unknown, next: () => void) => {
     req['requestId'] = crypto.randomUUID();
@@ -48,9 +47,10 @@ async function bootstrap() {
   });
 
   const port = config.get('PORT', 3001);
-  await app.listen(port);
-  console.log(`API running on http://localhost:${port}/api`);
-  console.log(`Health check: http://localhost:${port}/api/health`);
+  const host = '0.0.0.0';
+  await app.listen(port, host);
+  console.log(`API listening on http://${host}:${port}/api`);
+  console.log(`Health check: http://${host}:${port}/api/health`);
 }
 
 bootstrap().catch((error) => {

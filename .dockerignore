@@ -1,0 +1,47 @@
+# Source control, local tooling, and secrets
+.git
+.github
+.agents
+.agent
+.atl
+.claude
+.codegraph
+.codex
+.gemini
+.opencode
+.pi
+.playwright-mcp
+**/.env
+**/.env.*
+!**/.env.example
+**/*.pem
+**/*.key
+
+# Dependencies, caches, and generated output
+**/node_modules
+**/.pnpm-store
+**/.turbo
+**/.astro
+**/dist
+**/build
+**/.out
+**/*.tsbuildinfo
+**/*.log
+
+# Tests, reports, documentation, and unrelated applications
+**/coverage
+**/test-results
+**/playwright-report
+**/__snapshots__
+**/*.spec.*
+**/*.test.*
+apps/api/test
+apps/web
+docs
+openspec
+
+# Editor and operating-system files
+.idea
+.vscode
+**/.DS_Store
+**/Thumbs.db

@@ -6,6 +6,9 @@
   "author": "iJac IT Solutions",
   "license": "UNLICENSED",
   "type": "commonjs",
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "build": "nest build",
     "dev": "nest start --watch",
@@ -13,6 +16,7 @@
     "start:debug": "nest start --debug --watch",
     "start:prod": "node dist/main",
     "test:smoke": "node scripts/smoke-health.mjs",
+    "test:container": "node scripts/smoke-container.mjs",
     "lint": "eslint \"{src,apps,libs,test}/**/*.ts\"",
     "lint:fix": "eslint \"{src,apps,libs,test}/**/*.ts\" --fix",
     "typecheck": "tsc --noEmit",
