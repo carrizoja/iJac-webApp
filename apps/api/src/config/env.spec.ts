@@ -15,9 +15,9 @@ const validEnv: Record<string, unknown> = {
   CREDENTIAL_ENCRYPTION_KEY: Buffer.alloc(32).toString('base64'),
 };
 
-function without(key: string): Record<string, unknown> {
+function without(...keys: string[]): Record<string, unknown> {
   const env = { ...validEnv };
-  delete env[key];
+  for (const key of keys) delete env[key];
   return env;
 }
 
@@ -27,6 +27,13 @@ describe('validateApiEnvironment', () => {
     expect(result.FIREBASE_PROJECT_ID).toBe('ijac-test-project');
     expect(result.CORS_ORIGIN).toBe('http://localhost:4321');
     expect(result.WEB_APP_URL).toBe('http://localhost:4321');
+  });
+
+  it('accepts Application Default Credentials configuration', () => {
+    const result = validateApiEnvironment(without('FIREBASE_CLIENT_EMAIL', 'FIREBASE_PRIVATE_KEY'));
+
+    expect(result.FIREBASE_CLIENT_EMAIL).toBeUndefined();
+    expect(result.FIREBASE_PRIVATE_KEY).toBeUndefined();
   });
 
   it('applies defaults for PORT, NODE_ENV, and ALLOWED_DOMAIN', () => {
@@ -44,8 +51,6 @@ describe('validateApiEnvironment', () => {
     'CORS_ORIGIN',
     'WEB_APP_URL',
     'FIREBASE_PROJECT_ID',
-    'FIREBASE_CLIENT_EMAIL',
-    'FIREBASE_PRIVATE_KEY',
     'GOOGLE_CLIENT_ID',
     'GOOGLE_CLIENT_SECRET',
     'GOOGLE_REDIRECT_URI',
@@ -55,6 +60,15 @@ describe('validateApiEnvironment', () => {
       new RegExp(`Invalid API environment:.*${key}`),
     );
   });
+
+  it.each(['FIREBASE_CLIENT_EMAIL', 'FIREBASE_PRIVATE_KEY'])(
+    'rejects partial explicit Firebase credentials without %s',
+    (key) => {
+      expect(() => validateApiEnvironment(without(key))).toThrow(
+        /FIREBASE_CLIENT_EMAIL.*FIREBASE_PRIVATE_KEY|FIREBASE_PRIVATE_KEY.*FIREBASE_CLIENT_EMAIL/,
+      );
+    },
+  );
 
   it('rejects an invalid FIREBASE_CLIENT_EMAIL', () => {
     expect(() =>

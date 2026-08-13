@@ -4,6 +4,7 @@
  * Starts `node dist/main.js` on an ephemeral port with local-only
  * configuration, polls GET /api/health until it responds or the
  * deadline expires, and proves graceful SIGTERM termination.
+ * Synthetic explicit Firebase credentials keep startup independent of ADC.
  * No Firebase or Google network calls are made.
  */
 import { spawn } from 'node:child_process';

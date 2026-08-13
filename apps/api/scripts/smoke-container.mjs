@@ -1,5 +1,6 @@
 /**
  * Builds and exercises the API container with synthetic local-only configuration.
+ * Synthetic explicit Firebase credentials keep startup independent of ADC.
  * Firebase and Google APIs are never called; only the public health route is probed.
  */
 import { execFile, spawn } from 'node:child_process';

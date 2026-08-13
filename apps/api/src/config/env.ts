@@ -7,8 +7,8 @@ export interface ApiEnvironment {
   WEB_APP_URL: string;
   ALLOWED_DOMAIN: string;
   FIREBASE_PROJECT_ID: string;
-  FIREBASE_CLIENT_EMAIL: string;
-  FIREBASE_PRIVATE_KEY: string;
+  FIREBASE_CLIENT_EMAIL?: string;
+  FIREBASE_PRIVATE_KEY?: string;
   FIRESTORE_EMULATOR_HOST?: string;
   GOOGLE_CLIENT_ID: string;
   GOOGLE_CLIENT_SECRET: string;
@@ -27,8 +27,8 @@ export const apiEnvironmentSchema = Joi.object<ApiEnvironment>({
     .required(),
   ALLOWED_DOMAIN: Joi.string().allow('').default(''),
   FIREBASE_PROJECT_ID: Joi.string().required(),
-  FIREBASE_CLIENT_EMAIL: Joi.string().email().required(),
-  FIREBASE_PRIVATE_KEY: Joi.string().required(),
+  FIREBASE_CLIENT_EMAIL: Joi.string().email().optional(),
+  FIREBASE_PRIVATE_KEY: Joi.string().optional(),
   FIRESTORE_EMULATOR_HOST: Joi.string().optional(),
   GOOGLE_CLIENT_ID: Joi.string().required(),
   GOOGLE_CLIENT_SECRET: Joi.string().required(),
@@ -36,7 +36,9 @@ export const apiEnvironmentSchema = Joi.object<ApiEnvironment>({
   CREDENTIAL_ENCRYPTION_KEY: Joi.string().required(),
   REPOSITORY_MODE: Joi.string().valid('global', 'organization').default('global'),
   DEFAULT_ORGANIZATION_ID: Joi.string().optional(),
-}).unknown();
+})
+  .and('FIREBASE_CLIENT_EMAIL', 'FIREBASE_PRIVATE_KEY')
+  .unknown();
 
 export function validateApiEnvironment(raw: Record<string, unknown>): ApiEnvironment {
   const { error, value } = apiEnvironmentSchema.validate(raw, {

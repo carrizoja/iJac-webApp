@@ -3,6 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { initializeApp, cert } from 'firebase-admin/app';
 import { getFirestore } from 'firebase-admin/firestore';
 import { ApiEnvironment } from '../config/env';
+import { selectFirebaseCredentialMode } from './firebase-credential-mode';
 
 export const FIRESTORE = Symbol('FIRESTORE');
 
@@ -14,19 +15,21 @@ export const FIRESTORE = Symbol('FIRESTORE');
       inject: [ConfigService],
       useFactory: (config: ConfigService<ApiEnvironment>) => {
         const projectId = config.getOrThrow('FIREBASE_PROJECT_ID');
-        const clientEmail = config.getOrThrow('FIREBASE_CLIENT_EMAIL');
-        const privateKey = config
-          .getOrThrow('FIREBASE_PRIVATE_KEY')
-          .replace(/\\n/g, '\n');
+        const credentials = selectFirebaseCredentialMode({
+          FIREBASE_CLIENT_EMAIL: config.get('FIREBASE_CLIENT_EMAIL'),
+          FIREBASE_PRIVATE_KEY: config.get('FIREBASE_PRIVATE_KEY'),
+        });
 
         const app = initializeApp(
           {
-            credential: cert({
-              projectId,
-              clientEmail,
-              privateKey,
-            }),
             projectId,
+            ...(credentials.mode === 'explicit' && {
+              credential: cert({
+                projectId,
+                clientEmail: credentials.clientEmail,
+                privateKey: credentials.privateKey,
+              }),
+            }),
           },
           'ijac-api',
         );

@@ -7,7 +7,7 @@ This is a portfolio-quality, spec-driven monorepo containing an authenticated cl
 ## Workspace
 
 - `apps/web` — Astro + React islands + Tailwind CSS, intended for Vercel.
-- `apps/api` — NestJS API intended for Railway.
+- `apps/api` — NestJS API intended for Google Cloud Run.
 - `packages/shared` — Framework-independent TypeScript domain contracts.
 - `openspec/` — Spec-driven planning artifacts.
 
@@ -88,9 +88,11 @@ See `apps/api/.env.example`. These values are server-only and must never be comm
 
 See `docs/calendar-security-policy.md` for the MVP account allowlist, target calendar, OAuth redirect URLs, and encryption key ownership policy.
 
-Key secrets:
+Local development needs either Firebase emulator/ADC access or both explicit service-account variables. `FIREBASE_CLIENT_EMAIL` and `FIREBASE_PRIVATE_KEY` are an optional all-or-nothing pair; production Cloud Run must omit both and use Application Default Credentials from its dedicated runtime service account.
 
-- `FIREBASE_PRIVATE_KEY` — Firebase Admin service account private key.
+Key local secrets:
+
+- `FIREBASE_PRIVATE_KEY` — Firebase Admin service account private key for explicit local credentials only.
 - `GOOGLE_CLIENT_SECRET` — Google OAuth client secret.
 - `CREDENTIAL_ENCRYPTION_KEY` — 32-byte base64 key for encrypting stored refresh credentials.
 
@@ -150,12 +152,12 @@ Connecting Calendar requires a separate server-side Google OAuth flow because Fi
 ## Security notes
 
 - Never commit `.env` files or service-account JSON.
-- Keep `CREDENTIAL_ENCRYPTION_KEY`, `GOOGLE_CLIENT_SECRET`, and `FIREBASE_PRIVATE_KEY` in Railway/Vercel environment secrets only.
+- Keep `CREDENTIAL_ENCRYPTION_KEY` and `GOOGLE_CLIENT_SECRET` in production Secret Manager. Never deploy a Firebase private key to Cloud Run.
 - Use `ALLOWED_DOMAIN` to restrict MVP access to the iJac Google Workspace domain.
 
 ## Deployment (future change)
 
 - `apps/web` → Vercel
-- `apps/api` → Railway
+- `apps/api` → Google Cloud Run in `southamerica-west1`, co-located with Firestore `(default)`
 
 These pipelines will be added in a separate change once the MVP is verified end-to-end.
