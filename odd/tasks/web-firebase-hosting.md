@@ -28,7 +28,7 @@ Mode: strict (global user config). Not applicable to these tasks: configuration 
 ## Tasks
 
 - [x] T1 Add Firebase Hosting config (`firebase.json` hosting block, `.firebaserc`) and deployment runbook. Route: inline (2 mechanical files + 1 doc).
-- [ ] T2 Build web with production API URL and deploy hosting to `ijac-webapp.web.app`; smoke test.
+- [x] T2 Build web with production API URL and deploy hosting to `ijac-webapp.web.app`; smoke test.
 - [ ] T3 Owner: add custom domain `app.ijac.com.ar` in Firebase console and the DNS records in Hostinger; wait for TLS.
 - [ ] T4 Owner: add `app.ijac.com.ar` to Firebase Auth authorized domains (and OAuth client origins if restricted).
 - [ ] T5 Update API `WEB_APP_URL` and `CORS_ORIGIN` to `https://app.ijac.com.ar` with a new Cloud Run revision (confirm first); verify login end to end.
@@ -42,8 +42,10 @@ Mode: strict (global user config). Not applicable to these tasks: configuration 
 
 - Branch: `feat/web-firebase-hosting`.
 - T1 done: commit `ee4d7f8`; JSON parse and Prettier check passed.
-- T2 blocked: `gcloud` needs interactive re-auth to read the Cloud Run API URL.
+- T2 done: built with `PUBLIC_API_URL=https://ijac-api-knmc6aqyia-tl.a.run.app/api` (gitignored `apps/web/.env.production`) and deployed to `https://ijac-webapp.web.app`. Smoke: `/`, `/clients`, `/work-orders`, `/work-orders/details`, `/calendar` 200; unknown path 404; security headers present.
+- Owner made the API publicly invokable (`allUsers` → `roles/run.invoker`); `/api/health` 200, `/api/work-orders` 401 without a token.
+- Finding: live API `CORS_ORIGIN` is `https://placeholder.invalid` and accepts a single origin, so browser API calls fail until T5.
 
 ## Next step
 
-T2 after `gcloud auth login`.
+T3/T4 (owner, Firebase console + Hostinger), then T5.
