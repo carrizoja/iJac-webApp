@@ -41,7 +41,9 @@ Mode: strict (global user config). Not applicable to these tasks: configuration 
 ## Progress
 
 - Branch: `feat/web-firebase-hosting`.
+- T1 done: commit `ee4d7f8`; JSON parse and Prettier check passed.
+- T2 blocked: `gcloud` needs interactive re-auth to read the Cloud Run API URL.
 
 ## Next step
 
-T1.
+T2 after `gcloud auth login`.
