@@ -40,4 +40,16 @@ Smoke test `https://ijac-webapp.web.app` and the custom domain: the login page l
 
 ## API alignment
 
-Set the Cloud Run API `WEB_APP_URL` and `CORS_ORIGIN` to `https://app.ijac.com.ar` and roll out a new revision (see `cloud-run-api-v1.md`). Until then, browser calls from the custom domain fail CORS.
+The API accepts a single browser origin (`CORS_ORIGIN`). Production values on Cloud Run service `ijac-api`:
+
+| Variable | Value |
+| --- | --- |
+| `WEB_APP_URL` | `https://app.ijac.com.ar` |
+| `CORS_ORIGIN` | `https://app.ijac.com.ar` |
+| `GOOGLE_REDIRECT_URI` | `https://ijac-api-knmc6aqyia-tl.a.run.app/api/calendar/connection/oauth/callback` |
+
+Change them with `gcloud run services update ijac-api --project=ijac-webapp --region=southamerica-west1 --update-env-vars=...`, which rolls out a new revision. The redirect URI must also be listed in the Google OAuth client's authorized redirect URIs.
+
+Because CORS allows only the custom domain, `https://ijac-webapp.web.app` serves the UI but its API calls are blocked; use `https://app.ijac.com.ar`.
+
+The API service allows unauthenticated invocation (`allUsers` → `roles/run.invoker`); authorization is enforced in the application by the Firebase ID token guard.

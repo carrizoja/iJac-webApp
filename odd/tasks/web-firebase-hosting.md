@@ -29,8 +29,8 @@ Mode: strict (global user config). Not applicable to these tasks: configuration 
 
 - [x] T1 Add Firebase Hosting config (`firebase.json` hosting block, `.firebaserc`) and deployment runbook. Route: inline (2 mechanical files + 1 doc).
 - [x] T2 Build web with production API URL and deploy hosting to `ijac-webapp.web.app`; smoke test.
-- [ ] T3 Owner: add custom domain `app.ijac.com.ar` in Firebase console and the DNS records in Hostinger; wait for TLS.
-- [ ] T4 Owner: add `app.ijac.com.ar` to Firebase Auth authorized domains (and OAuth client origins if restricted).
+- [x] T3 Owner: add custom domain `app.ijac.com.ar` in Firebase console and the DNS records in Hostinger; wait for TLS.
+- [x] T4 Owner: add `app.ijac.com.ar` to Firebase Auth authorized domains (and OAuth client origins if restricted).
 - [ ] T5 Update API `WEB_APP_URL` and `CORS_ORIGIN` to `https://app.ijac.com.ar` with a new Cloud Run revision (confirm first); verify login end to end.
 
 ## Acceptance criteria
@@ -46,6 +46,10 @@ Mode: strict (global user config). Not applicable to these tasks: configuration 
 - Owner made the API publicly invokable (`allUsers` → `roles/run.invoker`); `/api/health` 200, `/api/work-orders` 401 without a token.
 - Finding: live API `CORS_ORIGIN` is `https://placeholder.invalid` and accepts a single origin, so browser API calls fail until T5.
 
+- T3 done: Firebase custom domain `app.ijac.com.ar` HOST_ACTIVE / OWNERSHIP_ACTIVE; DNS resolves to Firebase. Certificate state `CERT_VALIDATING` at 2026-10-24 21:45 UTC (custom-domain HTTPS not yet usable).
+- T4 done: Auth authorized domains include `app.ijac.com.ar` (verified via Identity Toolkit config).
+- T5 partial: revision `ijac-api-00002-bkm` serves 100% with `WEB_APP_URL`/`CORS_ORIGIN=https://app.ijac.com.ar` and `GOOGLE_REDIRECT_URI` set to the API callback. Verified: health 200, unauthenticated 401, CORS preflight from `https://app.ijac.com.ar` 204 with matching origin. Pending: end-to-end Google login on the custom domain after TLS is issued; OAuth client redirect URI registration (owner).
+
 ## Next step
 
-T3/T4 (owner, Firebase console + Hostinger), then T5.
+When the certificate is active, verify login and data loading on `https://app.ijac.com.ar`, then close T5.
