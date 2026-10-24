@@ -31,7 +31,7 @@ Mode: strict (global user config). Not applicable to these tasks: configuration 
 - [x] T2 Build web with production API URL and deploy hosting to `ijac-webapp.web.app`; smoke test.
 - [x] T3 Owner: add custom domain `app.ijac.com.ar` in Firebase console and the DNS records in Hostinger; wait for TLS.
 - [x] T4 Owner: add `app.ijac.com.ar` to Firebase Auth authorized domains (and OAuth client origins if restricted).
-- [ ] T5 Update API `WEB_APP_URL` and `CORS_ORIGIN` to `https://app.ijac.com.ar` with a new Cloud Run revision (confirm first); verify login end to end.
+- [x] T5 Update API `WEB_APP_URL` and `CORS_ORIGIN` to `https://app.ijac.com.ar` with a new Cloud Run revision (confirm first); verify login end to end.
 
 ## Acceptance criteria
 
@@ -50,6 +50,9 @@ Mode: strict (global user config). Not applicable to these tasks: configuration 
 - T4 done: Auth authorized domains include `app.ijac.com.ar` (verified via Identity Toolkit config).
 - T5 partial: revision `ijac-api-00002-bkm` serves 100% with `WEB_APP_URL`/`CORS_ORIGIN=https://app.ijac.com.ar` and `GOOGLE_REDIRECT_URI` set to the API callback. Verified: health 200, unauthenticated 401, CORS preflight from `https://app.ijac.com.ar` 204 with matching origin. Pending: end-to-end Google login on the custom domain after TLS is issued; OAuth client redirect URI registration (owner).
 
+- T5 done: certificate for `app.ijac.com.ar` issued (valid to 2027-01-22); `https://app.ijac.com.ar` returns 200 with a valid TLS chain. Owner confirmed Google login and work-order loading on the custom domain (2026-10-24).
+- Open follow-up (owner): register `GOOGLE_REDIRECT_URI` in the Google OAuth client before using Google Calendar connection.
+
 ## Next step
 
-When the certificate is active, verify login and data loading on `https://app.ijac.com.ar`, then close T5.
+Feature complete. Push the branch and open a PR when ready.
