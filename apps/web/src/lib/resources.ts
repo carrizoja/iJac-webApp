@@ -1,9 +1,31 @@
-import { apiGet, apiPost, apiPatch, apiDelete } from './api';
+import { apiGet, apiPost, apiPatch, apiPut, apiDelete } from './api';
 import { getCurrentToken } from './auth';
-import type { Client, WorkOrder, WorkOrderClientSummary, PaginatedResponse } from '@ijac/shared';
+import type {
+  Client,
+  WorkOrder,
+  WorkOrderClientSummary,
+  PaginatedResponse,
+  OrganizationProfile,
+  OrganizationProfileInput,
+  OrganizationProfileResponse,
+} from '@ijac/shared';
+
+/** API failure that keeps the error code as its message plus any field-level details. */
+export class ApiRequestError extends Error {
+  constructor(
+    readonly code: string,
+    readonly fieldErrors?: Record<string, string>,
+  ) {
+    super(code);
+    this.name = 'ApiRequestError';
+  }
+}
 
 async function withToken<T>(
-  fn: (token: string) => Promise<{ data?: T; error?: { code: string; message: string } }>,
+  fn: (token: string) => Promise<{
+    data?: T;
+    error?: { code: string; message: string; fieldErrors?: Record<string, string> };
+  }>,
 ): Promise<T> {
   const token = await getCurrentToken();
   if (!token) {
@@ -11,7 +33,7 @@ async function withToken<T>(
   }
   const result = await fn(token);
   if (result.error) {
-    throw new Error(result.error.code);
+    throw new ApiRequestError(result.error.code, result.error.fieldErrors);
   }
   return result.data as T;
 }
@@ -85,4 +107,14 @@ export async function updateWorkOrder(
 
 export async function deleteWorkOrder(id: string): Promise<void> {
   return withToken((token) => apiDelete(`/work-orders/${id}`, token));
+}
+
+export async function getOrganizationProfile(): Promise<OrganizationProfileResponse> {
+  return withToken((token) => apiGet('/organization/profile', token));
+}
+
+export async function saveOrganizationProfile(
+  input: OrganizationProfileInput,
+): Promise<OrganizationProfile> {
+  return withToken((token) => apiPut('/organization/profile', input, token));
 }

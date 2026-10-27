@@ -17,6 +17,7 @@ const navLinks: NavLink[] = [
   { href: '/clients', labelKey: 'nav.clients' },
   { href: '/work-orders', labelKey: 'nav.workOrders' },
   { href: '/calendar', labelKey: 'nav.calendar' },
+  { href: '/settings', labelKey: 'nav.settings' },
 ];
 
 export function AppShell({ children }: { children: React.ReactNode }) {

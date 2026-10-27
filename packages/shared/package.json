@@ -17,13 +17,14 @@
     }
   },
   "scripts": {
-    "build": "tsc && tsc -p tsconfig.cjs.json && find dist/cjs -name '*.js' -exec sh -c 'mv \"$1\" \"dist/$(basename \"$1\" .js).cjs\"' _ {} \\; && rm -rf dist/cjs",
+    "build": "tsc && tsc -p tsconfig.cjs.json && find dist/cjs -name '*.js' -exec sh -c 'sed -E \"s#require\\(\\\"(\\./[^\\\"]+)\\.js\\\"\\)#require(\\\"\\1.cjs\\\")#g\" \"$1\" > \"dist/$(basename \"$1\" .js).cjs\"' _ {} \\; && rm -rf dist/cjs",
     "typecheck": "tsc --noEmit",
     "lint": "eslint \"src/**/*.ts\"",
     "test": "node --test dist/**/*.test.js"
   },
   "devDependencies": {
     "@ijac/tsconfig": "workspace:*",
+    "@types/node": "^22.20.1",
     "@typescript-eslint/eslint-plugin": "^8.65.0",
     "@typescript-eslint/parser": "^8.65.0",
     "eslint": "^9.39.5",

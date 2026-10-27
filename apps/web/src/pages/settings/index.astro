@@ -1,0 +1,19 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import { Protected } from '../../components/layout/Protected';
+import { AppShell } from '../../components/layout/AppShell';
+import { OrganizationSettings } from '../../components/settings/OrganizationSettings';
+---
+
+<Layout titleKey="title.settings">
+  <Protected client:load>
+    <AppShell client:load>
+      <h1 class="text-2xl font-semibold text-fg-primary" data-i18n="settings.pageHeading">Configuración</h1>
+      <p class="mt-2 text-fg-secondary" data-i18n="settings.pageDescription">Datos de la organización que se muestran como emisor en los recibos.</p>
+      <section class="mt-6 rounded-2xl border border-border-default bg-bg-secondary/80 p-4 sm:p-6" aria-labelledby="settings-profile-heading">
+        <h2 id="settings-profile-heading" class="mb-5 font-heading text-xl font-semibold text-fg-primary" data-i18n="settings.profileHeading">Perfil de la organización</h2>
+        <OrganizationSettings client:load />
+      </section>
+    </AppShell>
+  </Protected>
+</Layout>

@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { apiCall } from './api';
+import { apiCall, apiPut } from './api';
 
 function jsonResponse(body: unknown, init: ResponseInit = {}): Response {
   return new Response(JSON.stringify(body), {
@@ -93,5 +93,25 @@ describe('apiCall', () => {
     const headers = (init?.headers ?? {}) as Record<string, string>;
     expect(headers.Authorization).toBe('Bearer secret-token');
     expect(headers['Content-Type']).toBe('application/json');
+  });
+});
+
+describe('apiPut', () => {
+  beforeEach(() => {
+    vi.stubGlobal('fetch', vi.fn());
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it('sends a PUT request with a JSON body', async () => {
+    vi.mocked(fetch).mockResolvedValue(jsonResponse({ ok: true }));
+
+    await apiPut('/organization/profile', { phone: '555' }, 'token');
+
+    const [, init] = vi.mocked(fetch).mock.calls[0];
+    expect(init?.method).toBe('PUT');
+    expect(init?.body).toBe(JSON.stringify({ phone: '555' }));
   });
 });

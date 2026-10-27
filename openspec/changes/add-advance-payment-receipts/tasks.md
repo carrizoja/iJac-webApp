@@ -1,12 +1,12 @@
 ## 1. Slice 1 — Organization profile (PR 1)
 
-- [ ] 1.1 Add `isValidCuit` and `normalizeTaxId` to `packages/shared` with table-driven tests (valid/invalid check digits, hyphens and dots, wrong lengths)
-- [ ] 1.2 Add `OrganizationProfile` type and `Currency`/`OrganizationProfileStatus` shared types
-- [ ] 1.3 Add `@RequireRole` decorator and `RolesGuard` in `apps/api/src/auth` with tests for admin allowed, member 403, and missing role
-- [ ] 1.4 Add organization-profile repository (both `REPOSITORY_MODE` paths) and service with tests, including the not-configured response
-- [ ] 1.5 Add `GET /organization/profile` (member) and `PUT /organization/profile` (admin) with DTO validation and controller tests
-- [ ] 1.6 Add web API client functions and a Settings page with profile form: editable for admins, read-only for members, with ES/EN translations and component tests
-- [ ] 1.7 Add Settings navigation entry and verify lint, typecheck, tests, and build pass
+- [x] 1.1 Add `isValidCuit` and `normalizeTaxId` to `packages/shared` with table-driven tests (valid/invalid check digits, hyphens and dots, wrong lengths)
+- [x] 1.2 Add `OrganizationProfile` type and `Currency`/`OrganizationProfileStatus` shared types
+- [x] 1.3 Add `@RequireRole` decorator and `RolesGuard` in `apps/api/src/auth` with tests for admin allowed, member 403, and missing role
+- [x] 1.4 Add organization-profile repository (both `REPOSITORY_MODE` paths) and service with tests, including the not-configured response
+- [x] 1.5 Add `GET /organization/profile` (member) and `PUT /organization/profile` (admin) with DTO validation and controller tests
+- [x] 1.6 Add web API client functions and a Settings page with profile form: editable for admins, read-only for members, with ES/EN translations and component tests
+- [x] 1.7 Add Settings navigation entry and verify lint, typecheck, tests, and build pass
 
 ## 2. Slice 2 — Client tax identifier (PR 2)
 

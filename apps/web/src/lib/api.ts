@@ -122,6 +122,14 @@ export async function apiPatch<T>(
   return apiCall<T>(path, { method: 'PATCH', body: JSON.stringify(body) }, token);
 }
 
+export async function apiPut<T>(
+  path: string,
+  body: unknown,
+  token: string | null,
+): Promise<ApiResult<T>> {
+  return apiCall<T>(path, { method: 'PUT', body: JSON.stringify(body) }, token);
+}
+
 export async function apiDelete<T>(path: string, token: string | null): Promise<ApiResult<T>> {
   return apiCall<T>(path, { method: 'DELETE' }, token);
 }

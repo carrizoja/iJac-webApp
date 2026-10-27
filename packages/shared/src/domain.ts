@@ -12,8 +12,14 @@ export enum WorkOrderPriority {
   URGENT = 'urgent',
 }
 
+export enum Currency {
+  ARS = 'ARS',
+  USD = 'USD',
+}
+
 export const WORK_ORDER_STATUSES = Object.values(WorkOrderStatus);
 export const WORK_ORDER_PRIORITIES = Object.values(WorkOrderPriority);
+export const CURRENCIES = Object.values(Currency);
 
 export interface Client {
   id: string;
@@ -88,6 +94,27 @@ export interface ActorContext {
   organizationId: string;
   role: OrganizationMemberRole;
 }
+
+export interface OrganizationProfile {
+  businessName: string;
+  /** CUIT stored as 11 digits, without separators. */
+  cuit: string;
+  address: string;
+  phone: string;
+  updatedAt: string;
+}
+
+/** Profile lookup result; `configured: false` means it has never been saved. */
+export type OrganizationProfileStatus =
+  { configured: true; profile: OrganizationProfile } | { configured: false };
+
+/** Body of `PUT /organization/profile`; `updatedAt` is server-managed. */
+export type OrganizationProfileInput = Omit<OrganizationProfile, 'updatedAt'>;
+
+/** `GET /organization/profile` response; `canEdit` reflects the caller's role. */
+export type OrganizationProfileResponse = OrganizationProfileStatus & {
+  canEdit: boolean;
+};
 
 export interface CalendarEvent {
   id: string;
