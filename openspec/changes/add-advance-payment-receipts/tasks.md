@@ -25,6 +25,7 @@
 
 ## 4. Slice 4 — Payments, balance, and receipts (PR 4, may split API/web if over budget)
 
+- [ ] 4.0 Prerequisite (ops, before deploying slices 1 and 4 to production): cut production over from `REPOSITORY_MODE=global` to `organization` using the existing migration tooling (preview → migrate → verify → switch env) and provision the organization with the owner as `admin`; in `global` mode no role is resolved, so admin-only routes always return 403
 - [ ] 4.1 Add shared `Payment`, `PaymentMethod`, `PaymentStatus`, `PaymentConcept`, and `WorkOrderBalance` types
 - [ ] 4.2 Add `computeBalance` and `formatReceiptNumber` to `packages/shared` with tests (voided excluded, zero payments, `0001-00000042`)
 - [ ] 4.3 Add `amountToSpanishWords` to `packages/shared` with table-driven tests covering the edge numbers listed in design.md and both currencies
