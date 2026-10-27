@@ -1,5 +1,6 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
+  PAYMENT_ERROR_CODES,
   PAYMENT_METHODS,
   PaymentMethod,
   PaymentStatus,
@@ -64,6 +65,8 @@ export function PaymentsPanel({ workOrderId, workOrderStatus }: PaymentsPanelPro
   const { language, t } = useLanguage();
   const [state, setState] = useState<LoadState>({ status: 'loading' });
   const [recordOpen, setRecordOpen] = useState(false);
+  /** One key per record form; reused for retries so a lost response cannot double-record. */
+  const idempotencyKey = useRef<string>('');
   const [form, setForm] = useState<RecordForm>(emptyForm);
   const [errors, setErrors] = useState<RecordErrors>({});
   const [submitting, setSubmitting] = useState(false);
@@ -112,6 +115,7 @@ export function PaymentsPanel({ workOrderId, workOrderStatus }: PaymentsPanelPro
   const remainingText = balance ? money(balance.remainingMinor) : '';
 
   const openRecord = () => {
+    idempotencyKey.current = crypto.randomUUID();
     setForm(emptyForm());
     setErrors({});
     setRecordOpen(true);
@@ -137,6 +141,7 @@ export function PaymentsPanel({ workOrderId, workOrderStatus }: PaymentsPanelPro
         paymentDate: form.paymentDate,
         method: form.method,
         ...(form.notes.trim() && { notes: form.notes.trim() }),
+        idempotencyKey: idempotencyKey.current,
       });
       setRecordOpen(false);
       await reload();
@@ -150,19 +155,27 @@ export function PaymentsPanel({ workOrderId, workOrderStatus }: PaymentsPanelPro
 
   const mapRecordError = (error: unknown): RecordErrors => {
     if (!(error instanceof ApiRequestError)) return { general: t('payments.recordError') };
+    switch (error.code) {
+      case PAYMENT_ERROR_CODES.ORGANIZATION_PROFILE_NOT_CONFIGURED:
+        return { profileMissing: true };
+      case PAYMENT_ERROR_CODES.WORK_ORDER_NOT_PRICED:
+        return { general: t('payments.unpricedHint') };
+      case PAYMENT_ERROR_CODES.WORK_ORDER_CANCELLED:
+        return { general: t('payments.cancelledHint') };
+      case PAYMENT_ERROR_CODES.IDEMPOTENCY_KEY_CONFLICT:
+        // The key is bound to another work order; a retry needs a fresh one.
+        idempotencyKey.current = crypto.randomUUID();
+        return { general: t('payments.recordError') };
+    }
     const next: RecordErrors = {};
     const unmapped: string[] = [];
     for (const [key, message] of Object.entries(error.fieldErrors ?? {})) {
-      if (key === 'amountMinor') next.amount = 'exceeds';
-      else if (key === 'paymentDate') next.paymentDate = true;
+      if (key === 'amountMinor') {
+        next.amount =
+          error.code === PAYMENT_ERROR_CODES.PAYMENT_EXCEEDS_BALANCE ? 'exceeds' : 'invalid';
+      } else if (key === 'paymentDate') next.paymentDate = true;
       else if (key === 'method') next.method = true;
       else unmapped.push(message);
-    }
-    if (error.code === 'CONFLICT') {
-      const detail = error.detail ?? '';
-      if (/organization profile/i.test(detail)) return { profileMissing: true };
-      if (/total price/i.test(detail)) return { general: t('payments.unpricedHint') };
-      if (/cancelled/i.test(detail)) return { general: t('payments.cancelledHint') };
     }
     if (unmapped.length > 0 || Object.keys(next).length === 0) {
       next.general = [t('payments.recordError'), ...unmapped].join(' ');

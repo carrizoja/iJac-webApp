@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import {
   Currency,
+  PAYMENT_ERROR_CODES,
   PaymentMethod,
   PaymentStatus,
   WorkOrderStatus,
@@ -21,7 +22,6 @@ vi.mock('../../lib/resources', () => {
     constructor(
       readonly code: string,
       readonly fieldErrors?: Record<string, string>,
-      readonly detail?: string,
     ) {
       super(code);
     }
@@ -31,6 +31,8 @@ vi.mock('../../lib/resources', () => {
 
 import { ApiRequestError } from '../../lib/resources';
 import { PaymentsPanel } from './PaymentsPanel';
+
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
 
 function response(overrides: Partial<WorkOrderPaymentsResponse> = {}): WorkOrderPaymentsResponse {
   return {
@@ -116,6 +118,7 @@ describe('PaymentsPanel', () => {
         paymentDate: '2026-08-05',
         method: PaymentMethod.CASH,
         notes: 'Seña',
+        idempotencyKey: expect.stringMatching(UUID_PATTERN),
       }),
     );
     expect(await screen.findByText('$ 75.000,00')).toBeInTheDocument();
@@ -167,7 +170,7 @@ describe('PaymentsPanel', () => {
   it('shows the overpayment error returned by the server and refreshes the balance', async () => {
     listPayments.mockResolvedValue(response());
     recordPayment.mockRejectedValue(
-      new ApiRequestError('VALIDATION_ERROR', {
+      new ApiRequestError(PAYMENT_ERROR_CODES.PAYMENT_EXCEEDS_BALANCE, {
         amountMinor: 'amount exceeds the remaining balance of 5000',
       }),
     );
@@ -187,11 +190,7 @@ describe('PaymentsPanel', () => {
   it('links to Settings when the organization profile is not configured', async () => {
     listPayments.mockResolvedValue(response());
     recordPayment.mockRejectedValue(
-      new ApiRequestError(
-        'CONFLICT',
-        undefined,
-        'Complete the organization profile before recording payments',
-      ),
+      new ApiRequestError(PAYMENT_ERROR_CODES.ORGANIZATION_PROFILE_NOT_CONFIGURED),
     );
     renderPanel();
 
@@ -206,6 +205,128 @@ describe('PaymentsPanel', () => {
       'href',
       '/settings',
     );
+  });
+
+  it('shows an invalid-amount message, not the overpayment one, for other amount errors', async () => {
+    listPayments.mockResolvedValue(response());
+    recordPayment.mockRejectedValue(
+      new ApiRequestError('VALIDATION_ERROR', { amountMinor: 'amountMinor must be an integer' }),
+    );
+    renderPanel();
+
+    await openRecordDialog();
+    fireEvent.change(screen.getByLabelText(/Importe/), { target: { value: '1.000,00' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Registrar' }));
+
+    expect(await screen.findByText('Ingresá un importe válido mayor a cero')).toBeInTheDocument();
+    expect(screen.queryByText(/supera el saldo/)).not.toBeInTheDocument();
+  });
+
+  it('shows the invalid-amount message in English too', async () => {
+    setLanguage('en');
+    listPayments.mockResolvedValue(response());
+    recordPayment.mockRejectedValue(
+      new ApiRequestError('VALIDATION_ERROR', { amountMinor: 'amountMinor must be an integer' }),
+    );
+    renderPanel();
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Record payment' }));
+    await screen.findByRole('alertdialog');
+    fireEvent.change(screen.getByLabelText(/Amount/), { target: { value: '1.000,00' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Record' }));
+
+    expect(await screen.findByText('Enter a valid amount greater than zero')).toBeInTheDocument();
+  });
+
+  it('maps the unpriced and cancelled codes to their hints', async () => {
+    listPayments.mockResolvedValue(response());
+    recordPayment.mockRejectedValueOnce(
+      new ApiRequestError(PAYMENT_ERROR_CODES.WORK_ORDER_NOT_PRICED),
+    );
+    renderPanel();
+
+    await openRecordDialog();
+    fireEvent.change(screen.getByLabelText(/Importe/), { target: { value: '1.000,00' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Registrar' }));
+    expect(
+      (await screen.findAllByText('Definí un precio total en la orden antes de registrar pagos.'))
+        .length,
+    ).toBeGreaterThan(0);
+
+    recordPayment.mockRejectedValueOnce(
+      new ApiRequestError(PAYMENT_ERROR_CODES.WORK_ORDER_CANCELLED),
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Registrar' }));
+    expect(
+      (await screen.findAllByText('La orden está cancelada: no se pueden registrar nuevos pagos.'))
+        .length,
+    ).toBeGreaterThan(0);
+  });
+
+  it('does not rely on message text: a plain CONFLICT shows the generic error', async () => {
+    listPayments.mockResolvedValue(response());
+    recordPayment.mockRejectedValue(new ApiRequestError('CONFLICT'));
+    renderPanel();
+
+    await openRecordDialog();
+    fireEvent.change(screen.getByLabelText(/Importe/), { target: { value: '1.000,00' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Registrar' }));
+
+    expect(await screen.findByText('No se pudo registrar el pago.')).toBeInTheDocument();
+  });
+
+  it('reuses the idempotency key when resubmitting after a network failure', async () => {
+    listPayments.mockResolvedValue(response());
+    recordPayment
+      .mockRejectedValueOnce(new Error('Failed to fetch'))
+      .mockResolvedValueOnce(makePayment());
+    renderPanel();
+
+    await openRecordDialog();
+    fireEvent.change(screen.getByLabelText(/Importe/), { target: { value: '1.000,00' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Registrar' }));
+    await screen.findByText('No se pudo registrar el pago.');
+    fireEvent.click(screen.getByRole('button', { name: 'Registrar' }));
+    await waitFor(() => expect(recordPayment).toHaveBeenCalledTimes(2));
+
+    const [first, second] = recordPayment.mock.calls.map(([, body]) => body.idempotencyKey);
+    expect(first).toMatch(UUID_PATTERN);
+    expect(second).toBe(first);
+  });
+
+  it('generates a new idempotency key for each new form', async () => {
+    listPayments.mockResolvedValue(response());
+    recordPayment.mockResolvedValue(makePayment());
+    renderPanel();
+
+    for (let attempt = 0; attempt < 2; attempt += 1) {
+      await openRecordDialog();
+      fireEvent.change(screen.getByLabelText(/Importe/), { target: { value: '1.000,00' } });
+      fireEvent.click(screen.getByRole('button', { name: 'Registrar' }));
+      await waitFor(() => expect(recordPayment).toHaveBeenCalledTimes(attempt + 1));
+      await waitFor(() => expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument());
+    }
+
+    const [first, second] = recordPayment.mock.calls.map(([, body]) => body.idempotencyKey);
+    expect(second).not.toBe(first);
+  });
+
+  it('uses a fresh key after the server reports an idempotency conflict', async () => {
+    listPayments.mockResolvedValue(response());
+    recordPayment
+      .mockRejectedValueOnce(new ApiRequestError(PAYMENT_ERROR_CODES.IDEMPOTENCY_KEY_CONFLICT))
+      .mockResolvedValueOnce(makePayment());
+    renderPanel();
+
+    await openRecordDialog();
+    fireEvent.change(screen.getByLabelText(/Importe/), { target: { value: '1.000,00' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Registrar' }));
+    await screen.findByText('No se pudo registrar el pago.');
+    fireEvent.click(screen.getByRole('button', { name: 'Registrar' }));
+    await waitFor(() => expect(recordPayment).toHaveBeenCalledTimes(2));
+
+    const [first, second] = recordPayment.mock.calls.map(([, body]) => body.idempotencyKey);
+    expect(second).not.toBe(first);
   });
 
   it('shows a generic error with unmapped server messages', async () => {

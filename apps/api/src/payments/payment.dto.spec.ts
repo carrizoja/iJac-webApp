@@ -40,6 +40,24 @@ describe('RecordPaymentDto', () => {
     expect(fieldsOf(error)).toEqual([field]);
   });
 
+  it('accepts a UUID v4 idempotency key', async () => {
+    const idempotencyKey = '3f1c2a9e-5b7d-4c1e-9a2b-6d8e0f1a2b3c';
+    await expect(validate({ ...valid, idempotencyKey }, RecordPaymentDto)).resolves.toMatchObject({
+      idempotencyKey,
+    });
+  });
+
+  it.each([['not-a-uuid'], [''], [42], ['3f1c2a9e-5b7d-1c1e-9a2b-6d8e0f1a2b3c']])(
+    'rejects idempotency key %j',
+    async (idempotencyKey) => {
+      const error = await validate({ ...valid, idempotencyKey }, RecordPaymentDto).catch(
+        (e: unknown) => e,
+      );
+      expect(error).toBeInstanceOf(ValidationError);
+      expect(fieldsOf(error)).toEqual(['idempotencyKey']);
+    },
+  );
+
   it('rejects unknown properties', async () => {
     const error = await validate({ ...valid, status: 'voided' }, RecordPaymentDto).catch(
       (e: unknown) => e,

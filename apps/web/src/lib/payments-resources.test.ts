@@ -50,7 +50,7 @@ describe('payment resources', () => {
     );
   });
 
-  it('keeps the server message as detail on failure', async () => {
+  it('keeps the server error code on failure', async () => {
     vi.mocked(apiPost).mockResolvedValue({
       error: { code: 'CONFLICT', message: 'Complete the organization profile first' },
     });
@@ -58,9 +58,7 @@ describe('payment resources', () => {
     const error = await recordPayment('wo1', input).catch((e: unknown) => e);
 
     expect(error).toBeInstanceOf(ApiRequestError);
-    expect(error).toMatchObject({
-      code: 'CONFLICT',
-      detail: 'Complete the organization profile first',
-    });
+    expect(error).toMatchObject({ code: 'CONFLICT' });
+    expect(error).not.toHaveProperty('detail');
   });
 });

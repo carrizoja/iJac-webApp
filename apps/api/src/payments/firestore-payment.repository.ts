@@ -4,6 +4,7 @@ import { Firestore, Timestamp } from 'firebase-admin/firestore';
 import {
   Currency,
   formatMoney,
+  PAYMENT_ERROR_CODES,
   computeBalance,
   Payment,
   PaymentActor,
@@ -65,6 +66,11 @@ export class FirestorePaymentRepository implements PaymentRepository {
     return this.collection(organizationId, 'workOrders').doc(workOrderId).collection('payments');
   }
 
+  /** Registry of idempotency keys; maps a key to the work order it was first used on. */
+  private keyRef(organizationId: string, key: string) {
+    return this.collection(organizationId, 'paymentKeys').doc(key);
+  }
+
   private toPayment(id: string, workOrderId: string, stored: StoredPayment): Payment {
     const { createdAt, void: voidData, ...rest } = stored;
     return {
@@ -97,23 +103,46 @@ export class FirestorePaymentRepository implements PaymentRepository {
   ): Promise<Payment> {
     const workOrderRef = this.collection(organizationId, 'workOrders').doc(workOrderId);
     const paymentsRef = this.paymentsCollection(organizationId, workOrderId);
-    const paymentRef = paymentsRef.doc();
+    const key = input.idempotencyKey;
+    const paymentRef = key ? paymentsRef.doc(key) : paymentsRef.doc();
+    const keyRef = key ? this.keyRef(organizationId, key) : null;
     const counterRef = this.counterRef(organizationId);
     const profileRef = this.profileRef(organizationId);
 
     return this.firestore.runTransaction(async (tx) => {
       // All reads happen before any write.
+      if (keyRef) {
+        const keyDoc = await tx.get(keyRef);
+        if (keyDoc.exists) {
+          if (keyDoc.get('workOrderId') !== workOrderId) {
+            throw new ConflictError(
+              'Idempotency key was already used for another work order',
+              PAYMENT_ERROR_CODES.IDEMPOTENCY_KEY_CONFLICT,
+            );
+          }
+          const original = await tx.get(paymentRef);
+          if (original.exists) {
+            return this.toPayment(paymentRef.id, workOrderId, original.data() as StoredPayment);
+          }
+        }
+      }
       const workOrder = await tx.get(workOrderRef);
       if (!workOrder.exists) {
         throw new NotFoundError('Work order');
       }
       if (workOrder.get('status') === WorkOrderStatus.CANCELLED) {
-        throw new ConflictError('Cannot record a payment on a cancelled work order');
+        throw new ConflictError(
+          'Cannot record a payment on a cancelled work order',
+          PAYMENT_ERROR_CODES.WORK_ORDER_CANCELLED,
+        );
       }
       const totalMinor = workOrder.get('totalPriceMinor') as number | undefined;
       const currency = workOrder.get('currency') as Currency | undefined;
       if (totalMinor === undefined || !currency) {
-        throw new ConflictError('Set a total price on the work order before recording payments');
+        throw new ConflictError(
+          'Set a total price on the work order before recording payments',
+          PAYMENT_ERROR_CODES.WORK_ORDER_NOT_PRICED,
+        );
       }
 
       const profileDoc = await tx.get(profileRef);
@@ -121,7 +150,10 @@ export class FirestorePaymentRepository implements PaymentRepository {
         ? (profileDoc.get('profile') as PaymentIssuerSnapshot | undefined)
         : undefined;
       if (!profile) {
-        throw new ConflictError('Complete the organization profile before recording payments');
+        throw new ConflictError(
+          'Complete the organization profile before recording payments',
+          PAYMENT_ERROR_CODES.ORGANIZATION_PROFILE_NOT_CONFIGURED,
+        );
       }
 
       const clientDoc = await tx.get(
@@ -142,6 +174,7 @@ export class FirestorePaymentRepository implements PaymentRepository {
           {
             amountMinor: `amountMinor must not exceed the remaining balance of ${formatMoney(remainingMinor, currency)}`,
           },
+          PAYMENT_ERROR_CODES.PAYMENT_EXCEEDS_BALANCE,
         );
       }
 
@@ -179,6 +212,7 @@ export class FirestorePaymentRepository implements PaymentRepository {
 
       tx.set(counterRef, { next: receiptNumber + 1 });
       tx.create(paymentRef, stored);
+      if (keyRef) tx.set(keyRef, { workOrderId, paymentId: paymentRef.id });
       return this.toPayment(paymentRef.id, workOrderId, stored);
     });
   }
@@ -199,7 +233,10 @@ export class FirestorePaymentRepository implements PaymentRepository {
       }
       const stored = doc.data() as StoredPayment;
       if (stored.status === PaymentStatus.VOIDED) {
-        throw new ConflictError('Payment is already voided');
+        throw new ConflictError(
+          'Payment is already voided',
+          PAYMENT_ERROR_CODES.PAYMENT_ALREADY_VOIDED,
+        );
       }
 
       const voided: StoredPayment = {

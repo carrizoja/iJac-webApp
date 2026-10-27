@@ -82,6 +82,7 @@ export class PaymentService {
         paymentDate: input.paymentDate,
         method: input.method,
         ...(notes && { notes }),
+        ...(input.idempotencyKey && { idempotencyKey: input.idempotencyKey }),
       },
       actor,
     );

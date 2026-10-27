@@ -49,6 +49,32 @@ The system SHALL reject a new payment when the work order has no total price, wh
 - **WHEN** an admin records a payment equal to the remaining balance
 - **THEN** the system stores the payment and the remaining balance becomes zero
 
+### Requirement: Idempotent payment recording
+The system SHALL accept a client-generated idempotency key (a UUID) when recording a payment. A repeated request with the same key for the same work order SHALL return the originally recorded payment without creating a new payment or consuming a receipt number. Reusing a key for a different work order SHALL be rejected.
+
+#### Scenario: Retry after a lost response
+- **WHEN** an admin records a payment with idempotency key K, the response is lost, and the client retries with the same key K and payload
+- **THEN** the system returns the payment recorded by the first request and the organization's next receipt number is unchanged
+
+#### Scenario: Key reused for another work order
+- **WHEN** a payment request uses an idempotency key already used for a payment of a different work order
+- **THEN** the system rejects the request with a conflict error and stores no payment
+
+### Requirement: Distinguishable payment errors
+The system SHALL identify each payment business-rule rejection with a distinct, stable error code: work order not priced, work order cancelled, organization profile not configured, amount exceeds remaining balance, payment already voided, and idempotency key conflict. Clients SHALL NOT need to parse error message text to tell these cases apart.
+
+#### Scenario: Cancelled work order code
+- **WHEN** an admin records a payment on a cancelled work order
+- **THEN** the error response carries the code for a cancelled work order
+
+#### Scenario: Overpayment code
+- **WHEN** an admin records a payment larger than the remaining balance
+- **THEN** the error response carries the overpayment code and a field-level error for the amount
+
+#### Scenario: Other invalid amount
+- **WHEN** an admin submits a zero or non-integer amount
+- **THEN** the error response is a generic validation error without the overpayment code, and the web shows an invalid-amount message rather than an overpayment message
+
 ### Requirement: Payment immutability and voiding
 The system SHALL NOT allow a payment to be edited or deleted. An admin SHALL be able to void an `active` payment by providing a non-empty reason. The system SHALL then record the reason, the voiding admin, and the voiding time, and SHALL keep the voided payment visible with its original receipt number.
 

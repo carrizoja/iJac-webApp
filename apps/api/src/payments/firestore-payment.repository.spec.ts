@@ -2,6 +2,7 @@ import { ConfigService } from '@nestjs/config';
 import { Firestore } from 'firebase-admin/firestore';
 import {
   Currency,
+  PAYMENT_ERROR_CODES,
   PaymentConcept,
   PaymentMethod,
   PaymentStatus,
@@ -309,6 +310,118 @@ describe.each(['global', 'organization'] as const)(
       await expect(repository.record(org, 'wo-1', input, admin)).rejects.toBeInstanceOf(
         NotFoundError,
       );
+    });
+
+    describe('idempotency', () => {
+      const key = '3f1c2a9e-5b7d-4c1e-9a2b-6d8e0f1a2b3c';
+
+      it('returns the original payment on a retry without touching the counter', async () => {
+        const { store, repository, seed } = setup(mode);
+        const paths = seed(org);
+
+        const first = await repository.record(
+          org,
+          'wo-1',
+          { ...input, idempotencyKey: key },
+          admin,
+        );
+        const retry = await repository.record(
+          org,
+          'wo-1',
+          { ...input, idempotencyKey: key },
+          admin,
+        );
+
+        expect(first.id).toBe(key);
+        expect(retry).toEqual(first);
+        expect(store.docs.get(paths.counter)).toEqual({ next: 2 });
+        expect(await repository.findByWorkOrder(org, 'wo-1')).toHaveLength(1);
+      });
+
+      it('returns the original payment even when the retry would now overpay', async () => {
+        const { repository, seed } = setup(mode);
+        seed(org);
+        const full = { ...input, amountMinor: 10000000, idempotencyKey: key };
+
+        const first = await repository.record(org, 'wo-1', full, admin);
+        const retry = await repository.record(org, 'wo-1', full, admin);
+
+        expect(retry.id).toBe(first.id);
+      });
+
+      it('rejects a key already used for another work order and stores nothing', async () => {
+        const { store, repository, seed } = setup(mode);
+        const paths = seed(org, {}, 'wo-1');
+        seed(org, {}, 'wo-2');
+        await repository.record(org, 'wo-1', { ...input, idempotencyKey: key }, admin);
+        const before = new Map(store.docs);
+
+        const error = await repository
+          .record(org, 'wo-2', { ...input, idempotencyKey: key }, admin)
+          .catch((e: unknown) => e);
+
+        expect(error).toBeInstanceOf(ConflictError);
+        expect((error as ConflictError).code).toBe(PAYMENT_ERROR_CODES.IDEMPOTENCY_KEY_CONFLICT);
+        expect(store.docs).toEqual(before);
+        expect(store.docs.get(paths.counter)).toEqual({ next: 2 });
+      });
+
+      it('keeps auto ids and no key registry when the key is omitted', async () => {
+        const { store, repository, seed } = setup(mode);
+        seed(org);
+        const payment = await repository.record(org, 'wo-1', input, admin);
+        expect(payment.id).toBe('pay-1');
+        expect([...store.docs.keys()].some((path) => path.includes('paymentKeys'))).toBe(false);
+      });
+    });
+
+    describe('error codes', () => {
+      const codeOf = (error: unknown) => (error as { code: string }).code;
+
+      it('flags an unpriced work order', async () => {
+        const { store, repository, seed } = setup(mode);
+        const paths = seed(org);
+        store.docs.set(paths.workOrder, { title: 'T', status: 'open', clientId: 'c1' });
+        const error = await repository.record(org, 'wo-1', input, admin).catch((e: unknown) => e);
+        expect(codeOf(error)).toBe(PAYMENT_ERROR_CODES.WORK_ORDER_NOT_PRICED);
+      });
+
+      it('flags a cancelled work order', async () => {
+        const { repository, seed } = setup(mode);
+        seed(org, { status: WorkOrderStatus.CANCELLED });
+        const error = await repository.record(org, 'wo-1', input, admin).catch((e: unknown) => e);
+        expect(codeOf(error)).toBe(PAYMENT_ERROR_CODES.WORK_ORDER_CANCELLED);
+      });
+
+      it('flags a missing organization profile', async () => {
+        const { repository, seed } = setup(mode);
+        seed(org, {}, 'wo-1', false);
+        const error = await repository.record(org, 'wo-1', input, admin).catch((e: unknown) => e);
+        expect(codeOf(error)).toBe(PAYMENT_ERROR_CODES.ORGANIZATION_PROFILE_NOT_CONFIGURED);
+      });
+
+      it('flags an overpayment with a field error and keeps status 400', async () => {
+        const { repository, seed } = setup(mode);
+        seed(org);
+        const error = await repository
+          .record(org, 'wo-1', { ...input, amountMinor: 10000001 }, admin)
+          .catch((e: unknown) => e);
+        expect(error).toBeInstanceOf(ValidationError);
+        expect(codeOf(error)).toBe(PAYMENT_ERROR_CODES.PAYMENT_EXCEEDS_BALANCE);
+        expect((error as ValidationError).statusCode).toBe(400);
+        expect(Object.keys((error as ValidationError).fieldErrors ?? {})).toEqual(['amountMinor']);
+      });
+
+      it('flags voiding an already voided payment', async () => {
+        const { repository, seed } = setup(mode);
+        seed(org);
+        const payment = await repository.record(org, 'wo-1', input, admin);
+        await repository.voidPayment(org, 'wo-1', payment.id, 'Mistake', admin);
+        const error = await repository
+          .voidPayment(org, 'wo-1', payment.id, 'Again', admin)
+          .catch((e: unknown) => e);
+        expect(codeOf(error)).toBe(PAYMENT_ERROR_CODES.PAYMENT_ALREADY_VOIDED);
+      });
     });
 
     describe('void', () => {

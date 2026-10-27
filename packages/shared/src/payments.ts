@@ -29,3 +29,15 @@ export function formatReceiptNumber(receiptNumber: number): string {
   }
   return `${RECEIPT_POINT_OF_SALE}-${String(receiptNumber).padStart(8, '0')}`;
 }
+
+/** Stable error codes for payment business-rule rejections (`ApiErrorResponse.code`). */
+export const PAYMENT_ERROR_CODES = {
+  WORK_ORDER_NOT_PRICED: 'WORK_ORDER_NOT_PRICED',
+  WORK_ORDER_CANCELLED: 'WORK_ORDER_CANCELLED',
+  ORGANIZATION_PROFILE_NOT_CONFIGURED: 'ORGANIZATION_PROFILE_NOT_CONFIGURED',
+  PAYMENT_EXCEEDS_BALANCE: 'PAYMENT_EXCEEDS_BALANCE',
+  PAYMENT_ALREADY_VOIDED: 'PAYMENT_ALREADY_VOIDED',
+  IDEMPOTENCY_KEY_CONFLICT: 'IDEMPOTENCY_KEY_CONFLICT',
+} as const;
+
+export type PaymentErrorCode = (typeof PAYMENT_ERROR_CODES)[keyof typeof PAYMENT_ERROR_CODES];

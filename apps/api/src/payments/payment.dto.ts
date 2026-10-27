@@ -2,6 +2,7 @@ import { Transform } from 'class-transformer';
 import {
   IsEnum,
   IsInt,
+  IsUUID,
   IsNotEmpty,
   IsOptional,
   IsString,
@@ -33,6 +34,11 @@ export class RecordPaymentDto {
   @IsString()
   @MaxLength(500)
   notes?: string;
+
+  /** Client-generated key that makes retries of the same submission safe. */
+  @IsOptional()
+  @IsUUID('4')
+  idempotencyKey?: string;
 }
 
 export class VoidPaymentDto {

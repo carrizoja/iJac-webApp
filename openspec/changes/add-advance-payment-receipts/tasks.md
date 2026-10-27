@@ -37,4 +37,7 @@
 - [x] 4.9 Add a `PaymentReceipt` component in fixed Spanish (issuer, number, date, client with optional tax ID, amount in figures and words, method, concept, title, "Documento no válido como factura", "ANULADO" mark with reason) with tests
 - [x] 4.10 Add a receipt print view reusing the print-hide pattern so only the receipt prints, with a test asserting `window.print` is triggered
 - [x] 4.11 Confirm `firestore.rules` default deny covers `payments` and `counters` (no rule change), and add a rules note to deployment docs
+- [x] 4.13 Add idempotent payment recording: client-generated UUID key, deduplicated inside the record transaction, with API and web tests
+- [x] 4.14 Add distinct error codes for payment business-rule rejections and map them in the payments panel instead of matching message text
+- [x] 4.15 Show the overpayment message only for the overpayment code; show an invalid-amount message for other amount errors
 - [ ] 4.12 Verify lint, typecheck, tests, and build pass and manually walk the full flow locally (profile → priced job → advance → settlement → void → reprint)

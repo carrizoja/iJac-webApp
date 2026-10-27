@@ -129,6 +129,17 @@ describe('PaymentService', () => {
       );
     });
 
+    it('forwards the idempotency key to the repository', async () => {
+      const idempotencyKey = '3f1c2a9e-5b7d-4c1e-9a2b-6d8e0f1a2b3c';
+      await service.record('org-1', 'wo-1', { ...validInput, idempotencyKey }, actor);
+      expect(payments.record).toHaveBeenCalledWith(
+        'org-1',
+        'wo-1',
+        { ...validInput, idempotencyKey },
+        actor,
+      );
+    });
+
     it.each([
       ['zero', { amountMinor: 0 }, 'amountMinor'],
       ['negative', { amountMinor: -5 }, 'amountMinor'],

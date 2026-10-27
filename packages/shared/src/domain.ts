@@ -219,6 +219,8 @@ export interface RecordPaymentInput {
   paymentDate: string;
   method: PaymentMethod;
   notes?: string;
+  /** Client-generated UUID v4; a retry with the same key returns the original payment. */
+  idempotencyKey?: string;
 }
 
 /** Body of `POST /work-orders/:id/payments/:paymentId/void`. */

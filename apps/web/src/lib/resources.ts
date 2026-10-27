@@ -19,8 +19,6 @@ export class ApiRequestError extends Error {
   constructor(
     readonly code: string,
     readonly fieldErrors?: Record<string, string>,
-    /** Server-provided message; used to tell apart errors that share a code. */
-    readonly detail?: string,
   ) {
     super(code);
     this.name = 'ApiRequestError';
@@ -39,7 +37,7 @@ async function withToken<T>(
   }
   const result = await fn(token);
   if (result.error) {
-    throw new ApiRequestError(result.error.code, result.error.fieldErrors, result.error.message);
+    throw new ApiRequestError(result.error.code, result.error.fieldErrors);
   }
   return result.data as T;
 }

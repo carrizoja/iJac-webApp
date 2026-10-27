@@ -11,11 +11,8 @@ export class ApiError extends Error {
 }
 
 export class ValidationError extends ApiError {
-  constructor(
-    message: string,
-    fieldErrors?: Record<string, string>,
-  ) {
-    super('VALIDATION_ERROR', message, 400, fieldErrors);
+  constructor(message: string, fieldErrors?: Record<string, string>, code = 'VALIDATION_ERROR') {
+    super(code, message, 400, fieldErrors);
   }
 }
 
@@ -38,8 +35,8 @@ export class NotFoundError extends ApiError {
 }
 
 export class ConflictError extends ApiError {
-  constructor(message: string) {
-    super('CONFLICT', message, 409);
+  constructor(message: string, code = 'CONFLICT') {
+    super(code, message, 409);
   }
 }
 
