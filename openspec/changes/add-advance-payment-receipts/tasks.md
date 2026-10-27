@@ -17,11 +17,11 @@
 
 ## 3. Slice 3 — Work-order pricing (PR 3)
 
-- [ ] 3.1 Add optional `totalPriceMinor` and `currency` to shared `WorkOrder`, plus `formatMoney(minor, currency)` with `es-AR` tests
-- [ ] 3.2 Validate price/currency pairing (non-negative integer, `ARS`|`USD`, currency required with price) in work-order DTOs and repository, with tests
-- [ ] 3.3 Add a money input helper in the web (parse `150.000,50` → minor units) with tests
-- [ ] 3.4 Add total price and currency inputs to the work-order form and show the total in work-order details, with ES/EN translations and component tests
-- [ ] 3.5 Verify lint, typecheck, tests, and build pass
+- [x] 3.1 Add optional `totalPriceMinor` and `currency` to shared `WorkOrder`, plus `formatMoney(minor, currency)` with `es-AR` tests
+- [x] 3.2 Validate price/currency pairing (non-negative integer, `ARS`|`USD`, currency required with price) in work-order DTOs and repository, with tests
+- [x] 3.3 Add a money input helper in the web (parse `150.000,50` → minor units) with tests
+- [x] 3.4 Add total price and currency inputs to the work-order form and show the total in work-order details, with ES/EN translations and component tests
+- [x] 3.5 Verify lint, typecheck, tests, and build pass
 
 ## 4. Slice 4 — Payments, balance, and receipts (PR 4, may split API/web if over budget)
 

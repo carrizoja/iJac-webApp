@@ -1,0 +1,167 @@
+import { FieldValue, Firestore } from 'firebase-admin/firestore';
+import { ConfigService } from '@nestjs/config';
+import { FirestoreWorkOrderRepository } from './firestore-work-order.repository';
+import { ApiEnvironment } from '../config/env';
+import { ValidationError } from '../common/errors';
+
+const stamp = new Date('2026-08-01T10:00:00.000Z');
+
+function createRepository(existing: Record<string, unknown> | null = {}) {
+  const snapshot = (data: Record<string, unknown>) => ({
+    id: 'wo-1',
+    exists: true,
+    get: (field: string) => data[field],
+    data: () => ({ ...data, createdAt: stamp, updatedAt: stamp }),
+  });
+  const ref = {
+    id: 'wo-1',
+    get: jest.fn().mockImplementation(async () => snapshot({ ...(existing ?? {}) })),
+  };
+  const clientRef = { id: 'c1' };
+  const tx = {
+    get: jest
+      .fn()
+      .mockImplementation(async (target: unknown) =>
+        target === ref
+          ? existing === null
+            ? { exists: false }
+            : snapshot({ clientId: 'c1', ...existing })
+          : { exists: true },
+      ),
+    create: jest.fn(),
+    update: jest.fn(),
+  };
+  const collection = {
+    doc: jest.fn().mockImplementation((id?: string) => (id === 'c1' ? clientRef : ref)),
+  };
+  const firestore = {
+    collection: jest.fn().mockReturnValue(collection),
+    runTransaction: jest.fn().mockImplementation(async (fn: (t: typeof tx) => unknown) => fn(tx)),
+  } as unknown as Firestore;
+  const config = {
+    get: jest.fn().mockReturnValue('global'),
+  } as unknown as ConfigService<ApiEnvironment>;
+  return { repository: new FirestoreWorkOrderRepository(firestore, config), tx, ref };
+}
+
+const createInput = {
+  title: 'Setup',
+  status: 'open',
+  priority: 'normal',
+  clientId: 'c1',
+};
+
+describe('FirestoreWorkOrderRepository pricing', () => {
+  it('stores price and currency on create', async () => {
+    const { repository, tx } = createRepository();
+    await repository.create('org', { ...createInput, totalPriceMinor: 15000000, currency: 'ARS' });
+    expect(tx.create).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ totalPriceMinor: 15000000, currency: 'ARS' }),
+    );
+  });
+
+  it('omits price fields for an unpriced work order', async () => {
+    const { repository, tx } = createRepository();
+    await repository.create('org', createInput);
+    const stored = tx.create.mock.calls[0][1] as Record<string, unknown>;
+    expect(stored).not.toHaveProperty('totalPriceMinor');
+    expect(stored).not.toHaveProperty('currency');
+  });
+
+  it('returns stored price and currency when reading', async () => {
+    const { repository } = createRepository({ totalPriceMinor: 5000, currency: 'USD' });
+    const order = await repository.findById('org', 'wo-1');
+    expect(order).toEqual(expect.objectContaining({ totalPriceMinor: 5000, currency: 'USD' }));
+  });
+
+  it('sets price and currency on update', async () => {
+    const { repository, tx } = createRepository({});
+    await repository.update('org', 'wo-1', { totalPriceMinor: 900, currency: 'USD' });
+    expect(tx.update).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ totalPriceMinor: 900, currency: 'USD' }),
+    );
+  });
+
+  it('reuses the stored currency when only the price changes', async () => {
+    const { repository, tx } = createRepository({ totalPriceMinor: 100, currency: 'USD' });
+    await repository.update('org', 'wo-1', { totalPriceMinor: 900 });
+    expect(tx.update).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ totalPriceMinor: 900, currency: 'USD' }),
+    );
+  });
+
+  it('rejects a price on an order with no stored currency and none in the request', async () => {
+    const { repository, tx } = createRepository({});
+    const error = await repository
+      .update('org', 'wo-1', { totalPriceMinor: 900 })
+      .catch((e: unknown) => e);
+    expect(error).toBeInstanceOf(ValidationError);
+    expect(Object.keys((error as ValidationError).fieldErrors ?? {})).toEqual(['currency']);
+    expect(tx.update).not.toHaveBeenCalled();
+  });
+
+  it('rejects a currency on an order that has no price', async () => {
+    const { repository, tx } = createRepository({});
+    const error = await repository
+      .update('org', 'wo-1', { currency: 'USD' })
+      .catch((e: unknown) => e);
+    expect(error).toBeInstanceOf(ValidationError);
+    expect(Object.keys((error as ValidationError).fieldErrors ?? {})).toEqual(['totalPriceMinor']);
+    expect(tx.update).not.toHaveBeenCalled();
+  });
+
+  it('changes only the currency of a priced order', async () => {
+    const { repository, tx } = createRepository({ totalPriceMinor: 100, currency: 'ARS' });
+    await repository.update('org', 'wo-1', { currency: 'USD' });
+    const update = tx.update.mock.calls[0][1] as Record<string, unknown>;
+    expect(update.currency).toBe('USD');
+    expect(update).not.toHaveProperty('totalPriceMinor');
+  });
+
+  it('clears both price and currency when totalPriceMinor is null', async () => {
+    const { repository, tx } = createRepository({ totalPriceMinor: 100, currency: 'ARS' });
+    await repository.update('org', 'wo-1', { totalPriceMinor: null });
+    expect(tx.update).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        totalPriceMinor: FieldValue.delete(),
+        currency: FieldValue.delete(),
+      }),
+    );
+  });
+
+  it('includes price and currency in list summaries', async () => {
+    const { repository } = createRepository();
+    const doc = {
+      id: 'wo-1',
+      get: (f: string) => (f === 'clientId' ? 'c1' : undefined),
+      data: () => ({
+        title: 'A',
+        status: 'open',
+        priority: 'low',
+        clientId: 'c1',
+        totalPriceMinor: 700,
+        currency: 'ARS',
+        createdAt: stamp,
+        updatedAt: stamp,
+      }),
+    };
+    const query = {
+      orderBy: jest.fn().mockReturnThis(),
+      limit: jest.fn().mockReturnThis(),
+      get: jest.fn().mockResolvedValue({ docs: [doc] }),
+    };
+    (repository as unknown as { collection: () => unknown }).collection = () => query;
+    (repository as unknown as { firestore: unknown }).firestore = {
+      collection: jest.fn().mockReturnValue({ doc: jest.fn() }),
+      getAll: jest.fn().mockResolvedValue([{ id: 'c1', exists: true, get: () => 'Acme' }]),
+    };
+    const result = await repository.findMany('org', {});
+    expect(result.items[0]).toEqual(
+      expect.objectContaining({ totalPriceMinor: 700, currency: 'ARS' }),
+    );
+  });
+});

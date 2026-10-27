@@ -3,10 +3,13 @@ import type { Client, WorkOrderClientSummary } from '@ijac/shared';
 import {
   WORK_ORDER_STATUSES,
   WORK_ORDER_PRIORITIES,
+  CURRENCIES,
+  Currency,
   WorkOrderStatus,
   WorkOrderPriority,
 } from '@ijac/shared';
-import { createWorkOrder, updateWorkOrder } from '../../lib/resources';
+import { ApiRequestError, createWorkOrder, updateWorkOrder } from '../../lib/resources';
+import { formatMoneyInput, parseMoneyInput } from '../../lib/money';
 import { Input, Textarea, Select, Button, Alert } from '../ui';
 import { useLanguage } from '../../hooks/useLanguage';
 import { priorityLabel, statusLabel } from '../../i18n/format';
@@ -23,6 +26,8 @@ interface FormErrors {
   clientId?: string;
   status?: string;
   priority?: string;
+  totalPrice?: string;
+  currency?: string;
   general?: string;
 }
 
@@ -35,6 +40,9 @@ export function WorkOrderForm({ clients, workOrder, onSaved, onCancel }: WorkOrd
     priority: workOrder?.priority ?? '',
     clientId: workOrder?.clientId ?? '',
     dueDate: workOrder?.dueDate ?? '',
+    totalPrice:
+      workOrder?.totalPriceMinor !== undefined ? formatMoneyInput(workOrder.totalPriceMinor) : '',
+    currency: workOrder?.currency ?? '',
   });
   const [errors, setErrors] = useState<FormErrors>({});
   const [submitting, setSubmitting] = useState(false);
@@ -46,6 +54,13 @@ export function WorkOrderForm({ clients, workOrder, onSaved, onCancel }: WorkOrd
     if (!form.clientId) next.clientId = t('workOrders.validation.client');
     if (!form.status) next.status = t('workOrders.validation.status');
     if (!form.priority) next.priority = t('workOrders.validation.priority');
+    const hasPrice = form.totalPrice.trim() !== '';
+    if (hasPrice && parseMoneyInput(form.totalPrice) === null) {
+      next.totalPrice = t('workOrders.validation.totalPrice');
+    } else if (!hasPrice && form.currency) {
+      next.totalPrice = t('workOrders.validation.priceForCurrency');
+    }
+    if (hasPrice && !form.currency) next.currency = t('workOrders.validation.currency');
     setErrors(next);
     return Object.keys(next).length === 0;
   };
@@ -63,20 +78,39 @@ export function WorkOrderForm({ clients, workOrder, onSaved, onCancel }: WorkOrd
         priority: form.priority as WorkOrderPriority,
         clientId: form.clientId,
       };
+      const totalPriceMinor = parseMoneyInput(form.totalPrice);
+      const pricing =
+        totalPriceMinor !== null
+          ? { totalPriceMinor, currency: form.currency as Currency }
+          : undefined;
       if (workOrder) {
         await updateWorkOrder(workOrder.id, {
           ...payload,
           dueDate: form.dueDate || null,
+          // `null` clears both price and currency on the server.
+          ...(pricing ??
+            (workOrder.totalPriceMinor !== undefined ? { totalPriceMinor: null } : {})),
         });
       } else {
         await createWorkOrder({
           ...payload,
           ...(form.dueDate ? { dueDate: form.dueDate } : {}),
+          ...pricing,
         });
       }
       onSaved();
-    } catch {
-      setErrors({ general: t('workOrders.saveError') });
+    } catch (error) {
+      const serverErrors = error instanceof ApiRequestError ? error.fieldErrors : undefined;
+      if (serverErrors?.totalPriceMinor || serverErrors?.currency) {
+        setErrors({
+          ...(serverErrors.totalPriceMinor && {
+            totalPrice: t('workOrders.validation.totalPrice'),
+          }),
+          ...(serverErrors.currency && { currency: t('workOrders.validation.currency') }),
+        });
+      } else {
+        setErrors({ general: t('workOrders.saveError') });
+      }
     } finally {
       setSubmitting(false);
     }
@@ -148,6 +182,32 @@ export function WorkOrderForm({ clients, workOrder, onSaved, onCancel }: WorkOrd
           {WORK_ORDER_PRIORITIES.map((p) => (
             <option key={p} value={p}>
               {priorityLabel(p, language)}
+            </option>
+          ))}
+        </Select>
+      </div>
+
+      <div className="grid gap-4 sm:grid-cols-2">
+        <Input
+          id="totalPrice"
+          inputMode="decimal"
+          label={t('workOrders.totalPrice')}
+          helpText={t('workOrders.totalPriceHelp')}
+          value={form.totalPrice}
+          onChange={(e) => setForm({ ...form, totalPrice: e.target.value })}
+          error={errors.totalPrice}
+        />
+        <Select
+          id="currency"
+          label={t('workOrders.currency')}
+          value={form.currency}
+          onChange={(e) => setForm({ ...form, currency: e.target.value })}
+          error={errors.currency}
+        >
+          <option value="">{t('workOrders.selectCurrency')}</option>
+          {CURRENCIES.map((c) => (
+            <option key={c} value={c}>
+              {t(c === Currency.ARS ? 'workOrders.currencyArs' : 'workOrders.currencyUsd')}
             </option>
           ))}
         </Select>

@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, Fragment } from 'react';
 import type { WorkOrderClientSummary, Client } from '@ijac/shared';
 import { listWorkOrders, deleteWorkOrder } from '../../lib/resources';
-import { WORK_ORDER_STATUSES, WORK_ORDER_PRIORITIES } from '@ijac/shared';
+import { WORK_ORDER_STATUSES, WORK_ORDER_PRIORITIES, formatMoney } from '@ijac/shared';
 import {
   Select,
   Button,
@@ -185,6 +185,9 @@ export function WorkOrderList({ clients, onCreate, onEdit }: WorkOrderListProps)
                 <th scope="col" className="px-4 py-3">
                   {t('workOrders.deadline')}
                 </th>
+                <th scope="col" className="px-4 py-3">
+                  {t('workOrders.totalPrice')}
+                </th>
                 <th scope="col" className="px-4 py-3 text-right">
                   {t('common.actions')}
                 </th>
@@ -206,6 +209,11 @@ export function WorkOrderList({ clients, onCreate, onEdit }: WorkOrderListProps)
                     </td>
                     <td className="px-4 py-3.5 text-fg-muted">
                       {wo.dueDate ? formatDateOnly(wo.dueDate, language) : '—'}
+                    </td>
+                    <td className="px-4 py-3.5 text-fg-muted">
+                      {wo.totalPriceMinor !== undefined && wo.currency
+                        ? formatMoney(wo.totalPriceMinor, wo.currency)
+                        : '—'}
                     </td>
                     <td className="px-4 py-3.5 text-right">
                       <div className="inline-flex gap-2 justify-end">
@@ -235,7 +243,7 @@ export function WorkOrderList({ clients, onCreate, onEdit }: WorkOrderListProps)
                   {confirmDelete === wo.id && (
                     <tr key={`${wo.id}-delete`}>
                       <td
-                        colSpan={6}
+                        colSpan={7}
                         className="bg-priority-high/10 px-4 py-3"
                         data-testid="delete-confirmation"
                       >
@@ -326,6 +334,11 @@ export function WorkOrderList({ clients, onCreate, onEdit }: WorkOrderListProps)
                       </Badge>
                       {wo.dueDate && (
                         <Badge variant="neutral">{formatDateOnly(wo.dueDate, language)}</Badge>
+                      )}
+                      {wo.totalPriceMinor !== undefined && wo.currency && (
+                        <Badge variant="neutral">
+                          {formatMoney(wo.totalPriceMinor, wo.currency)}
+                        </Badge>
                       )}
                     </div>
                   </div>

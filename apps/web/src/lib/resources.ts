@@ -100,7 +100,11 @@ export async function getWorkOrder(id: string): Promise<WorkOrder> {
 
 export async function updateWorkOrder(
   id: string,
-  input: Partial<Omit<WorkOrder, 'dueDate'>> & { dueDate?: string | null },
+  input: Partial<Omit<WorkOrder, 'dueDate' | 'totalPriceMinor'>> & {
+    dueDate?: string | null;
+    /** `null` clears the price and its currency. */
+    totalPriceMinor?: number | null;
+  },
 ): Promise<WorkOrder> {
   return withToken((token) => apiPatch(`/work-orders/${id}`, input, token));
 }

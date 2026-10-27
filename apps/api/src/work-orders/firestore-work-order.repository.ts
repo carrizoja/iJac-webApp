@@ -81,6 +81,10 @@ export class FirestoreWorkOrderRepository implements WorkOrderRepository {
       priority: input.priority,
       clientId: input.clientId,
       dueDate: toTimestamp(input.dueDate) ?? null,
+      ...(input.totalPriceMinor != null && {
+        totalPriceMinor: input.totalPriceMinor,
+        currency: input.currency,
+      }),
       createdAt: now,
       updatedAt: now,
     };
@@ -126,12 +130,19 @@ export class FirestoreWorkOrderRepository implements WorkOrderRepository {
     if (input.priority !== undefined) update.priority = input.priority;
     if (input.dueDate !== undefined)
       update.dueDate = input.dueDate ? toTimestamp(input.dueDate) : null;
+    if (input.totalPriceMinor === null) {
+      update.totalPriceMinor = FieldValue.delete();
+      update.currency = FieldValue.delete();
+    } else if (input.totalPriceMinor !== undefined) {
+      update.totalPriceMinor = input.totalPriceMinor;
+    }
 
     await this.firestore.runTransaction(async (tx) => {
       const doc = await tx.get(ref);
       if (!doc.exists) {
         throw new NotFoundError('Work order');
       }
+      this.applyPricing(doc, input, update);
       const previousClientId = doc.get('clientId') as string;
       if (input.clientId !== undefined && input.clientId !== previousClientId) {
         if (!clientRef) {
@@ -158,6 +169,36 @@ export class FirestoreWorkOrderRepository implements WorkOrderRepository {
     });
 
     return this.toWorkOrder(await ref.get());
+  }
+
+  /**
+   * Resolves the stored price/currency pairing for an update. A currency
+   * always needs a price, whether sent now or already stored, and vice versa.
+   */
+  private applyPricing(
+    doc: FirebaseFirestore.DocumentSnapshot,
+    input: UpdateWorkOrderInput,
+    update: Record<string, unknown>,
+  ): void {
+    if (input.totalPriceMinor === null) return;
+    const storedPrice = doc.get('totalPriceMinor') as number | undefined;
+    const storedCurrency = doc.get('currency') as string | undefined;
+    if (input.totalPriceMinor !== undefined) {
+      const currency = input.currency ?? storedCurrency;
+      if (!currency) {
+        throw new ValidationError('Invalid work order', {
+          currency: 'currency is required when totalPriceMinor is set',
+        });
+      }
+      update.currency = currency;
+    } else if (input.currency !== undefined) {
+      if (storedPrice === undefined) {
+        throw new ValidationError('Invalid work order', {
+          totalPriceMinor: 'totalPriceMinor is required when currency is set',
+        });
+      }
+      update.currency = input.currency;
+    }
   }
 
   async delete(organizationId: string, id: string): Promise<void> {
@@ -246,6 +287,10 @@ export class FirestoreWorkOrderRepository implements WorkOrderRepository {
         status: order.status,
         priority: order.priority,
         dueDate: order.dueDate,
+        ...(order.totalPriceMinor !== undefined && {
+          totalPriceMinor: order.totalPriceMinor,
+          currency: order.currency,
+        }),
         createdAt: order.createdAt,
         updatedAt: order.updatedAt,
       };
@@ -299,6 +344,10 @@ export class FirestoreWorkOrderRepository implements WorkOrderRepository {
         status: order.status,
         priority: order.priority,
         dueDate: order.dueDate,
+        ...(order.totalPriceMinor !== undefined && {
+          totalPriceMinor: order.totalPriceMinor,
+          currency: order.currency,
+        }),
         createdAt: order.createdAt,
         updatedAt: order.updatedAt,
       };

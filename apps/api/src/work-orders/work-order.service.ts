@@ -5,7 +5,7 @@ import {
   UpdateWorkOrderInput,
   WorkOrderFilter,
 } from './work-order.repository';
-import { WorkOrder, WorkOrderClientSummary } from '@ijac/shared';
+import { CURRENCIES, Currency, WorkOrder, WorkOrderClientSummary } from '@ijac/shared';
 import { WORK_ORDER_REPOSITORY } from './work-order.constants';
 import { ValidationError } from '../common/errors';
 
@@ -13,12 +13,14 @@ import { ValidationError } from '../common/errors';
 export class WorkOrderService {
   constructor(@Inject(WORK_ORDER_REPOSITORY) private readonly repository: WorkOrderRepository) {}
 
-  async create(
-    organizationId: string,
-    input: CreateWorkOrderInput,
-  ): Promise<WorkOrder> {
+  async create(organizationId: string, input: CreateWorkOrderInput): Promise<WorkOrder> {
     this.validateWorkOrderInput(input);
-    return this.repository.create(organizationId, input);
+    const { totalPriceMinor, ...rest } = input;
+    this.validatePricing(totalPriceMinor, input.currency, 'create');
+    return this.repository.create(organizationId, {
+      ...rest,
+      ...(totalPriceMinor != null && { totalPriceMinor }),
+    });
   }
 
   async update(
@@ -27,27 +29,57 @@ export class WorkOrderService {
     input: UpdateWorkOrderInput,
   ): Promise<WorkOrder> {
     this.validateWorkOrderInput(input);
+    this.validatePricing(input.totalPriceMinor, input.currency, 'update');
     return this.repository.update(organizationId, id, input);
   }
 
-  private validateWorkOrderInput(
-    input: CreateWorkOrderInput | UpdateWorkOrderInput,
-  ): void {
+  private validateWorkOrderInput(input: CreateWorkOrderInput | UpdateWorkOrderInput): void {
     const validStatuses = ['open', 'in-progress', 'completed', 'cancelled'];
     const validPriorities = ['low', 'normal', 'high', 'urgent'];
-    if (
-      input.status !== undefined &&
-      !validStatuses.includes(input.status as string)
-    ) {
+    if (input.status !== undefined && !validStatuses.includes(input.status as string)) {
       throw new ValidationError(`Invalid work order status: ${input.status}`);
     }
+    if (input.priority !== undefined && !validPriorities.includes(input.priority as string)) {
+      throw new ValidationError(`Invalid work order priority: ${input.priority}`);
+    }
+  }
+
+  /**
+   * Stateless price/currency rules. Rules that depend on the stored order
+   * (price without any currency, currency without a stored price) are enforced
+   * by the repository inside its transaction.
+   */
+  private validatePricing(
+    totalPriceMinor: number | null | undefined,
+    currency: string | undefined,
+    mode: 'create' | 'update',
+  ): void {
+    const fieldErrors: Record<string, string> = {};
+    const hasPrice = typeof totalPriceMinor === 'number';
+    if (hasPrice && !(Number.isSafeInteger(totalPriceMinor) && totalPriceMinor >= 0)) {
+      fieldErrors.totalPriceMinor = 'totalPriceMinor must be a non-negative integer';
+    }
+    if (currency !== undefined && !CURRENCIES.includes(currency as Currency)) {
+      fieldErrors.currency = 'currency must be ARS or USD';
+    }
+    if (!fieldErrors.currency && currency !== undefined && !hasPrice) {
+      // On update a bare currency is checked against the stored price by the
+      // repository; a null price clears the order, so a currency contradicts it.
+      if (mode === 'create' || totalPriceMinor === null) {
+        fieldErrors.totalPriceMinor = 'totalPriceMinor is required when currency is set';
+      }
+    }
     if (
-      input.priority !== undefined &&
-      !validPriorities.includes(input.priority as string)
+      !fieldErrors.currency &&
+      !fieldErrors.totalPriceMinor &&
+      mode === 'create' &&
+      hasPrice &&
+      currency === undefined
     ) {
-      throw new ValidationError(
-        `Invalid work order priority: ${input.priority}`,
-      );
+      fieldErrors.currency = 'currency is required when totalPriceMinor is set';
+    }
+    if (Object.keys(fieldErrors).length > 0) {
+      throw new ValidationError('Invalid work order', fieldErrors);
     }
   }
 
@@ -55,10 +87,7 @@ export class WorkOrderService {
     await this.repository.delete(organizationId, id);
   }
 
-  async findById(
-    organizationId: string,
-    id: string,
-  ): Promise<WorkOrder | null> {
+  async findById(organizationId: string, id: string): Promise<WorkOrder | null> {
     return this.repository.findById(organizationId, id);
   }
 

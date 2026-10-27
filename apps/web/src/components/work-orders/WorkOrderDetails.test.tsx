@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import type { Client, WorkOrder } from '@ijac/shared';
-import { WorkOrderPriority, WorkOrderStatus } from '@ijac/shared';
+import { Currency, WorkOrderPriority, WorkOrderStatus } from '@ijac/shared';
 import { setLanguage } from '../../i18n/language';
 
 const { getClient, getWorkOrder } = vi.hoisted(() => ({
@@ -174,5 +174,46 @@ describe('WorkOrderDetails', () => {
     });
     expect(getClient).not.toHaveBeenCalled();
     expectDocumentActionsAbsent();
+  });
+
+  it('shows the formatted total price inside the printable document', async () => {
+    window.history.replaceState({}, '', '/work-orders/details?id=work-order-1');
+    getWorkOrder.mockResolvedValue({
+      ...workOrder,
+      totalPriceMinor: 15000050,
+      currency: Currency.ARS,
+    });
+    getClient.mockResolvedValue(client);
+
+    render(<WorkOrderDetails />);
+
+    const price = await screen.findByText('$ 150.000,50');
+    expect(screen.getByText('Precio total')).toBeInTheDocument();
+    expect(price.closest('.work-order-print-document')).not.toBeNull();
+    expect(price.closest('.work-order-print-hidden')).toBeNull();
+  });
+
+  it('formats a USD total price', async () => {
+    window.history.replaceState({}, '', '/work-orders/details?id=work-order-1');
+    getWorkOrder.mockResolvedValue({
+      ...workOrder,
+      totalPriceMinor: 125050,
+      currency: Currency.USD,
+    });
+    getClient.mockResolvedValue(client);
+
+    render(<WorkOrderDetails />);
+
+    expect(await screen.findByText('US$ 1.250,50')).toBeInTheDocument();
+  });
+
+  it('indicates when the order has no price', async () => {
+    window.history.replaceState({}, '', '/work-orders/details?id=work-order-1');
+    getWorkOrder.mockResolvedValue(workOrder);
+    getClient.mockResolvedValue(client);
+
+    render(<WorkOrderDetails />);
+
+    expect(await screen.findByText('Sin precio')).toBeInTheDocument();
   });
 });

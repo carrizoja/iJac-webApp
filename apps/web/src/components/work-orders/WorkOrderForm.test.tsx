@@ -2,14 +2,21 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { WorkOrderForm } from './WorkOrderForm';
 import type { Client, WorkOrderClientSummary } from '@ijac/shared';
-import { WorkOrderStatus, WorkOrderPriority } from '@ijac/shared';
+import { Currency, WorkOrderStatus, WorkOrderPriority } from '@ijac/shared';
 
-vi.mock('../../lib/resources', () => ({
-  createWorkOrder: vi.fn(),
-  updateWorkOrder: vi.fn(),
-}));
+vi.mock('../../lib/resources', () => {
+  class ApiRequestError extends Error {
+    constructor(
+      readonly code: string,
+      readonly fieldErrors?: Record<string, string>,
+    ) {
+      super(code);
+    }
+  }
+  return { ApiRequestError, createWorkOrder: vi.fn(), updateWorkOrder: vi.fn() };
+});
 
-import { createWorkOrder, updateWorkOrder } from '../../lib/resources';
+import { ApiRequestError, createWorkOrder, updateWorkOrder } from '../../lib/resources';
 
 describe('WorkOrderForm', () => {
   const now = new Date().toISOString();
@@ -211,6 +218,144 @@ describe('WorkOrderForm', () => {
 
     await waitFor(() => {
       expect(screen.queryByText(/título es obligatorio/i)).not.toBeInTheDocument();
+    });
+  });
+
+  describe('pricing', () => {
+    function fillRequired() {
+      fireEvent.change(screen.getByLabelText(/título/i), { target: { value: 'Reparar red' } });
+      fireEvent.change(screen.getByLabelText(/cliente/i), { target: { value: 'c1' } });
+      fireEvent.change(screen.getByLabelText(/estado/i), { target: { value: 'open' } });
+      fireEvent.change(screen.getByLabelText(/prioridad/i), { target: { value: 'high' } });
+    }
+    const submitCreate = () =>
+      fireEvent.click(screen.getByRole('button', { name: /crear orden/i }));
+    const created = createWorkOrder as unknown as ReturnType<typeof vi.fn>;
+    const updated = updateWorkOrder as unknown as ReturnType<typeof vi.fn>;
+
+    beforeEach(() => {
+      // Earlier tests install persistent implementations; start from a clean mock.
+      created.mockReset();
+      updated.mockReset();
+    });
+
+    it('omits price and currency when left blank', async () => {
+      created.mockResolvedValueOnce({ id: 'wo1' });
+      render(<WorkOrderForm clients={clients} onSaved={() => {}} onCancel={() => {}} />);
+      fillRequired();
+      submitCreate();
+      await waitFor(() => expect(created).toHaveBeenCalled());
+      expect(created.mock.calls[0][0]).not.toHaveProperty('totalPriceMinor');
+      expect(created.mock.calls[0][0]).not.toHaveProperty('currency');
+    });
+
+    it('sends the parsed price in minor units with its currency', async () => {
+      created.mockResolvedValueOnce({ id: 'wo1' });
+      render(<WorkOrderForm clients={clients} onSaved={() => {}} onCancel={() => {}} />);
+      fillRequired();
+      fireEvent.change(screen.getByLabelText(/precio total/i), { target: { value: '150.000,50' } });
+      fireEvent.change(screen.getByLabelText(/moneda/i), { target: { value: 'ARS' } });
+      submitCreate();
+      await waitFor(() =>
+        expect(created).toHaveBeenCalledWith(
+          expect.objectContaining({ totalPriceMinor: 15000050, currency: 'ARS' }),
+        ),
+      );
+    });
+
+    it('rejects an unparseable price without calling the API', async () => {
+      render(<WorkOrderForm clients={clients} onSaved={() => {}} onCancel={() => {}} />);
+      fillRequired();
+      fireEvent.change(screen.getByLabelText(/precio total/i), { target: { value: '12,345' } });
+      fireEvent.change(screen.getByLabelText(/moneda/i), { target: { value: 'USD' } });
+      submitCreate();
+      expect(await screen.findByText(/importe válido/i)).toBeInTheDocument();
+      expect(created).not.toHaveBeenCalled();
+    });
+
+    it('requires a currency when a price is entered', async () => {
+      render(<WorkOrderForm clients={clients} onSaved={() => {}} onCancel={() => {}} />);
+      fillRequired();
+      fireEvent.change(screen.getByLabelText(/precio total/i), { target: { value: '100' } });
+      submitCreate();
+      expect(await screen.findByText(/elegí la moneda/i)).toBeInTheDocument();
+      expect(created).not.toHaveBeenCalled();
+    });
+
+    it('requires a price when a currency is chosen', async () => {
+      render(<WorkOrderForm clients={clients} onSaved={() => {}} onCancel={() => {}} />);
+      fillRequired();
+      fireEvent.change(screen.getByLabelText(/moneda/i), { target: { value: 'USD' } });
+      submitCreate();
+      expect(await screen.findByText(/ingresá el precio/i)).toBeInTheDocument();
+      expect(created).not.toHaveBeenCalled();
+    });
+
+    it('prefills the price and currency when editing', () => {
+      render(
+        <WorkOrderForm
+          clients={clients}
+          workOrder={{
+            id: 'wo1',
+            clientId: 'c1',
+            clientName: 'Acme',
+            title: 'Fix',
+            status: WorkOrderStatus.OPEN,
+            priority: WorkOrderPriority.HIGH,
+            totalPriceMinor: 15000050,
+            currency: Currency.USD,
+            createdAt: now,
+            updatedAt: now,
+          }}
+          onSaved={() => {}}
+          onCancel={() => {}}
+        />,
+      );
+      expect((screen.getByLabelText(/precio total/i) as HTMLInputElement).value).toBe('150.000,50');
+      expect((screen.getByLabelText(/moneda/i) as HTMLSelectElement).value).toBe('USD');
+    });
+
+    it('clears the price on update by sending null when the field is emptied', async () => {
+      updated.mockResolvedValueOnce({ id: 'wo1' });
+      render(
+        <WorkOrderForm
+          clients={clients}
+          workOrder={{
+            id: 'wo1',
+            clientId: 'c1',
+            clientName: 'Acme',
+            title: 'Fix',
+            status: WorkOrderStatus.OPEN,
+            priority: WorkOrderPriority.HIGH,
+            totalPriceMinor: 1000,
+            currency: Currency.ARS,
+            createdAt: now,
+            updatedAt: now,
+          }}
+          onSaved={() => {}}
+          onCancel={() => {}}
+        />,
+      );
+      fireEvent.change(screen.getByLabelText(/precio total/i), { target: { value: '' } });
+      fireEvent.change(screen.getByLabelText(/moneda/i), { target: { value: '' } });
+      fireEvent.click(screen.getByRole('button', { name: /guardar cambios/i }));
+      await waitFor(() => expect(updated).toHaveBeenCalled());
+      const payload = updated.mock.calls[0][1];
+      expect(payload.totalPriceMinor).toBeNull();
+      expect(payload).not.toHaveProperty('currency');
+    });
+
+    it('maps server field errors to the price inputs', async () => {
+      created.mockRejectedValueOnce(
+        new ApiRequestError('VALIDATION_ERROR', { currency: 'currency is required' }),
+      );
+      render(<WorkOrderForm clients={clients} onSaved={() => {}} onCancel={() => {}} />);
+      fillRequired();
+      fireEvent.change(screen.getByLabelText(/precio total/i), { target: { value: '100' } });
+      fireEvent.change(screen.getByLabelText(/moneda/i), { target: { value: 'ARS' } });
+      submitCreate();
+      expect(await screen.findByText(/elegí la moneda/i)).toBeInTheDocument();
+      expect(screen.queryByText(/no se pudo guardar/i)).not.toBeInTheDocument();
     });
   });
 });

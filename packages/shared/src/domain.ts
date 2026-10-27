@@ -44,6 +44,9 @@ export interface WorkOrder {
   priority: WorkOrderPriority;
   clientId: string;
   dueDate?: string;
+  /** Total price in minor currency units (cents); present together with `currency`. */
+  totalPriceMinor?: number;
+  currency?: Currency;
   createdAt: string;
   updatedAt: string;
 }
@@ -56,6 +59,8 @@ export interface WorkOrderClientSummary {
   status: WorkOrderStatus;
   priority: WorkOrderPriority;
   dueDate?: string;
+  totalPriceMinor?: number;
+  currency?: Currency;
   createdAt: string;
   updatedAt: string;
 }

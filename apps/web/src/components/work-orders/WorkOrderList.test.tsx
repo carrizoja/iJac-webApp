@@ -127,4 +127,21 @@ describe('WorkOrderList', () => {
     expect(alert).not.toHaveTextContent('Fallo al conectar');
     expect(screen.getByRole('button', { name: 'Cerrar alerta' })).toBeInTheDocument();
   });
+
+  it('shows the formatted total price in table and card views, and a dash when unpriced', async () => {
+    listWorkOrders.mockResolvedValue({
+      items: [
+        { ...sampleWorkOrder, totalPriceMinor: 15000000, currency: 'ARS' },
+        { ...sampleWorkOrder, id: 'wo-2', title: 'Sin precio aún' },
+      ],
+    });
+    render(<WorkOrderList clients={[sampleClient]} onCreate={vi.fn()} onEdit={vi.fn()} />);
+
+    await waitFor(() => expect(screen.getByText('Reparación de Servidor')).toBeInTheDocument());
+    expect(screen.getByRole('columnheader', { name: 'Precio total' })).toBeInTheDocument();
+    expect(screen.getByText('$ 150.000,00')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Tarjetas' }));
+    expect(screen.getByText('$ 150.000,00')).toBeInTheDocument();
+  });
 });

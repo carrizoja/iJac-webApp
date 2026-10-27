@@ -6,7 +6,7 @@ import {
   UpdateWorkOrderInput,
   WorkOrderFilter,
 } from './work-order.repository';
-import { WorkOrder, WorkOrderClientSummary, WorkOrderStatus, WorkOrderPriority } from '@ijac/shared';
+import { WorkOrder, WorkOrderClientSummary, WorkOrderStatus, WorkOrderPriority, Currency } from '@ijac/shared';
 import { NotFoundError, ValidationError } from '../common/errors';
 import { WORK_ORDER_REPOSITORY } from './work-order.constants';
 
@@ -32,6 +32,10 @@ class InMemoryWorkOrderRepository implements WorkOrderRepository {
       priority: input.priority as WorkOrderPriority,
       clientId: input.clientId,
       dueDate: input.dueDate,
+      ...(input.totalPriceMinor != null && {
+        totalPriceMinor: input.totalPriceMinor,
+        currency: input.currency as Currency,
+      }),
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
@@ -45,8 +49,12 @@ class InMemoryWorkOrderRepository implements WorkOrderRepository {
     if (input.clientId && !this.clientIds.has(input.clientId)) {
       throw new NotFoundError('Client');
     }
+    const { totalPriceMinor: _price, currency: _currency, ...unpriced } = workOrder;
+    const base = input.totalPriceMinor === null ? unpriced : workOrder;
     const updated: WorkOrder = {
-      ...workOrder,
+      ...base,
+      ...(typeof input.totalPriceMinor === 'number' && { totalPriceMinor: input.totalPriceMinor }),
+      ...(input.currency !== undefined && { currency: input.currency as Currency }),
       ...(input.title !== undefined && { title: input.title }),
       ...(input.description !== undefined && { description: input.description }),
       ...(input.status !== undefined && { status: input.status as WorkOrderStatus }),
@@ -175,5 +183,74 @@ describe('WorkOrderService', () => {
     await service.delete('uid', wo.id);
     const found = await service.findById('uid', wo.id);
     expect(found).toBeNull();
+  });
+
+  describe('pricing', () => {
+    const base = { title: 'A', status: 'open', priority: 'normal', clientId: 'client-a' };
+
+    it('stores a priced work order', async () => {
+      const wo = await service.create('uid', { ...base, totalPriceMinor: 15000000, currency: 'ARS' });
+      expect(wo.totalPriceMinor).toBe(15000000);
+      expect(wo.currency).toBe('ARS');
+    });
+
+    it('stores an unpriced work order without price or currency', async () => {
+      const wo = await service.create('uid', base);
+      expect(wo).not.toHaveProperty('totalPriceMinor');
+      expect(wo).not.toHaveProperty('currency');
+    });
+
+    it('accepts a zero price', async () => {
+      const wo = await service.create('uid', { ...base, totalPriceMinor: 0, currency: 'USD' });
+      expect(wo.totalPriceMinor).toBe(0);
+    });
+
+    it.each([
+      ['price without currency', { totalPriceMinor: 100 }, 'currency'],
+      ['currency without price', { currency: 'ARS' }, 'totalPriceMinor'],
+      ['unsupported currency', { totalPriceMinor: 100, currency: 'EUR' }, 'currency'],
+      ['negative price', { totalPriceMinor: -1, currency: 'ARS' }, 'totalPriceMinor'],
+      ['fractional price', { totalPriceMinor: 1.5, currency: 'ARS' }, 'totalPriceMinor'],
+      ['unsafe integer price', { totalPriceMinor: 2 ** 60, currency: 'ARS' }, 'totalPriceMinor'],
+      ['null price with currency', { totalPriceMinor: null, currency: 'ARS' }, 'totalPriceMinor'],
+    ])('rejects %s on create', async (_name, pricing, field) => {
+      const error = await service
+        .create('uid', { ...base, ...pricing } as CreateWorkOrderInput)
+        .catch((e: unknown) => e);
+      expect(error).toBeInstanceOf(ValidationError);
+      expect(Object.keys((error as ValidationError).fieldErrors ?? {})).toEqual([field]);
+    });
+
+    it('treats a null price on create as unpriced', async () => {
+      const wo = await service.create('uid', { ...base, totalPriceMinor: null } as CreateWorkOrderInput);
+      expect(wo).not.toHaveProperty('totalPriceMinor');
+    });
+
+    it('updates the price together with the currency', async () => {
+      const wo = await service.create('uid', base);
+      const updated = await service.update('uid', wo.id, { totalPriceMinor: 900, currency: 'USD' });
+      expect(updated).toEqual(expect.objectContaining({ totalPriceMinor: 900, currency: 'USD' }));
+    });
+
+    it('clears price and currency when totalPriceMinor is null', async () => {
+      const wo = await service.create('uid', { ...base, totalPriceMinor: 900, currency: 'USD' });
+      const updated = await service.update('uid', wo.id, { totalPriceMinor: null });
+      expect(updated).not.toHaveProperty('totalPriceMinor');
+      expect(updated).not.toHaveProperty('currency');
+    });
+
+    it('rejects clearing the price while also sending a currency', async () => {
+      const wo = await service.create('uid', { ...base, totalPriceMinor: 900, currency: 'USD' });
+      await expect(
+        service.update('uid', wo.id, { totalPriceMinor: null, currency: 'ARS' }),
+      ).rejects.toBeInstanceOf(ValidationError);
+    });
+
+    it('rejects an invalid price on update', async () => {
+      const wo = await service.create('uid', base);
+      await expect(
+        service.update('uid', wo.id, { totalPriceMinor: -5, currency: 'ARS' }),
+      ).rejects.toBeInstanceOf(ValidationError);
+    });
   });
 });
