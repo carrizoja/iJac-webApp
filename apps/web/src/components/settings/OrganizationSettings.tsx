@@ -124,18 +124,21 @@ export function OrganizationSettings() {
       setSaved(true);
     } catch (error) {
       const serverErrors = error instanceof ApiRequestError ? error.fieldErrors : undefined;
-      if (serverErrors && Object.keys(serverErrors).length > 0) {
-        const next: FormErrors = {};
-        for (const field of FIELDS) {
-          if (serverErrors[field.name]) {
-            next[field.name] =
-              field.name === 'cuit' ? t('settings.validation.cuitInvalid') : t(field.requiredKey);
-          }
+      const next: FormErrors = {};
+      const unmapped: string[] = [];
+      for (const [key, message] of Object.entries(serverErrors ?? {})) {
+        const field = FIELDS.find((candidate) => candidate.name === key);
+        if (field) {
+          next[field.name] =
+            field.name === 'cuit' ? t('settings.validation.cuitInvalid') : t(field.requiredKey);
+        } else {
+          unmapped.push(message);
         }
-        setErrors(next);
-      } else {
-        setErrors({ general: t('settings.saveError') });
       }
+      if (unmapped.length > 0 || Object.keys(next).length === 0) {
+        next.general = [t('settings.saveError'), ...unmapped].join(' ');
+      }
+      setErrors(next);
     } finally {
       setSubmitting(false);
     }

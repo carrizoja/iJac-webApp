@@ -140,6 +140,46 @@ describe('OrganizationSettings', () => {
     });
   });
 
+  it('shows unknown server field errors at form level', async () => {
+    vi.mocked(getOrganizationProfile).mockResolvedValue({
+      configured: true,
+      profile,
+      canEdit: true,
+    });
+    vi.mocked(saveOrganizationProfile).mockRejectedValue(
+      new ApiRequestError('VALIDATION_ERROR', { 'issuer.logo': 'logo is not allowed' }),
+    );
+
+    render(<OrganizationSettings />);
+    await screen.findByLabelText(/cuit/i);
+    fireEvent.click(screen.getByRole('button', { name: /guardar cambios/i }));
+
+    expect(await screen.findByText(/no se pudo guardar el perfil/i)).toBeInTheDocument();
+    expect(screen.getByText(/logo is not allowed/i)).toBeInTheDocument();
+    expect(screen.queryByText(/cuit no es válido/i)).not.toBeInTheDocument();
+  });
+
+  it('shows a known field error on its input and unknown ones at form level', async () => {
+    vi.mocked(getOrganizationProfile).mockResolvedValue({
+      configured: true,
+      profile,
+      canEdit: true,
+    });
+    vi.mocked(saveOrganizationProfile).mockRejectedValue(
+      new ApiRequestError('VALIDATION_ERROR', {
+        cuit: 'cuit must be a valid 11-digit CUIT',
+        extra: 'extra is not allowed',
+      }),
+    );
+
+    render(<OrganizationSettings />);
+    await screen.findByLabelText(/cuit/i);
+    fireEvent.click(screen.getByRole('button', { name: /guardar cambios/i }));
+
+    expect(await screen.findByText(/cuit no es válido/i)).toBeInTheDocument();
+    expect(screen.getByText(/extra is not allowed/i)).toBeInTheDocument();
+  });
+
   it('shows a generic error when the save fails', async () => {
     vi.mocked(getOrganizationProfile).mockResolvedValue({
       configured: true,
