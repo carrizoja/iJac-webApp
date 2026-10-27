@@ -229,4 +229,17 @@ describe('ClientList', () => {
       '¿Eliminar cliente "Acme Inc"?',
     );
   });
+
+  it('shows the tax ID in table and card modes only when present', async () => {
+    listClients.mockResolvedValue({
+      items: [{ ...client, taxId: '20123456786' }, secondClient],
+    });
+    render(<ClientList onCreate={vi.fn()} onEdit={vi.fn()} />);
+
+    await waitFor(() => expect(screen.getByText('Acme Inc')).toBeInTheDocument());
+    expect(screen.getAllByText(/20123456786/)).toHaveLength(1);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Tarjetas' }));
+    expect(screen.getAllByText(/20123456786/)).toHaveLength(1);
+  });
 });

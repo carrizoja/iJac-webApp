@@ -1,18 +1,20 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { ClientService } from './client.service';
-import { ClientRepository, CreateClientInput, UpdateClientInput, ClientFilter } from './client.repository';
+import {
+  ClientRepository,
+  CreateClientInput,
+  UpdateClientInput,
+  ClientFilter,
+} from './client.repository';
 import { Client } from '@ijac/shared';
-import { NotFoundError, ConflictError } from '../common/errors';
+import { NotFoundError, ConflictError, ValidationError } from '../common/errors';
 import { CLIENT_REPOSITORY } from './client.constants';
 
 class InMemoryClientRepository implements ClientRepository {
   private clients: Map<string, Client> = new Map();
   private counter = 0;
 
-  async create(
-    _organizationId: string,
-    input: CreateClientInput,
-  ): Promise<Client> {
+  async create(_organizationId: string, input: CreateClientInput): Promise<Client> {
     this.counter += 1;
     const client: Client = {
       id: `client-${this.counter}`,
@@ -21,6 +23,7 @@ class InMemoryClientRepository implements ClientRepository {
       phone: input.phone,
       organization: input.organization ?? '',
       notes: input.notes ?? '',
+      ...(input.taxId && { taxId: input.taxId }),
       searchPrefixes: [],
       workOrderCount: 0,
       createdAt: new Date().toISOString(),
@@ -30,15 +33,14 @@ class InMemoryClientRepository implements ClientRepository {
     return client;
   }
 
-  async update(
-    _organizationId: string,
-    id: string,
-    input: UpdateClientInput,
-  ): Promise<Client> {
+  async update(_organizationId: string, id: string, input: UpdateClientInput): Promise<Client> {
     const client = this.clients.get(id);
     if (!client) throw new NotFoundError('Client');
+    const { taxId: _previousTaxId, ...rest } = client;
+    const nextTaxId = input.taxId === undefined ? client.taxId : input.taxId;
     const updated: Client = {
-      ...client,
+      ...rest,
+      ...(nextTaxId && { taxId: nextTaxId }),
       ...(input.name !== undefined && { name: input.name }),
       ...(input.email !== undefined && { email: input.email }),
       ...(input.phone !== undefined && { phone: input.phone }),
@@ -61,10 +63,7 @@ class InMemoryClientRepository implements ClientRepository {
     this.clients.delete(id);
   }
 
-  async findById(
-    _organizationId: string,
-    id: string,
-  ): Promise<Client | null> {
+  async findById(_organizationId: string, id: string): Promise<Client | null> {
     return this.clients.get(id) ?? null;
   }
 
@@ -73,16 +72,13 @@ class InMemoryClientRepository implements ClientRepository {
     filter: ClientFilter,
   ): Promise<{ items: Client[]; nextCursor?: string }> {
     let items = Array.from(this.clients.values()).sort(
-      (a, b) =>
-        new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
+      (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
     );
     if (filter.organization) {
       items = items.filter((c) => c.organization === filter.organization);
     }
     if (filter.search) {
-      items = items.filter((c) =>
-        c.name.toLowerCase().includes(filter.search!.toLowerCase()),
-      );
+      items = items.filter((c) => c.name.toLowerCase().includes(filter.search!.toLowerCase()));
     }
     const limit = filter.limit ?? 20;
     return { items: items.slice(0, limit) };
@@ -146,9 +142,9 @@ describe('ClientService', () => {
   });
 
   it('throws not found when updating unknown client', async () => {
-    await expect(
-      service.update('org-1', 'missing', { name: 'X' }),
-    ).rejects.toBeInstanceOf(NotFoundError);
+    await expect(service.update('org-1', 'missing', { name: 'X' })).rejects.toBeInstanceOf(
+      NotFoundError,
+    );
   });
 
   it('deletes an unreferenced client', async () => {
@@ -169,9 +165,7 @@ describe('ClientService', () => {
       phone: '123',
     });
     repository.setWorkOrderCount(created.id, 1);
-    await expect(
-      service.delete('org-1', created.id),
-    ).rejects.toBeInstanceOf(ConflictError);
+    await expect(service.delete('org-1', created.id)).rejects.toBeInstanceOf(ConflictError);
   });
 
   it('filters clients by organization', async () => {
@@ -202,5 +196,74 @@ describe('ClientService', () => {
     });
     const result = await service.findMany('org-1', { search: 'xyz' });
     expect(result.items).toHaveLength(0);
+  });
+
+  describe('taxId', () => {
+    const base = { name: 'Acme', email: 'acme@example.com', phone: '123' };
+
+    it('normalizes a formatted valid CUIT before persisting', async () => {
+      const client = await service.create('org-1', {
+        ...base,
+        taxId: '20-12345678-6',
+      });
+      expect(client.taxId).toBe('20123456786');
+    });
+
+    it('accepts a DNI of 7 to 10 digits with separators', async () => {
+      const client = await service.create('org-1', {
+        ...base,
+        taxId: '12.345.678',
+      });
+      expect(client.taxId).toBe('12345678');
+    });
+
+    it('creates a client without taxId when it is omitted or blank', async () => {
+      expect((await service.create('org-1', base)).taxId).toBeUndefined();
+      expect((await service.create('org-1', { ...base, taxId: '  ' })).taxId).toBeUndefined();
+    });
+
+    it.each([
+      ['letters', '12AB5678'],
+      ['too short', '123456'],
+      ['too long', '123456789012'],
+      ['bad CUIT check digit', '20-12345678-9'],
+    ])('rejects %s with a field-level error on taxId', async (_name, taxId) => {
+      const error = await service.create('org-1', { ...base, taxId }).catch((e: unknown) => e);
+      expect(error).toBeInstanceOf(ValidationError);
+      expect((error as ValidationError).fieldErrors).toHaveProperty('taxId');
+    });
+
+    it('validates taxId on update as well', async () => {
+      const created = await service.create('org-1', base);
+      await expect(service.update('org-1', created.id, { taxId: 'abc' })).rejects.toBeInstanceOf(
+        ValidationError,
+      );
+    });
+
+    it('normalizes taxId on update', async () => {
+      const created = await service.create('org-1', base);
+      const updated = await service.update('org-1', created.id, {
+        taxId: '20-12345678-6',
+      });
+      expect(updated.taxId).toBe('20123456786');
+    });
+
+    it('clears taxId when updated with an empty value', async () => {
+      const created = await service.create('org-1', {
+        ...base,
+        taxId: '12345678',
+      });
+      const updated = await service.update('org-1', created.id, { taxId: '' });
+      expect(updated.taxId).toBeUndefined();
+    });
+
+    it('leaves taxId untouched when not part of the update', async () => {
+      const created = await service.create('org-1', {
+        ...base,
+        taxId: '12345678',
+      });
+      const updated = await service.update('org-1', created.id, { name: 'X' });
+      expect(updated.taxId).toBe('12345678');
+    });
   });
 });

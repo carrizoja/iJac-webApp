@@ -28,6 +28,8 @@ export interface Client {
   phone: string;
   organization?: string;
   notes?: string;
+  /** Normalized digits only (DNI or CUIT). */
+  taxId?: string;
   searchPrefixes?: string[];
   workOrderCount: number;
   createdAt: string;

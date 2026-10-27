@@ -10,10 +10,10 @@
 
 ## 2. Slice 2 — Client tax identifier (PR 2)
 
-- [ ] 2.1 Add optional `taxId` to shared `Client` type
-- [ ] 2.2 Accept, validate (7–11 digits, CUIT check digit when 11), normalize, and clear `taxId` in client DTOs and repository, with service and repository tests
-- [ ] 2.3 Add tax ID input to the client form and show it in client details, with ES/EN translations and component tests
-- [ ] 2.4 Verify lint, typecheck, tests, and build pass
+- [x] 2.1 Add optional `taxId` to shared `Client` type
+- [x] 2.2 Accept, validate (7–11 digits, CUIT check digit when 11), normalize, and clear `taxId` in client DTOs and repository, with service and repository tests
+- [x] 2.3 Add tax ID input to the client form and show it in client details, with ES/EN translations and component tests
+- [x] 2.4 Verify lint, typecheck, tests, and build pass
 
 ## 3. Slice 3 — Work-order pricing (PR 3)
 

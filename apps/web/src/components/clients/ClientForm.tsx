@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import type { Client } from '@ijac/shared';
-import { createClient, updateClient } from '../../lib/resources';
+import { isValidCuit, normalizeTaxId, type Client } from '@ijac/shared';
+import { ApiRequestError, createClient, updateClient } from '../../lib/resources';
 import { Input, Textarea, Button, Alert } from '../ui';
 import { useLanguage } from '../../hooks/useLanguage';
 
@@ -14,7 +14,16 @@ interface FormErrors {
   name?: string;
   email?: string;
   phone?: string;
+  taxId?: string;
   general?: string;
+}
+
+/** Optional field: blank is valid; otherwise 7-11 digits, with a valid check digit for 11. */
+function isTaxIdAcceptable(value: string): boolean {
+  const normalized = normalizeTaxId(value);
+  if (!normalized) return true;
+  if (!/^\d{7,11}$/.test(normalized)) return false;
+  return normalized.length !== 11 || isValidCuit(normalized);
 }
 
 export function ClientForm({ client, onSaved, onCancel }: ClientFormProps) {
@@ -25,6 +34,7 @@ export function ClientForm({ client, onSaved, onCancel }: ClientFormProps) {
     phone: client?.phone ?? '',
     organization: client?.organization ?? '',
     notes: client?.notes ?? '',
+    taxId: client?.taxId ?? '',
   });
   const [errors, setErrors] = useState<FormErrors>({});
   const [submitting, setSubmitting] = useState(false);
@@ -36,6 +46,7 @@ export function ClientForm({ client, onSaved, onCancel }: ClientFormProps) {
     else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email))
       next.email = t('clients.validation.emailInvalid');
     if (!form.phone.trim()) next.phone = t('clients.validation.phone');
+    if (!isTaxIdAcceptable(form.taxId)) next.taxId = t('clients.validation.taxId');
     setErrors(next);
     return Object.keys(next).length === 0;
   };
@@ -52,8 +63,13 @@ export function ClientForm({ client, onSaved, onCancel }: ClientFormProps) {
         await createClient(form);
       }
       onSaved();
-    } catch {
-      setErrors({ general: t('clients.saveError') });
+    } catch (error) {
+      const serverErrors = error instanceof ApiRequestError ? error.fieldErrors : undefined;
+      if (serverErrors?.taxId) {
+        setErrors({ taxId: t('clients.validation.taxId') });
+      } else {
+        setErrors({ general: t('clients.saveError') });
+      }
     } finally {
       setSubmitting(false);
     }
@@ -100,6 +116,16 @@ export function ClientForm({ client, onSaved, onCancel }: ClientFormProps) {
         label={t('clients.organization')}
         value={form.organization}
         onChange={(e) => setForm({ ...form, organization: e.target.value })}
+      />
+
+      <Input
+        id="taxId"
+        label={t('clients.taxId')}
+        helpText={t('clients.taxIdHelp')}
+        value={form.taxId}
+        onChange={(e) => setForm({ ...form, taxId: e.target.value })}
+        error={errors.taxId}
+        inputMode="numeric"
       />
 
       <Textarea

@@ -168,7 +168,14 @@ export function ClientList({ onCreate, onEdit }: ClientListProps) {
                     <tr
                       className={confirmDelete === client.id ? 'bg-priority-high/5' : 'table-row'}
                     >
-                      <td className="px-4 py-3.5 font-medium">{client.name}</td>
+                      <td className="px-4 py-3.5 font-medium">
+                        {client.name}
+                        {client.taxId && (
+                          <span className="block text-xs font-normal text-fg-muted">
+                            {t('clients.taxId')}: {client.taxId}
+                          </span>
+                        )}
+                      </td>
                       <td className="px-4 py-3.5 text-fg-muted">{client.email}</td>
                       <td className="px-4 py-3.5 text-fg-muted">{client.phone}</td>
                       <td className="px-4 py-3.5 text-fg-muted">{client.organization || '—'}</td>
@@ -289,6 +296,11 @@ export function ClientList({ onCreate, onEdit }: ClientListProps) {
                       <p className="text-sm text-fg-muted">{client.phone}</p>
                       {client.organization && (
                         <p className="mt-1 text-xs text-fg-muted">{client.organization}</p>
+                      )}
+                      {client.taxId && (
+                        <p className="mt-1 text-xs text-fg-muted">
+                          {t('clients.taxId')}: {client.taxId}
+                        </p>
                       )}
                     </div>
                     <div className="flex flex-wrap gap-2">
