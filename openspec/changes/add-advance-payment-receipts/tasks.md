@@ -33,8 +33,8 @@
 - [x] 4.5 Add the void operation (reason required, double-void conflict, audit fields) with tests
 - [x] 4.6 Add payment service and controller: `GET /work-orders/:id/payments` (member), `POST` record and `POST .../void` (admin), with organization-isolation and 403 tests
 - [x] 4.7 Enforce currency lock and minimum total in the work-order update path through a transaction that reads active payments, with tests for each update scenario in the spec
-- [ ] 4.8 Add a payments panel to work-order details (balance summary, payment list, admin-only record and void dialogs, unpriced hint, link to Settings when the profile is missing), with ES/EN translations and component tests
-- [ ] 4.9 Add a `PaymentReceipt` component in fixed Spanish (issuer, number, date, client with optional tax ID, amount in figures and words, method, concept, title, "Documento no válido como factura", "ANULADO" mark with reason) with tests
-- [ ] 4.10 Add a receipt print view reusing the print-hide pattern so only the receipt prints, with a test asserting `window.print` is triggered
+- [x] 4.8 Add a payments panel to work-order details (balance summary, payment list, admin-only record and void dialogs, unpriced hint, link to Settings when the profile is missing), with ES/EN translations and component tests
+- [x] 4.9 Add a `PaymentReceipt` component in fixed Spanish (issuer, number, date, client with optional tax ID, amount in figures and words, method, concept, title, "Documento no válido como factura", "ANULADO" mark with reason) with tests
+- [x] 4.10 Add a receipt print view reusing the print-hide pattern so only the receipt prints, with a test asserting `window.print` is triggered
 - [x] 4.11 Confirm `firestore.rules` default deny covers `payments` and `counters` (no rule change), and add a rules note to deployment docs
 - [ ] 4.12 Verify lint, typecheck, tests, and build pass and manually walk the full flow locally (profile → priced job → advance → settlement → void → reprint)

@@ -683,4 +683,35 @@
   .work-order-print-document :is(h1, h2, p, span, dt, dd) {
     color: #111827 !important;
   }
+
+  /* Receipt print view: only the receipt overlay (a direct child of body) prints. */
+  body:has(.receipt-print-overlay) > :not(.receipt-print-overlay) {
+    display: none !important;
+  }
+
+  .receipt-print-hidden {
+    display: none !important;
+  }
+
+  body:has(.receipt-print-overlay) {
+    min-width: 0;
+    background: #fff !important;
+  }
+
+  .receipt-print-overlay {
+    position: static !important;
+    overflow: visible !important;
+    background: #fff !important;
+  }
+
+  .receipt-print-overlay > div {
+    max-width: none !important;
+    padding: 0 !important;
+  }
+
+  .receipt-print-area .payment-receipt {
+    break-inside: avoid;
+    page-break-inside: avoid;
+    color: #111827 !important;
+  }
 }

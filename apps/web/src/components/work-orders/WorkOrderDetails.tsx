@@ -3,6 +3,7 @@ import { formatMoney, type Client, type WorkOrder } from '@ijac/shared';
 import { FileDown, MessageCircle } from 'lucide-react';
 import { getClient, getWorkOrder } from '../../lib/resources';
 import { Alert, Badge, Button, LoadingState, Panel } from '../ui';
+import { PaymentsPanel } from '../payments/PaymentsPanel';
 import { useLanguage } from '../../hooks/useLanguage';
 import { formatDateOnly, formatDateTime, priorityLabel, statusLabel } from '../../i18n/format';
 
@@ -226,6 +227,8 @@ export function WorkOrderDetails() {
           </div>
         </dl>
       </Panel>
+
+      <PaymentsPanel workOrderId={workOrder.id} workOrderStatus={workOrder.status} />
     </article>
   );
 }

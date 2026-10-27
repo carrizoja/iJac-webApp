@@ -8,6 +8,10 @@ import type {
   OrganizationProfile,
   OrganizationProfileInput,
   OrganizationProfileResponse,
+  Payment,
+  RecordPaymentInput,
+  VoidPaymentInput,
+  WorkOrderPaymentsResponse,
 } from '@ijac/shared';
 
 /** API failure that keeps the error code as its message plus any field-level details. */
@@ -15,6 +19,8 @@ export class ApiRequestError extends Error {
   constructor(
     readonly code: string,
     readonly fieldErrors?: Record<string, string>,
+    /** Server-provided message; used to tell apart errors that share a code. */
+    readonly detail?: string,
   ) {
     super(code);
     this.name = 'ApiRequestError';
@@ -33,7 +39,7 @@ async function withToken<T>(
   }
   const result = await fn(token);
   if (result.error) {
-    throw new ApiRequestError(result.error.code, result.error.fieldErrors);
+    throw new ApiRequestError(result.error.code, result.error.fieldErrors, result.error.message);
   }
   return result.data as T;
 }
@@ -121,4 +127,33 @@ export async function saveOrganizationProfile(
   input: OrganizationProfileInput,
 ): Promise<OrganizationProfile> {
   return withToken((token) => apiPut('/organization/profile', input, token));
+}
+
+export async function listPayments(workOrderId: string): Promise<WorkOrderPaymentsResponse> {
+  return withToken((token) =>
+    apiGet(`/work-orders/${encodeURIComponent(workOrderId)}/payments`, token),
+  );
+}
+
+export async function recordPayment(
+  workOrderId: string,
+  input: RecordPaymentInput,
+): Promise<Payment> {
+  return withToken((token) =>
+    apiPost(`/work-orders/${encodeURIComponent(workOrderId)}/payments`, input, token),
+  );
+}
+
+export async function voidPayment(
+  workOrderId: string,
+  paymentId: string,
+  input: VoidPaymentInput,
+): Promise<Payment> {
+  return withToken((token) =>
+    apiPost(
+      `/work-orders/${encodeURIComponent(workOrderId)}/payments/${encodeURIComponent(paymentId)}/void`,
+      input,
+      token,
+    ),
+  );
 }
