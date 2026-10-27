@@ -56,6 +56,10 @@ The system SHALL accept a client-generated idempotency key (a UUID) when recordi
 - **WHEN** an admin records a payment with idempotency key K, the response is lost, and the client retries with the same key K and payload
 - **THEN** the system returns the payment recorded by the first request and the organization's next receipt number is unchanged
 
+#### Scenario: Key reused with a different payload
+- **WHEN** a payment request reuses an idempotency key for the same work order but with a different amount, payment date, method, or notes
+- **THEN** the system rejects the request with the idempotency key conflict error and stores no payment
+
 #### Scenario: Key reused for another work order
 - **WHEN** a payment request uses an idempotency key already used for a payment of a different work order
 - **THEN** the system rejects the request with a conflict error and stores no payment

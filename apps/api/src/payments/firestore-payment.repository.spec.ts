@@ -366,6 +366,63 @@ describe.each(['global', 'organization'] as const)(
         expect(store.docs.get(paths.counter)).toEqual({ next: 2 });
       });
 
+      describe('key reused with a different payload', () => {
+        it.each([
+          ['amountMinor', { amountMinor: 1000000 }],
+          ['paymentDate', { paymentDate: '2026-08-11' }],
+          ['method', { method: PaymentMethod.CASH }],
+          ['notes', { notes: 'Different note' }],
+        ])('rejects a different %s and stores nothing', async (_field, change) => {
+          const { store, repository, seed } = setup(mode);
+          const paths = seed(org);
+          await repository.record(org, 'wo-1', { ...input, idempotencyKey: key }, admin);
+          const before = new Map(store.docs);
+
+          const error = await repository
+            .record(org, 'wo-1', { ...input, ...change, idempotencyKey: key }, admin)
+            .catch((e: unknown) => e);
+
+          expect(error).toBeInstanceOf(ConflictError);
+          expect((error as ConflictError).code).toBe(PAYMENT_ERROR_CODES.IDEMPOTENCY_KEY_CONFLICT);
+          expect(store.docs).toEqual(before);
+          expect(store.docs.get(paths.counter)).toEqual({ next: 2 });
+        });
+
+        it('treats trimmed, empty and absent notes as the same payload', async () => {
+          const { store, repository, seed } = setup(mode);
+          const paths = seed(org);
+          const first = await repository.record(
+            org,
+            'wo-1',
+            { ...input, notes: '  Deposit  ', idempotencyKey: key },
+            admin,
+          );
+          const retry = await repository.record(
+            org,
+            'wo-1',
+            { ...input, notes: 'Deposit', idempotencyKey: key },
+            admin,
+          );
+          expect(retry).toEqual(first);
+
+          const otherKey = '9b2d4f6a-1c3e-4a5b-8d7f-0e1a2b3c4d5e';
+          const bare = await repository.record(
+            org,
+            'wo-1',
+            { ...input, idempotencyKey: otherKey },
+            admin,
+          );
+          const blank = await repository.record(
+            org,
+            'wo-1',
+            { ...input, notes: '   ', idempotencyKey: otherKey },
+            admin,
+          );
+          expect(blank).toEqual(bare);
+          expect(store.docs.get(paths.counter)).toEqual({ next: 3 });
+        });
+      });
+
       it('keeps auto ids and no key registry when the key is omitted', async () => {
         const { store, repository, seed } = setup(mode);
         seed(org);

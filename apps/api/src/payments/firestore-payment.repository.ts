@@ -88,6 +88,16 @@ export class FirestorePaymentRepository implements PaymentRepository {
     };
   }
 
+  /** Compares the replayed request with the stored payment; notes are compared as recorded (trimmed, empty equals absent). */
+  private isSamePayload(stored: StoredPayment, input: RecordPaymentInput): boolean {
+    return (
+      stored.amountMinor === input.amountMinor &&
+      stored.paymentDate === input.paymentDate &&
+      stored.method === input.method &&
+      (stored.notes ?? '') === (input.notes?.trim() ?? '')
+    );
+  }
+
   async findByWorkOrder(organizationId: string, workOrderId: string): Promise<Payment[]> {
     const snapshot = await this.paymentsCollection(organizationId, workOrderId).get();
     return snapshot.docs
@@ -122,7 +132,14 @@ export class FirestorePaymentRepository implements PaymentRepository {
           }
           const original = await tx.get(paymentRef);
           if (original.exists) {
-            return this.toPayment(paymentRef.id, workOrderId, original.data() as StoredPayment);
+            const stored = original.data() as StoredPayment;
+            if (!this.isSamePayload(stored, input)) {
+              throw new ConflictError(
+                'Idempotency key was already used with a different payment',
+                PAYMENT_ERROR_CODES.IDEMPOTENCY_KEY_CONFLICT,
+              );
+            }
+            return this.toPayment(paymentRef.id, workOrderId, stored);
           }
         }
       }

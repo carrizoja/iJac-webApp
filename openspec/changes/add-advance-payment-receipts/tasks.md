@@ -40,4 +40,5 @@
 - [x] 4.13 Add idempotent payment recording: client-generated UUID key, deduplicated inside the record transaction, with API and web tests
 - [x] 4.14 Add distinct error codes for payment business-rule rejections and map them in the payments panel instead of matching message text
 - [x] 4.15 Show the overpayment message only for the overpayment code; show an invalid-amount message for other amount errors
+- [x] 4.16 Reject idempotent replays whose payload differs from the original payment, with tests
 - [ ] 4.12 Verify lint, typecheck, tests, and build pass and manually walk the full flow locally (profile → priced job → advance → settlement → void → reprint)
