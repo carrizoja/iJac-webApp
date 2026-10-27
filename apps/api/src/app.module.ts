@@ -6,6 +6,7 @@ import { FirebaseModule } from './firebase/firebase.module';
 import { AuthModule } from './auth/auth.module';
 import { ClientModule } from './clients/client.module';
 import { WorkOrderModule } from './work-orders/work-order.module';
+import { PaymentModule } from './payments/payment.module';
 import { CalendarModule } from './calendar/calendar.module';
 import { CalendarConnectionModule } from './calendar/calendar-connection.module';
 import { FirebaseAuthGuard } from './auth/firebase-auth.guard';
@@ -27,6 +28,7 @@ import { validateApiEnvironment } from './config/env';
     HealthModule,
     ClientModule,
     WorkOrderModule,
+    PaymentModule,
     CalendarModule,
     CalendarConnectionModule,
     OrganizationProfileModule,

@@ -46,6 +46,10 @@ Run the service as a dedicated, non-default service account used only by this AP
 
 Select the narrowest predefined or custom IAM roles that provide those capabilities, and validate them against the deployed critical paths before traffic promotion. Exact role composition is an infrastructure decision because collection-level scope and organization policy may require a custom role; do not attach project-wide editor/owner roles.
 
+## Payment Routes And Repository Mode
+
+Recording and voiding payments (`POST /work-orders/:id/payments` and `POST /work-orders/:id/payments/:paymentId/void`) and saving the organization profile are admin-only. Roles are resolved only when `REPOSITORY_MODE=organization`; in `global` mode no role is resolved, so these routes always return 403. Cut production over to `organization` mode (and provision the owner as `admin`) before relying on payments. Payments and receipt counters are server-only Firestore data covered by the default-deny rules.
+
 ## Secrets
 
 Store `GOOGLE_CLIENT_SECRET` and `CREDENTIAL_ENCRYPTION_KEY` in Secret Manager. OAuth client identifiers may be normal environment configuration according to organization policy. Cloud Run must use its runtime identity for Firebase Admin; do not create or inject a Firebase service-account private key.

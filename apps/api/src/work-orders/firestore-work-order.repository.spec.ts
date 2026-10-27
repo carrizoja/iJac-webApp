@@ -2,19 +2,27 @@ import { FieldValue, Firestore } from 'firebase-admin/firestore';
 import { ConfigService } from '@nestjs/config';
 import { FirestoreWorkOrderRepository } from './firestore-work-order.repository';
 import { ApiEnvironment } from '../config/env';
-import { ValidationError } from '../common/errors';
+import { ConflictError, ValidationError } from '../common/errors';
 
 const stamp = new Date('2026-08-01T10:00:00.000Z');
 
-function createRepository(existing: Record<string, unknown> | null = {}) {
+function createRepository(
+  existing: Record<string, unknown> | null = {},
+  payments: Array<{ amountMinor: number; status: string }> = [],
+) {
   const snapshot = (data: Record<string, unknown>) => ({
     id: 'wo-1',
     exists: true,
     get: (field: string) => data[field],
     data: () => ({ ...data, createdAt: stamp, updatedAt: stamp }),
   });
+  const paymentsRef = { id: 'payments' };
   const ref = {
     id: 'wo-1',
+    collection: jest.fn().mockImplementation((name: string) => {
+      if (name !== 'payments') throw new Error(`unexpected subcollection ${name}`);
+      return paymentsRef;
+    }),
     get: jest.fn().mockImplementation(async () => snapshot({ ...(existing ?? {}) })),
   };
   const clientRef = { id: 'c1' };
@@ -22,11 +30,13 @@ function createRepository(existing: Record<string, unknown> | null = {}) {
     get: jest
       .fn()
       .mockImplementation(async (target: unknown) =>
-        target === ref
-          ? existing === null
-            ? { exists: false }
-            : snapshot({ clientId: 'c1', ...existing })
-          : { exists: true },
+        target === paymentsRef
+          ? { docs: payments.map((data) => ({ data: () => data })) }
+          : target === ref
+            ? existing === null
+              ? { exists: false }
+              : snapshot({ clientId: 'c1', ...existing })
+            : { exists: true },
       ),
     create: jest.fn(),
     update: jest.fn(),
@@ -41,7 +51,7 @@ function createRepository(existing: Record<string, unknown> | null = {}) {
   const config = {
     get: jest.fn().mockReturnValue('global'),
   } as unknown as ConfigService<ApiEnvironment>;
-  return { repository: new FirestoreWorkOrderRepository(firestore, config), tx, ref };
+  return { repository: new FirestoreWorkOrderRepository(firestore, config), tx, ref, paymentsRef };
 }
 
 const createInput = {
@@ -163,5 +173,79 @@ describe('FirestoreWorkOrderRepository pricing', () => {
     expect(result.items[0]).toEqual(
       expect.objectContaining({ totalPriceMinor: 700, currency: 'ARS' }),
     );
+  });
+});
+
+describe('FirestoreWorkOrderRepository payment guards', () => {
+  const priced = { totalPriceMinor: 10000000, currency: 'ARS' };
+  const active = (amountMinor: number) => ({ amountMinor, status: 'active' });
+  const voided = (amountMinor: number) => ({ amountMinor, status: 'voided' });
+
+  it('rejects a currency change when an active payment exists', async () => {
+    const { repository, tx } = createRepository(priced, [active(3000000)]);
+    await expect(repository.update('org', 'wo-1', { currency: 'USD' })).rejects.toBeInstanceOf(
+      ConflictError,
+    );
+    expect(tx.update).not.toHaveBeenCalled();
+  });
+
+  it('rejects a currency change sent together with a new total', async () => {
+    const { repository, tx } = createRepository(priced, [active(3000000)]);
+    await expect(
+      repository.update('org', 'wo-1', { totalPriceMinor: 20000000, currency: 'USD' }),
+    ).rejects.toBeInstanceOf(ConflictError);
+    expect(tx.update).not.toHaveBeenCalled();
+  });
+
+  it('accepts resending the same currency', async () => {
+    const { repository, tx } = createRepository(priced, [active(3000000)]);
+    await repository.update('org', 'wo-1', { totalPriceMinor: 20000000, currency: 'ARS' });
+    expect(tx.update).toHaveBeenCalled();
+  });
+
+  it('rejects clearing the price when an active payment exists', async () => {
+    const { repository, tx } = createRepository(priced, [active(3000000)]);
+    await expect(
+      repository.update('org', 'wo-1', { totalPriceMinor: null }),
+    ).rejects.toBeInstanceOf(ConflictError);
+    expect(tx.update).not.toHaveBeenCalled();
+  });
+
+  it('rejects a total lower than the sum of active payments', async () => {
+    const { repository, tx } = createRepository(priced, [active(3000000), active(2000000)]);
+    await expect(
+      repository.update('org', 'wo-1', { totalPriceMinor: 4999999 }),
+    ).rejects.toBeInstanceOf(ConflictError);
+    expect(tx.update).not.toHaveBeenCalled();
+  });
+
+  it('accepts a total equal to the sum of active payments', async () => {
+    const { repository, tx } = createRepository(priced, [active(3000000), active(2000000)]);
+    await repository.update('org', 'wo-1', { totalPriceMinor: 5000000 });
+    expect(tx.update).toHaveBeenCalled();
+  });
+
+  it('accepts raising the total after a payment', async () => {
+    const { repository, tx } = createRepository(priced, [active(3000000)]);
+    await repository.update('org', 'wo-1', { totalPriceMinor: 20000000 });
+    expect(tx.update).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ totalPriceMinor: 20000000 }),
+    );
+  });
+
+  it('ignores voided payments, allowing a currency change, a lower total and clearing', async () => {
+    for (const input of [{ currency: 'USD' }, { totalPriceMinor: 1 }, { totalPriceMinor: null }]) {
+      const { repository, tx } = createRepository(priced, [voided(3000000)]);
+      await repository.update('org', 'wo-1', input);
+      expect(tx.update).toHaveBeenCalled();
+    }
+  });
+
+  it('does not read payments when pricing is untouched', async () => {
+    const { repository, tx, paymentsRef } = createRepository(priced, [active(3000000)]);
+    await repository.update('org', 'wo-1', { title: 'Renamed' });
+    expect(tx.get).not.toHaveBeenCalledWith(paymentsRef);
+    expect(tx.update).toHaveBeenCalled();
   });
 });

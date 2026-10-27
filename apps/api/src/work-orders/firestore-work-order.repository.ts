@@ -1,4 +1,11 @@
-import { WorkOrder, WorkOrderClientSummary, WorkOrderStatus, WorkOrderPriority } from '@ijac/shared';
+import {
+  computeBalance,
+  Payment,
+  WorkOrder,
+  WorkOrderClientSummary,
+  WorkOrderStatus,
+  WorkOrderPriority,
+} from '@ijac/shared';
 import {
   WorkOrderRepository,
   CreateWorkOrderInput,
@@ -11,7 +18,7 @@ import { ConfigService } from '@nestjs/config';
 import { FIRESTORE } from '../firebase/firebase.module';
 import { ApiEnvironment } from '../config/env';
 import { toIsoString, toTimestamp, nowTimestamp } from '../common/timestamps';
-import { NotFoundError, ValidationError } from '../common/errors';
+import { ConflictError, NotFoundError, ValidationError } from '../common/errors';
 
 @Injectable()
 export class FirestoreWorkOrderRepository implements WorkOrderRepository {
@@ -143,6 +150,7 @@ export class FirestoreWorkOrderRepository implements WorkOrderRepository {
         throw new NotFoundError('Work order');
       }
       this.applyPricing(doc, input, update);
+      await this.assertPricingAllowedByPayments(tx, ref, doc, input);
       const previousClientId = doc.get('clientId') as string;
       if (input.clientId !== undefined && input.clientId !== previousClientId) {
         if (!clientRef) {
@@ -198,6 +206,36 @@ export class FirestoreWorkOrderRepository implements WorkOrderRepository {
         });
       }
       update.currency = input.currency;
+    }
+  }
+
+  /**
+   * With active payments the order's money is locked: the currency cannot
+   * change, the price cannot be removed, and the total cannot drop below what
+   * was paid. Voided payments do not count. Raising the total is always fine.
+   * Payments are only read when the request touches pricing.
+   */
+  private async assertPricingAllowedByPayments(
+    tx: FirebaseFirestore.Transaction,
+    ref: FirebaseFirestore.DocumentReference,
+    doc: FirebaseFirestore.DocumentSnapshot,
+    input: UpdateWorkOrderInput,
+  ): Promise<void> {
+    if (input.totalPriceMinor === undefined && input.currency === undefined) return;
+
+    const snapshot = await tx.get(ref.collection('payments'));
+    const payments = snapshot.docs.map((payment) => payment.data() as Payment);
+    const { paidMinor } = computeBalance(0, payments);
+    if (paidMinor === 0) return;
+
+    if (input.totalPriceMinor === null) {
+      throw new ConflictError('Cannot remove the total price of a work order with active payments');
+    }
+    if (input.currency !== undefined && input.currency !== doc.get('currency')) {
+      throw new ConflictError('Cannot change the currency of a work order with active payments');
+    }
+    if (input.totalPriceMinor !== undefined && input.totalPriceMinor < paidMinor) {
+      throw new ConflictError('Total price cannot be lower than the amount already paid');
     }
   }
 

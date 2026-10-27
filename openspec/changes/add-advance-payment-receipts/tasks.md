@@ -26,15 +26,15 @@
 ## 4. Slice 4 — Payments, balance, and receipts (PR 4, may split API/web if over budget)
 
 - [ ] 4.0 Prerequisite (ops, before deploying slices 1 and 4 to production): cut production over from `REPOSITORY_MODE=global` to `organization` using the existing migration tooling (preview → migrate → verify → switch env) and provision the organization with the owner as `admin`; in `global` mode no role is resolved, so admin-only routes always return 403
-- [ ] 4.1 Add shared `Payment`, `PaymentMethod`, `PaymentStatus`, `PaymentConcept`, and `WorkOrderBalance` types
-- [ ] 4.2 Add `computeBalance` and `formatReceiptNumber` to `packages/shared` with tests (voided excluded, zero payments, `0001-00000042`)
-- [ ] 4.3 Add `amountToSpanishWords` to `packages/shared` with table-driven tests covering the edge numbers listed in design.md and both currencies
-- [ ] 4.4 Add payment repository with the record transaction (counter increment, preconditions, snapshots, concept) for both `REPOSITORY_MODE` paths, with tests for numbering, overpay, unpriced, cancelled, and profile-not-configured
-- [ ] 4.5 Add the void operation (reason required, double-void conflict, audit fields) with tests
-- [ ] 4.6 Add payment service and controller: `GET /work-orders/:id/payments` (member), `POST` record and `POST .../void` (admin), with organization-isolation and 403 tests
-- [ ] 4.7 Enforce currency lock and minimum total in the work-order update path through a transaction that reads active payments, with tests for each update scenario in the spec
+- [x] 4.1 Add shared `Payment`, `PaymentMethod`, `PaymentStatus`, `PaymentConcept`, and `WorkOrderBalance` types
+- [x] 4.2 Add `computeBalance` and `formatReceiptNumber` to `packages/shared` with tests (voided excluded, zero payments, `0001-00000042`)
+- [x] 4.3 Add `amountToSpanishWords` to `packages/shared` with table-driven tests covering the edge numbers listed in design.md and both currencies
+- [x] 4.4 Add payment repository with the record transaction (counter increment, preconditions, snapshots, concept) for both `REPOSITORY_MODE` paths, with tests for numbering, overpay, unpriced, cancelled, and profile-not-configured
+- [x] 4.5 Add the void operation (reason required, double-void conflict, audit fields) with tests
+- [x] 4.6 Add payment service and controller: `GET /work-orders/:id/payments` (member), `POST` record and `POST .../void` (admin), with organization-isolation and 403 tests
+- [x] 4.7 Enforce currency lock and minimum total in the work-order update path through a transaction that reads active payments, with tests for each update scenario in the spec
 - [ ] 4.8 Add a payments panel to work-order details (balance summary, payment list, admin-only record and void dialogs, unpriced hint, link to Settings when the profile is missing), with ES/EN translations and component tests
 - [ ] 4.9 Add a `PaymentReceipt` component in fixed Spanish (issuer, number, date, client with optional tax ID, amount in figures and words, method, concept, title, "Documento no válido como factura", "ANULADO" mark with reason) with tests
 - [ ] 4.10 Add a receipt print view reusing the print-hide pattern so only the receipt prints, with a test asserting `window.print` is triggered
-- [ ] 4.11 Confirm `firestore.rules` default deny covers `payments` and `counters` (no rule change), and add a rules note to deployment docs
+- [x] 4.11 Confirm `firestore.rules` default deny covers `payments` and `counters` (no rule change), and add a rules note to deployment docs
 - [ ] 4.12 Verify lint, typecheck, tests, and build pass and manually walk the full flow locally (profile → priced job → advance → settlement → void → reprint)

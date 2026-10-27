@@ -27,6 +27,11 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
+    // Payments (`.../workOrders/{id}/payments/{paymentId}`) and receipt counters
+    // (`counters/receipts`, `organizations/{id}/counters/receipts`) are
+    // server-only: nested documents are not matched by the rules above, so the
+    // default deny below covers them. No rule change is needed.
+
     // Default deny
     match /{document=**} {
       allow read, write: if false;
