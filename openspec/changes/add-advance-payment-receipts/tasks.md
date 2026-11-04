@@ -41,4 +41,10 @@
 - [x] 4.14 Add distinct error codes for payment business-rule rejections and map them in the payments panel instead of matching message text
 - [x] 4.15 Show the overpayment message only for the overpayment code; show an invalid-amount message for other amount errors
 - [x] 4.16 Reject idempotent replays whose payload differs from the original payment, with tests
-- [ ] 4.12 Verify lint, typecheck, tests, and build pass and manually walk the full flow locally (profile → priced job → advance → settlement → void → reprint)
+- [x] 4.12 Verify lint, typecheck, tests, and build pass and manually walk the full flow locally (profile → priced job → advance → settlement → void → reprint)
+
+## 5. Follow-ups found in the manual walk-through
+
+- [ ] 5.1 Link each work-order list row to its details page; today only the calendar links there, so the payments panel is otherwise unreachable
+- [ ] 5.2 Show the client tax ID on the receipt with CUIT hyphens (`30-71234567-1`), matching the issuer CUIT
+- [ ] 5.3 Hide browser print headers and footers on the receipt (date, title, URL), for example with `@page { margin: 0 }` and inner padding
