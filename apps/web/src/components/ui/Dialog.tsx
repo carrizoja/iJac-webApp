@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useCallback } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { cn } from './cn';
 import { Button } from './Button';
 import { useLanguage } from '../../hooks/useLanguage';
@@ -52,18 +52,12 @@ export function Dialog({
   const previousActiveElement = useRef<HTMLElement | null>(null);
   const contentRef = useRef<HTMLDivElement>(null);
 
-  /**
-   * Handle Escape key to close dialog
-   */
-  const handleKeyDown = useCallback(
-    (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        e.preventDefault();
-        onClose();
-      }
-    },
-    [onClose],
-  );
+  // Keep the latest onClose without re-running the open effect on every
+  // parent render; re-running it would steal focus from the active field.
+  const onCloseRef = useRef(onClose);
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  }, [onClose]);
 
   /**
    * Handle backdrop click to close dialog
@@ -83,7 +77,12 @@ export function Dialog({
     // Store the element that had focus before dialog opened
     previousActiveElement.current = document.activeElement as HTMLElement;
 
-    // Add Escape key listener
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        onCloseRef.current();
+      }
+    };
     document.addEventListener('keydown', handleKeyDown);
 
     // Move focus to dialog or first focusable element
@@ -102,7 +101,7 @@ export function Dialog({
     return () => {
       document.removeEventListener('keydown', handleKeyDown);
     };
-  }, [isOpen, handleKeyDown]);
+  }, [isOpen]);
 
   /**
    * Restore focus when dialog closes

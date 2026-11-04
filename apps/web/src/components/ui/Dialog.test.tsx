@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { useState } from 'react';
+import { render, screen, fireEvent, act } from '@testing-library/react';
 import { Dialog } from './Dialog';
 
 describe('Dialog', () => {
@@ -228,5 +229,43 @@ describe('Dialog', () => {
     render(<Dialog {...defaultProps} />);
     const dialog = screen.getByRole('alertdialog');
     expect(dialog).toHaveAttribute('aria-labelledby', 'dialog-title');
+  });
+  it('keeps focus on a field while typing when onClose is an inline function', () => {
+    vi.useFakeTimers();
+    function Host() {
+      const [value, setValue] = useState('');
+      return (
+        <Dialog isOpen onClose={() => undefined} title="Record">
+          <input aria-label="Amount" value={value} onChange={(e) => setValue(e.target.value)} />
+        </Dialog>
+      );
+    }
+    render(<Host />);
+    act(() => {
+      vi.runAllTimers();
+    });
+
+    const input = screen.getByLabelText('Amount');
+    input.focus();
+    fireEvent.change(input, { target: { value: '3' } });
+    act(() => {
+      vi.runAllTimers();
+    });
+
+    expect(input).toHaveFocus();
+    expect(input).toHaveValue('3');
+    vi.useRealTimers();
+  });
+
+  it('calls the latest onClose on Escape after re-renders', () => {
+    const first = vi.fn();
+    const latest = vi.fn();
+    const { rerender } = render(<Dialog {...defaultProps} onClose={first} />);
+    rerender(<Dialog {...defaultProps} onClose={latest} />);
+
+    fireEvent.keyDown(document, { key: 'Escape' });
+
+    expect(latest).toHaveBeenCalledTimes(1);
+    expect(first).not.toHaveBeenCalled();
   });
 });
