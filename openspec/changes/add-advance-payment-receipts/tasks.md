@@ -25,12 +25,12 @@
 
 ## 4. Slice 4 — Payments, balance, and receipts (PR 4, may split API/web if over budget)
 
-- [ ] 4.0 Prerequisite (ops, before deploying slices 1 and 4 to production): cut production over from `REPOSITORY_MODE=global` to `organization` using the existing migration tooling (preview → migrate → verify → switch env) and provision the organization with the owner as `admin`; in `global` mode no role is resolved, so admin-only routes always return 403
+- [x] 4.0 Prerequisite (ops, before deploying slices 1 and 4 to production): cut production over from `REPOSITORY_MODE=global` to `organization` using the existing migration tooling (preview → migrate → verify → switch env) and provision the organization with the owner as `admin`; in `global` mode no role is resolved, so admin-only routes always return 403
   - [x] 4.0a Write provisioning timestamps as Firestore timestamps (string values make `toIsoString` throw on every authenticated request)
   - [x] 4.0b Make provisioning non-destructive: create the organization document only if missing, keep member writes idempotent
   - [x] 4.0c Compare timestamps by value in the migration so a re-run skips already-copied documents
   - [x] 4.0d Add `migrate:organization` and `provision:organization` API scripts with `--dry-run` and a printed target project
-  - [ ] 4.0e Run the cutover in production following `docs/deployment/organization-mode-cutover.md`
+  - [x] 4.0e Run the cutover in production following `docs/deployment/organization-mode-cutover.md`
 - [x] 4.1 Add shared `Payment`, `PaymentMethod`, `PaymentStatus`, `PaymentConcept`, and `WorkOrderBalance` types
 - [x] 4.2 Add `computeBalance` and `formatReceiptNumber` to `packages/shared` with tests (voided excluded, zero payments, `0001-00000042`)
 - [x] 4.3 Add `amountToSpanishWords` to `packages/shared` with table-driven tests covering the edge numbers listed in design.md and both currencies
