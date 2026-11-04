@@ -49,11 +49,22 @@ Run from a workstation with Application Default Credentials for project `ijac-we
    - `organizations/ijac/members/<uid>` has `role: admin`, `status: active`;
    - `activeOrganizationMemberships/<uid>` points to `ijac`.
 7. **Switch.** Update the Cloud Run service `ijac-api` (region `southamerica-west1`) env var to `REPOSITORY_MODE=organization`. This creates a new revision.
-8. **Smoke test.** Sign in at https://app.ijac.com.ar:
+   ```bash
+   gcloud run services update ijac-api --region=southamerica-west1 --project=ijac-webapp \
+     --update-env-vars=REPOSITORY_MODE=organization
+   ```
+8. **Verify the switch.** The smoke test below passes in either mode, so it cannot prove the switch. Check that the template shows the new value and that the newest revision gets all the traffic:
+   ```bash
+   gcloud run services describe ijac-api --region=southamerica-west1 --project=ijac-webapp \
+     --format='value(spec.template.spec.containers[0].env)' | tr ';' '\n' | grep REPOSITORY_MODE
+   gcloud run services describe ijac-api --region=southamerica-west1 --project=ijac-webapp \
+     --format='yaml(status.latestReadyRevisionName,status.traffic)'
+   ```
+   Expect `'value': 'organization'`, and 100% of traffic on `latestReadyRevisionName`. If traffic is pinned to an older revision, run `gcloud run services update-traffic ijac-api --to-latest --region=southamerica-west1 --project=ijac-webapp`.
+9. **Smoke test.** Sign in at https://app.ijac.com.ar:
    - clients and work orders list as before;
-   - the calendar still shows events;
-   - Settings shows an editable profile form (admin).
-9. **Then deploy the payments feature** (API first, then web).
+   - the calendar still shows events.
+10. **Then deploy the payments feature** (API first, then web). After the API deploy, repeat the checks in step 8: a new revision must keep `REPOSITORY_MODE=organization` and get the traffic. Then open Settings. An admin sees the editable profile form below the "not configured yet" notice. If the notice appears without the form, the API is still in `global` mode.
 
 ## Rollback
 
