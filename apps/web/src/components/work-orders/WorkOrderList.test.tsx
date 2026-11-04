@@ -118,6 +118,19 @@ describe('WorkOrderList', () => {
     );
   });
 
+  it('links the work-order title to its details page in table and card views', async () => {
+    listWorkOrders.mockResolvedValue({ items: [{ ...sampleWorkOrder, id: 'wo/1 a' }] });
+    render(<WorkOrderList clients={[sampleClient]} onCreate={vi.fn()} onEdit={vi.fn()} />);
+
+    const tableLink = await screen.findByRole('link', { name: 'Reparación de Servidor' });
+    expect(tableLink).toHaveAttribute('href', '/work-orders/details?id=wo%2F1%20a');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Tarjetas' }));
+
+    const cardLink = screen.getByRole('link', { name: 'Reparación de Servidor' });
+    expect(cardLink).toHaveAttribute('href', '/work-orders/details?id=wo%2F1%20a');
+  });
+
   it('shows request error alert when fetch fails', async () => {
     listWorkOrders.mockRejectedValueOnce(new Error('Fallo al conectar'));
     render(<WorkOrderList clients={[sampleClient]} onCreate={vi.fn()} onEdit={vi.fn()} />);

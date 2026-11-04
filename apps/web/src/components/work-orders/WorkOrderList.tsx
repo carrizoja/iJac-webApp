@@ -23,6 +23,10 @@ interface WorkOrderListProps {
   onEdit?: (workOrder: WorkOrderClientSummary) => void;
 }
 
+function workOrderDetailsHref(id: string): string {
+  return `/work-orders/details?id=${encodeURIComponent(id)}`;
+}
+
 export function WorkOrderList({ clients, onCreate, onEdit }: WorkOrderListProps) {
   const { language, t } = useLanguage();
   const neonActionButtonBaseClass =
@@ -197,7 +201,14 @@ export function WorkOrderList({ clients, onCreate, onEdit }: WorkOrderListProps)
               {workOrders.map((wo) => (
                 <Fragment key={wo.id}>
                   <tr className={confirmDelete === wo.id ? 'bg-priority-high/5' : 'table-row'}>
-                    <td className="px-4 py-3.5 font-medium">{wo.title}</td>
+                    <td className="px-4 py-3.5 font-medium">
+                      <a
+                        href={workOrderDetailsHref(wo.id)}
+                        className="text-fg-primary underline-offset-4 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus rounded"
+                      >
+                        {wo.title}
+                      </a>
+                    </td>
                     <td className="px-4 py-3.5 text-fg-muted">{wo.clientName}</td>
                     <td className="px-4 py-3.5">
                       <Badge variant="neutral">{statusLabel(wo.status, language)}</Badge>
@@ -325,7 +336,14 @@ export function WorkOrderList({ clients, onCreate, onEdit }: WorkOrderListProps)
               >
                 <div className="flex items-start justify-between gap-2">
                   <div className="flex-1">
-                    <h3 className="font-medium text-fg-primary">{wo.title}</h3>
+                    <h3 className="font-medium text-fg-primary">
+                      <a
+                        href={workOrderDetailsHref(wo.id)}
+                        className="text-fg-primary underline-offset-4 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus rounded"
+                      >
+                        {wo.title}
+                      </a>
+                    </h3>
                     <p className="text-sm text-fg-muted">{wo.clientName}</p>
                     <div className="mt-2 flex flex-wrap gap-2 text-xs">
                       <Badge variant="neutral">{statusLabel(wo.status, language)}</Badge>
