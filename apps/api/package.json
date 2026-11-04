@@ -15,6 +15,8 @@
     "start": "nest start",
     "start:debug": "nest start --debug --watch",
     "start:prod": "node dist/main",
+    "migrate:organization": "nest build && node dist/migration/migrate.js",
+    "provision:organization": "nest build && node dist/migration/provision.js",
     "test:smoke": "node scripts/smoke-health.mjs",
     "test:container": "node scripts/smoke-container.mjs",
     "lint": "eslint \"{src,apps,libs,test}/**/*.ts\"",

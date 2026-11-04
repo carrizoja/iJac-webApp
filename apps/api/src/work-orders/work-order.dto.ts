@@ -1,12 +1,16 @@
 import {
   IsEnum,
+  IsInt,
   IsNotEmpty,
   IsOptional,
   IsString,
   IsISO8601,
+  Max,
   MaxLength,
+  Min,
+  ValidateIf,
 } from 'class-validator';
-import { WorkOrderStatus, WorkOrderPriority } from '@ijac/shared';
+import { Currency, WorkOrderStatus, WorkOrderPriority } from '@ijac/shared';
 
 export class CreateWorkOrderDto {
   @IsString()
@@ -32,6 +36,16 @@ export class CreateWorkOrderDto {
   @IsOptional()
   @IsISO8601()
   dueDate?: string;
+
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  @Max(Number.MAX_SAFE_INTEGER)
+  totalPriceMinor?: number | null;
+
+  @ValidateIf((_, value) => value !== undefined)
+  @IsEnum(Currency)
+  currency?: Currency;
 }
 
 export class UpdateWorkOrderDto {
@@ -61,6 +75,16 @@ export class UpdateWorkOrderDto {
   @IsOptional()
   @IsISO8601()
   dueDate?: string | null;
+
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  @Max(Number.MAX_SAFE_INTEGER)
+  totalPriceMinor?: number | null;
+
+  @ValidateIf((_, value) => value !== undefined)
+  @IsEnum(Currency)
+  currency?: Currency;
 }
 
 export class WorkOrderListQueryDto {

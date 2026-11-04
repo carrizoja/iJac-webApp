@@ -61,6 +61,10 @@ describe('AppShell', () => {
     expect(within(desktopNavigation).getByRole('link', { name: 'Clientes' })).toBeInTheDocument();
     expect(within(desktopNavigation).getByRole('link', { name: 'Órdenes' })).toBeInTheDocument();
     expect(within(desktopNavigation).getByRole('link', { name: 'Calendario' })).toBeInTheDocument();
+    expect(within(desktopNavigation).getByRole('link', { name: 'Configuración' })).toHaveAttribute(
+      'href',
+      '/settings',
+    );
   });
 
   it('starts with accessible mobile navigation collapsed', () => {

@@ -1,6 +1,11 @@
 import { Client } from '@ijac/shared';
-import { ClientRepository, CreateClientInput, UpdateClientInput, ClientFilter } from './client.repository';
-import { Firestore, Timestamp } from 'firebase-admin/firestore';
+import {
+  ClientRepository,
+  CreateClientInput,
+  UpdateClientInput,
+  ClientFilter,
+} from './client.repository';
+import { FieldValue, Firestore, Timestamp } from 'firebase-admin/firestore';
 import { Injectable, Inject } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { FIRESTORE } from '../firebase/firebase.module';
@@ -20,10 +25,7 @@ export class FirestoreClientRepository implements ClientRepository {
       return this.firestore.collection('clients');
     }
 
-    return this.firestore
-      .collection('organizations')
-      .doc(organizationId)
-      .collection('clients');
+    return this.firestore.collection('organizations').doc(organizationId).collection('clients');
   }
 
   private toClient(doc: FirebaseFirestore.DocumentSnapshot): Client {
@@ -41,12 +43,9 @@ export class FirestoreClientRepository implements ClientRepository {
 
   private normalizeSearch(input: CreateClientInput | UpdateClientInput): string[] {
     const terms = new Set<string>();
-    const sources = [
-      input.name,
-      input.email,
-      input.phone,
-      input.organization,
-    ].filter((v): v is string => typeof v === 'string' && v.length > 0);
+    const sources = [input.name, input.email, input.phone, input.organization].filter(
+      (v): v is string => typeof v === 'string' && v.length > 0,
+    );
     for (const source of sources) {
       const normalized = source.toLowerCase().trim();
       for (let i = 1; i <= Math.min(10, normalized.length); i++) {
@@ -56,10 +55,7 @@ export class FirestoreClientRepository implements ClientRepository {
     return Array.from(terms);
   }
 
-  async create(
-    organizationId: string,
-    input: CreateClientInput,
-  ): Promise<Client> {
+  async create(organizationId: string, input: CreateClientInput): Promise<Client> {
     const now = nowTimestamp();
     const ref = this.collection(organizationId).doc();
     const client: Omit<Client, 'id' | 'createdAt' | 'updatedAt'> & {
@@ -71,6 +67,7 @@ export class FirestoreClientRepository implements ClientRepository {
       phone: input.phone.trim(),
       organization: input.organization?.trim() ?? '',
       notes: input.notes?.trim() ?? '',
+      ...(input.taxId?.trim() && { taxId: input.taxId.trim() }),
       searchPrefixes: this.normalizeSearch(input),
       workOrderCount: 0,
       createdAt: now,
@@ -80,11 +77,7 @@ export class FirestoreClientRepository implements ClientRepository {
     return this.toClient(await ref.get());
   }
 
-  async update(
-    organizationId: string,
-    id: string,
-    input: UpdateClientInput,
-  ): Promise<Client> {
+  async update(organizationId: string, id: string, input: UpdateClientInput): Promise<Client> {
     const ref = this.collection(organizationId).doc(id);
     const doc = await ref.get();
     if (!doc.exists) {
@@ -94,17 +87,17 @@ export class FirestoreClientRepository implements ClientRepository {
     if (input.name !== undefined) update.name = input.name.trim();
     if (input.email !== undefined) update.email = input.email.trim();
     if (input.phone !== undefined) update.phone = input.phone.trim();
-    if (input.organization !== undefined)
-      update.organization = input.organization.trim();
+    if (input.organization !== undefined) update.organization = input.organization.trim();
     if (input.notes !== undefined) update.notes = input.notes.trim();
+    if (input.taxId !== undefined) {
+      update.taxId = input.taxId.trim() || FieldValue.delete();
+    }
     if (Object.keys(input).length > 0) {
       update.searchPrefixes = this.normalizeSearch({
         name: (update.name as string) ?? (doc.get('name') as string),
         email: (update.email as string) ?? (doc.get('email') as string),
         phone: (update.phone as string) ?? (doc.get('phone') as string),
-        organization:
-          (update.organization as string) ??
-          (doc.get('organization') as string),
+        organization: (update.organization as string) ?? (doc.get('organization') as string),
         notes: (update.notes as string) ?? (doc.get('notes') as string),
       });
     }
@@ -127,10 +120,7 @@ export class FirestoreClientRepository implements ClientRepository {
     });
   }
 
-  async findById(
-    organizationId: string,
-    id: string,
-  ): Promise<Client | null> {
+  async findById(organizationId: string, id: string): Promise<Client | null> {
     const doc = await this.collection(organizationId).doc(id).get();
     if (!doc.exists) return null;
     return this.toClient(doc);
@@ -160,9 +150,7 @@ export class FirestoreClientRepository implements ClientRepository {
     }
 
     if (filter.cursor) {
-      const cursorDoc = await this.collection(organizationId)
-        .doc(filter.cursor)
-        .get();
+      const cursorDoc = await this.collection(organizationId).doc(filter.cursor).get();
       if (cursorDoc.exists) {
         query = query.startAfter(cursorDoc);
       }
@@ -171,9 +159,7 @@ export class FirestoreClientRepository implements ClientRepository {
     const snapshot = await query.get();
     const items = snapshot.docs.map((doc) => this.toClient(doc));
     const nextCursor =
-      snapshot.docs.length === limit
-        ? snapshot.docs[snapshot.docs.length - 1].id
-        : undefined;
+      snapshot.docs.length === limit ? snapshot.docs[snapshot.docs.length - 1].id : undefined;
     return { items, nextCursor };
   }
 }

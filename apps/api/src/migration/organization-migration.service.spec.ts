@@ -1,12 +1,9 @@
 import { OrganizationMigrationService } from './organization-migration.service';
-import { Firestore } from 'firebase-admin/firestore';
+import { Firestore, Timestamp } from 'firebase-admin/firestore';
 
 describe('OrganizationMigrationService', () => {
   function createMockFirestore(): Firestore {
-    const collections: Record<
-      string,
-      { docs: Map<string, unknown> }
-    > = {};
+    const collections: Record<string, { docs: Map<string, unknown> }> = {};
 
     const getCollection = (path: string) => {
       if (!collections[path]) {
@@ -138,19 +135,60 @@ describe('OrganizationMigrationService', () => {
       email: 'acme@test.com',
     });
 
-    await firestore
-      .collection('organizations/default-org/clients')
-      .doc('client-1')
-      .set({
-        name: 'Acme',
-        email: 'acme@test.com',
-      });
+    await firestore.collection('organizations/default-org/clients').doc('client-1').set({
+      name: 'Acme',
+      email: 'acme@test.com',
+    });
 
     const result = await service.migrate(false);
 
     expect(result.success).toBe(true);
     expect(result.clientsSkipped).toBe(1);
     expect(result.clientsCopied).toBe(0);
+  });
+
+  it('skips documents whose timestamps and nested values are equal but not the same objects', async () => {
+    const firestore = createMockFirestore();
+    const service = new OrganizationMigrationService(firestore, {
+      get: jest.fn().mockReturnValue('default-org'),
+    } as any);
+    const source = () => ({
+      name: 'Acme',
+      createdAt: Timestamp.fromMillis(1_700_000_000_000),
+      tags: ['vip', 'cba'],
+      address: { city: 'Córdoba', zip: '5000' },
+    });
+
+    await firestore.collection('clients').doc('client-1').set(source());
+    await firestore.collection('organizations/default-org/clients').doc('client-1').set(source());
+
+    const result = await service.migrate(false);
+
+    expect(result.success).toBe(true);
+    expect(result.clientsSkipped).toBe(1);
+    expect(result.clientsConflicts).toBe(0);
+    expect(result.errors).toEqual([]);
+  });
+
+  it('reports a conflict when a timestamp value differs', async () => {
+    const firestore = createMockFirestore();
+    const service = new OrganizationMigrationService(firestore, {
+      get: jest.fn().mockReturnValue('default-org'),
+    } as any);
+
+    await firestore
+      .collection('clients')
+      .doc('client-1')
+      .set({ name: 'Acme', createdAt: Timestamp.fromMillis(1_700_000_000_000) });
+    await firestore
+      .collection('organizations/default-org/clients')
+      .doc('client-1')
+      .set({ name: 'Acme', createdAt: Timestamp.fromMillis(1_700_000_000_001) });
+
+    const result = await service.migrate(false);
+
+    expect(result.success).toBe(false);
+    expect(result.clientsConflicts).toBe(1);
   });
 
   it('detects conflicts when target has different data', async () => {
@@ -164,20 +202,15 @@ describe('OrganizationMigrationService', () => {
       email: 'acme@test.com',
     });
 
-    await firestore
-      .collection('organizations/default-org/clients')
-      .doc('client-1')
-      .set({
-        name: 'Different',
-        email: 'different@test.com',
-      });
+    await firestore.collection('organizations/default-org/clients').doc('client-1').set({
+      name: 'Different',
+      email: 'different@test.com',
+    });
 
     const result = await service.migrate(false);
 
     expect(result.success).toBe(false);
     expect(result.clientsConflicts).toBe(1);
-    expect(result.errors).toContain(
-      'Client client-1 exists in target with different data',
-    );
+    expect(result.errors).toContain('Client client-1 exists in target with different data');
   });
 });

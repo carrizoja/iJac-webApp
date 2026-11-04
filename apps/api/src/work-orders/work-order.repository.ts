@@ -7,6 +7,8 @@ export interface CreateWorkOrderInput {
   priority: string;
   clientId: string;
   dueDate?: string;
+  totalPriceMinor?: number | null;
+  currency?: string;
 }
 
 export interface UpdateWorkOrderInput {
@@ -16,6 +18,9 @@ export interface UpdateWorkOrderInput {
   priority?: string;
   clientId?: string;
   dueDate?: string | null;
+  /** A number sets the price; `null` clears both price and currency. */
+  totalPriceMinor?: number | null;
+  currency?: string;
 }
 
 export interface WorkOrderFilter {

@@ -118,6 +118,19 @@ describe('WorkOrderList', () => {
     );
   });
 
+  it('links the work-order title to its details page in table and card views', async () => {
+    listWorkOrders.mockResolvedValue({ items: [{ ...sampleWorkOrder, id: 'wo/1 a' }] });
+    render(<WorkOrderList clients={[sampleClient]} onCreate={vi.fn()} onEdit={vi.fn()} />);
+
+    const tableLink = await screen.findByRole('link', { name: 'Reparación de Servidor' });
+    expect(tableLink).toHaveAttribute('href', '/work-orders/details?id=wo%2F1%20a');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Tarjetas' }));
+
+    const cardLink = screen.getByRole('link', { name: 'Reparación de Servidor' });
+    expect(cardLink).toHaveAttribute('href', '/work-orders/details?id=wo%2F1%20a');
+  });
+
   it('shows request error alert when fetch fails', async () => {
     listWorkOrders.mockRejectedValueOnce(new Error('Fallo al conectar'));
     render(<WorkOrderList clients={[sampleClient]} onCreate={vi.fn()} onEdit={vi.fn()} />);
@@ -126,5 +139,22 @@ describe('WorkOrderList', () => {
     expect(alert).toHaveTextContent('No se pudieron cargar las órdenes. Intentá nuevamente.');
     expect(alert).not.toHaveTextContent('Fallo al conectar');
     expect(screen.getByRole('button', { name: 'Cerrar alerta' })).toBeInTheDocument();
+  });
+
+  it('shows the formatted total price in table and card views, and a dash when unpriced', async () => {
+    listWorkOrders.mockResolvedValue({
+      items: [
+        { ...sampleWorkOrder, totalPriceMinor: 15000000, currency: 'ARS' },
+        { ...sampleWorkOrder, id: 'wo-2', title: 'Sin precio aún' },
+      ],
+    });
+    render(<WorkOrderList clients={[sampleClient]} onCreate={vi.fn()} onEdit={vi.fn()} />);
+
+    await waitFor(() => expect(screen.getByText('Reparación de Servidor')).toBeInTheDocument());
+    expect(screen.getByRole('columnheader', { name: 'Precio total' })).toBeInTheDocument();
+    expect(screen.getByText('$ 150.000,00')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Tarjetas' }));
+    expect(screen.getByText('$ 150.000,00')).toBeInTheDocument();
   });
 });

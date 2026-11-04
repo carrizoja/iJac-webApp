@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
-import type { Client, WorkOrder } from '@ijac/shared';
+import { formatMoney, type Client, type WorkOrder } from '@ijac/shared';
 import { FileDown, MessageCircle } from 'lucide-react';
 import { getClient, getWorkOrder } from '../../lib/resources';
 import { Alert, Badge, Button, LoadingState, Panel } from '../ui';
+import { PaymentsPanel } from '../payments/PaymentsPanel';
 import { useLanguage } from '../../hooks/useLanguage';
 import { formatDateOnly, formatDateTime, priorityLabel, statusLabel } from '../../i18n/format';
 
@@ -189,7 +190,17 @@ export function WorkOrderDetails() {
       </div>
 
       <Panel size="lg" className="border border-border-default" data-print-panel>
-        <dl className="grid gap-6 sm:grid-cols-3">
+        <dl className="grid gap-6 sm:grid-cols-4">
+          <div>
+            <dt className="text-xs font-semibold uppercase tracking-wider text-fg-muted">
+              {t('workOrders.totalPrice')}
+            </dt>
+            <dd className="mt-2 text-sm font-semibold text-fg-primary">
+              {workOrder.totalPriceMinor !== undefined && workOrder.currency
+                ? formatMoney(workOrder.totalPriceMinor, workOrder.currency)
+                : t('workOrders.noPrice')}
+            </dd>
+          </div>
           <div>
             <dt className="text-xs font-semibold uppercase tracking-wider text-fg-muted">
               {t('workOrders.due')}
@@ -216,6 +227,8 @@ export function WorkOrderDetails() {
           </div>
         </dl>
       </Panel>
+
+      <PaymentsPanel workOrderId={workOrder.id} workOrderStatus={workOrder.status} />
     </article>
   );
 }

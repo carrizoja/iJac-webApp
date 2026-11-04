@@ -3,12 +3,19 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { ClientForm } from './ClientForm';
 import type { Client } from '@ijac/shared';
 
-vi.mock('../../lib/resources', () => ({
-  createClient: vi.fn(),
-  updateClient: vi.fn(),
-}));
+vi.mock('../../lib/resources', () => {
+  class ApiRequestError extends Error {
+    constructor(
+      readonly code: string,
+      readonly fieldErrors?: Record<string, string>,
+    ) {
+      super(code);
+    }
+  }
+  return { ApiRequestError, createClient: vi.fn(), updateClient: vi.fn() };
+});
 
-import { createClient, updateClient } from '../../lib/resources';
+import { ApiRequestError, createClient, updateClient } from '../../lib/resources';
 
 describe('ClientForm', () => {
   it('shows validation errors for empty required fields', async () => {
@@ -124,6 +131,84 @@ describe('ClientForm', () => {
         expect.objectContaining({ name: 'Acme Inc Updated' }),
       );
       expect(onSaved).toHaveBeenCalled();
+    });
+  });
+
+  describe('tax ID', () => {
+    const fillRequired = () => {
+      fireEvent.change(screen.getByLabelText(/nombre/i), { target: { value: 'Acme' } });
+      fireEvent.change(screen.getByLabelText(/email/i), { target: { value: 'acme@example.com' } });
+      fireEvent.change(screen.getByLabelText(/teléfono/i), { target: { value: '123' } });
+    };
+
+    it('renders an optional CUIT/DNI input with helper text', () => {
+      render(<ClientForm onSaved={() => {}} onCancel={() => {}} />);
+      const input = screen.getByLabelText(/cuit\/dni/i);
+      expect(input).not.toBeRequired();
+      expect(screen.getByText(/entre 7 y 11 dígitos/i)).toBeInTheDocument();
+    });
+
+    it('submits a valid CUIT as typed', async () => {
+      const mockedCreate = vi.mocked(createClient);
+      mockedCreate.mockResolvedValueOnce({ id: '1' } as Client);
+      render(<ClientForm onSaved={() => {}} onCancel={() => {}} />);
+      fillRequired();
+      fireEvent.change(screen.getByLabelText(/cuit\/dni/i), {
+        target: { value: '20-12345678-6' },
+      });
+      fireEvent.click(screen.getByRole('button', { name: /crear cliente/i }));
+      await waitFor(() => {
+        expect(mockedCreate).toHaveBeenCalledWith(
+          expect.objectContaining({ taxId: '20-12345678-6' }),
+        );
+      });
+    });
+
+    it('blocks submit and shows a field error for an invalid tax ID', async () => {
+      const mockedCreate = vi.mocked(createClient);
+      mockedCreate.mockClear();
+      render(<ClientForm onSaved={() => {}} onCancel={() => {}} />);
+      fillRequired();
+      fireEvent.change(screen.getByLabelText(/cuit\/dni/i), { target: { value: '12AB5678' } });
+      fireEvent.click(screen.getByRole('button', { name: /crear cliente/i }));
+      await waitFor(() => {
+        expect(screen.getByText(/cuit o dni no es válido/i)).toBeInTheDocument();
+      });
+      expect(mockedCreate).not.toHaveBeenCalled();
+    });
+
+    it('prefills the stored tax ID and sends an empty value to clear it', async () => {
+      const mockedUpdate = vi.mocked(updateClient);
+      mockedUpdate.mockResolvedValueOnce({ id: 'c1' } as Client);
+      const existing = {
+        id: 'c1',
+        name: 'Acme',
+        email: 'acme@example.com',
+        phone: '123',
+        taxId: '12345678',
+      } as Client;
+      render(<ClientForm client={existing} onSaved={() => {}} onCancel={() => {}} />);
+      const input = screen.getByLabelText(/cuit\/dni/i);
+      expect(input).toHaveValue('12345678');
+      fireEvent.change(input, { target: { value: '' } });
+      fireEvent.click(screen.getByRole('button', { name: /guardar cambios/i }));
+      await waitFor(() => {
+        expect(mockedUpdate).toHaveBeenCalledWith('c1', expect.objectContaining({ taxId: '' }));
+      });
+    });
+
+    it('maps a server field error on taxId to the input', async () => {
+      vi.mocked(createClient).mockRejectedValueOnce(
+        new ApiRequestError('VALIDATION_ERROR', { taxId: 'taxId must be valid' }),
+      );
+      render(<ClientForm onSaved={() => {}} onCancel={() => {}} />);
+      fillRequired();
+      fireEvent.change(screen.getByLabelText(/cuit\/dni/i), { target: { value: '12345678' } });
+      fireEvent.click(screen.getByRole('button', { name: /crear cliente/i }));
+      await waitFor(() => {
+        expect(screen.getByText(/cuit o dni no es válido/i)).toBeInTheDocument();
+      });
+      expect(screen.queryByText(/no se pudo guardar el cliente/i)).not.toBeInTheDocument();
     });
   });
 });

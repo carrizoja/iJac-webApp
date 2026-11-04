@@ -1,4 +1,4 @@
-import { Firestore } from 'firebase-admin/firestore';
+import { FieldValue, Firestore } from 'firebase-admin/firestore';
 import { ConfigService } from '@nestjs/config';
 import { FirestoreClientRepository } from './firestore-client.repository';
 import { ApiEnvironment } from '../config/env';
@@ -79,17 +79,14 @@ describe('FirestoreClientRepository.findMany', () => {
     const query = createQueryDouble();
     const repository = createRepository(query);
 
-    await expect(
-      repository.findMany('user-1', { search: '  AcMe  ', limit: 5 }),
-    ).resolves.toEqual({ items: [], nextCursor: undefined });
+    await expect(repository.findMany('user-1', { search: '  AcMe  ', limit: 5 })).resolves.toEqual({
+      items: [],
+      nextCursor: undefined,
+    });
 
     expect(query.orderBy).toHaveBeenCalledWith('updatedAt', 'desc');
     expect(query.limit).toHaveBeenCalledWith(5);
-    expect(query.where).toHaveBeenCalledWith(
-      'searchPrefixes',
-      'array-contains',
-      'acme',
-    );
+    expect(query.where).toHaveBeenCalledWith('searchPrefixes', 'array-contains', 'acme');
   });
 
   it('caps the requested page size at 100 clients', async () => {
@@ -118,5 +115,69 @@ describe('FirestoreClientRepository.findMany', () => {
       ],
       nextCursor: 'client-1',
     });
+  });
+});
+
+describe('FirestoreClientRepository taxId persistence', () => {
+  function createWriteRepository(existing: Record<string, unknown> = {}) {
+    const ref = {
+      id: 'client-1',
+      set: jest.fn().mockResolvedValue(undefined),
+      update: jest.fn().mockResolvedValue(undefined),
+      get: jest.fn().mockResolvedValue({
+        id: 'client-1',
+        exists: true,
+        get: (field: string) => existing[field],
+        data: () => ({
+          ...existing,
+          createdAt: new Date('2026-08-01T10:00:00.000Z'),
+          updatedAt: new Date('2026-08-01T10:00:00.000Z'),
+        }),
+      }),
+    };
+    const collection = { doc: jest.fn().mockReturnValue(ref) };
+    const firestore = {
+      collection: jest.fn().mockReturnValue({
+        doc: jest.fn().mockReturnValue({
+          collection: jest.fn().mockReturnValue(collection),
+        }),
+      }),
+    } as unknown as Firestore;
+    const config = {
+      get: jest.fn().mockReturnValue('organization'),
+    } as unknown as ConfigService<ApiEnvironment>;
+    return { ref, repository: new FirestoreClientRepository(firestore, config) };
+  }
+
+  const required = { name: 'Acme', email: 'a@acme.test', phone: '555' };
+
+  it('stores taxId on create and keeps it out of search prefixes', async () => {
+    const { ref, repository } = createWriteRepository();
+    await repository.create('org-1', { ...required, taxId: '20123456786' });
+    const saved = ref.set.mock.calls[0][0];
+    expect(saved.taxId).toBe('20123456786');
+    expect(saved.searchPrefixes).not.toContain('2012');
+  });
+
+  it('omits taxId on create when absent', async () => {
+    const { ref, repository } = createWriteRepository();
+    await repository.create('org-1', required);
+    expect(ref.set.mock.calls[0][0]).not.toHaveProperty('taxId');
+  });
+
+  it('sets taxId on update', async () => {
+    const { ref, repository } = createWriteRepository(required);
+    await repository.update('org-1', 'client-1', { taxId: '12345678' });
+    expect(ref.update.mock.calls[0][0].taxId).toBe('12345678');
+  });
+
+  it('deletes the stored field when update receives an empty taxId', async () => {
+    const { ref, repository } = createWriteRepository({
+      ...required,
+      taxId: '12345678',
+    });
+    await repository.update('org-1', 'client-1', { taxId: '' });
+    const patch = ref.update.mock.calls[0][0];
+    expect(patch.taxId).toBeInstanceOf(FieldValue.delete().constructor);
   });
 });

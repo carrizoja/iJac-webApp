@@ -25,6 +25,11 @@ export class CreateClientDto {
   @IsString()
   @MaxLength(2000)
   notes?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(30)
+  taxId?: string;
 }
 
 export class UpdateClientDto {
@@ -55,6 +60,11 @@ export class UpdateClientDto {
   @IsString()
   @MaxLength(2000)
   notes?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(30)
+  taxId?: string;
 }
 
 export class ClientListQueryDto {

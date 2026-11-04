@@ -6,6 +6,8 @@ export interface CreateClientInput {
   phone: string;
   organization?: string;
   notes?: string;
+  /** Normalized digits only. On update, an empty string clears the stored value. */
+  taxId?: string;
 }
 
 export interface UpdateClientInput {
@@ -14,6 +16,8 @@ export interface UpdateClientInput {
   phone?: string;
   organization?: string;
   notes?: string;
+  /** Normalized digits only. On update, an empty string clears the stored value. */
+  taxId?: string;
 }
 
 export interface ClientFilter {
