@@ -31,7 +31,7 @@ async function main() {
       .migrate(args.dryRun, args.organizationId);
 
     console.log('\n=== Migration Result ===');
-    console.log(`Mode: ${result.dryRun ? 'DRY RUN (nothing written)' : 'APPLY'}`);
+    console.log(`Mode: ${result.dryRun ? 'DRY RUN' : 'APPLY'}`);
     console.log(`Clients copied: ${result.clientsCopied}`);
     console.log(`Clients skipped: ${result.clientsSkipped}`);
     console.log(`Clients conflicts: ${result.clientsConflicts}`);
