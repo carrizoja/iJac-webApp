@@ -160,22 +160,39 @@ export class OrganizationMigrationService {
     return result;
   }
 
+  /**
+   * Deep value equality for Firestore data. Values with an `isEqual` method
+   * (Timestamp, GeoPoint, DocumentReference) compare by value, so documents
+   * copied by an earlier run are recognized instead of reported as conflicts.
+   */
   private documentsMatch(a: unknown, b: unknown): boolean {
     if (a === b) return true;
-    if (typeof a !== 'object' || typeof b !== 'object') return false;
-    if (a === null || b === null) return false;
+    if (typeof a !== 'object' || typeof b !== 'object' || a === null || b === null) {
+      return false;
+    }
+
+    const comparable = a as { isEqual?: (other: unknown) => boolean };
+    if (typeof comparable.isEqual === 'function') {
+      return a.constructor === b.constructor && comparable.isEqual(b);
+    }
+
+    if (Array.isArray(a) || Array.isArray(b)) {
+      return (
+        Array.isArray(a) &&
+        Array.isArray(b) &&
+        a.length === b.length &&
+        a.every((item, index) => this.documentsMatch(item, b[index]))
+      );
+    }
 
     const aObj = a as Record<string, unknown>;
     const bObj = b as Record<string, unknown>;
     const aKeys = Object.keys(aObj).sort();
     const bKeys = Object.keys(bObj).sort();
-
     if (aKeys.length !== bKeys.length) return false;
 
-    for (const key of aKeys) {
-      if (aObj[key] !== bObj[key]) return false;
-    }
-
-    return true;
+    return aKeys.every(
+      (key, index) => key === bKeys[index] && this.documentsMatch(aObj[key], bObj[key]),
+    );
   }
 }

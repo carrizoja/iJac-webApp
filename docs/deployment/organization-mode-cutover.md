@@ -17,27 +17,33 @@ The migration **copies**. It never deletes the global documents, so switching th
 
 Payments, the receipt counter and the organization profile do not exist in production yet. Run this cutover **before** deploying the payments feature, so nothing has to be moved for them.
 
-## Code prerequisites
+## Commands
 
-These must be fixed and merged before the cutover:
+Run from `apps/api`. Both commands build the API first, print the Firestore they will use, and write only with `--yes`:
 
-1. **Provisioning writes timestamps as strings.** `OrganizationProvisioningService` stores `createdAt` and `updatedAt` as ISO strings. The membership repository passes them to `toIsoString`, which expects a Firestore `Timestamp` or `Date` and calls `.toISOString()` on the string. That throws, so every authenticated request would fail. Write Firestore timestamps instead.
-2. **Provisioning overwrites the organization document.** `orgRef.set(...)` replaces the whole document, which would erase the `profile` field if provisioning is ever re-run. Create the organization document only when it does not exist (or merge), and keep membership writes idempotent.
-3. **No way to run either tool.** Add API scripts:
-   - `pnpm --filter @ijac/api migrate:organization -- --dry-run --organization-id=ijac`
-   - `pnpm --filter @ijac/api provision:organization -- --organization-id=ijac --name="..." --admin-uid=<uid> --admin-email=<email>`
-   Both should print what they would write with `--dry-run`, and refuse to run against the emulator or production unless the target project is printed and confirmed.
-4. **Migration is not safely re-runnable.** `documentsMatch` compares field values with `===`, so two equal Firestore `Timestamp`s count as different. A second run after a partial failure reports every copied document as a conflict. Compare timestamps by value (`isEqual`) so a re-run skips documents it already copied.
+```bash
+pnpm migrate:organization -- --organization-id=ijac --dry-run
+pnpm migrate:organization -- --organization-id=ijac --yes
+
+pnpm provision:organization -- --organization-id=ijac --name="IJAC" \
+  --admin-uid=<uid> --admin-email=<email> --dry-run
+pnpm provision:organization -- --organization-id=ijac --name="IJAC" \
+  --admin-uid=<uid> --admin-email=<email> --yes
+```
+
+- The `Target:` line must read `Target: PRODUCTION Firestore (project ijac-webapp)`. If it names the emulator, `FIRESTORE_EMULATOR_HOST` is still set (in the shell or in `apps/api/.env`).
+- Both commands are safe to re-run. The migration skips documents it already copied. Provisioning never overwrites an existing organization document (or its profile) and keeps each membership's creation time.
+- They load only config and Firebase, so the OAuth and encryption secrets are not needed.
 
 ## Runbook
 
-Run from a workstation with Application Default Credentials for project `ijac-webapp` (`gcloud auth application-default login`). Make sure `FIRESTORE_EMULATOR_HOST` is **not** set.
+Run from a workstation with Application Default Credentials for project `ijac-webapp` (`gcloud auth application-default login`). Make sure `FIRESTORE_EMULATOR_HOST` is **not** set, in the shell or in `apps/api/.env`, and `FIREBASE_PROJECT_ID=ijac-webapp`.
 
 1. **Back up.** Export Firestore: `gcloud firestore export gs://<backup-bucket>/pre-org-cutover --project=ijac-webapp`.
-2. **Dry run.** Run `migrate:organization --dry-run --organization-id=ijac`. Expect zero orphaned work orders and zero conflicts. Note the client, work-order and mapping counts.
+2. **Dry run.** Run `migrate:organization` and `provision:organization` with `--dry-run`. Check the `Target:` line. Expect zero orphaned work orders and zero conflicts. Note the client, work-order and mapping counts.
 3. **Pause writes.** Tell users not to edit for a few minutes. Writes made in global mode after step 4 would not be copied.
-4. **Migrate.** Run the same command without `--dry-run`. The counts should match step 2.
-5. **Provision.** Run `provision:organization` for `ijac` with the owner's UID and email as `admin`.
+4. **Migrate.** Run `migrate:organization` with `--yes`. The counts should match step 2.
+5. **Provision.** Run `provision:organization` with `--yes` for `ijac` with the owner's UID and email as `admin`.
 6. **Verify the data.** In the Firebase console, check:
    - `organizations/ijac/clients` and `organizations/ijac/workOrders` have the same counts as the global collections;
    - `organizations/ijac/members/<uid>` has `role: admin`, `status: active`;

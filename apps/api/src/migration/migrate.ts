@@ -1,21 +1,37 @@
 import { NestFactory } from '@nestjs/core';
-import { AppModule } from '../app.module';
+import { ConfigService } from '@nestjs/config';
+import { CliModule } from './cli.module';
+import { describeTarget, parseMigrateArgs } from './cli-args';
 import { OrganizationMigrationService } from './organization-migration.service';
 
 async function main() {
-  const dryRun = process.argv.includes('--dry-run');
-  const defaultOrgId = process.argv
-    .find((arg) => arg.startsWith('--organization-id='))
-    ?.split('=')[1];
-
-  const app = await NestFactory.createApplicationContext(AppModule);
-  const migrationService = app.get(OrganizationMigrationService);
-
+  let args: ReturnType<typeof parseMigrateArgs>;
   try {
-    const result = await migrationService.migrate(dryRun, defaultOrgId);
+    args = parseMigrateArgs(process.argv.slice(2));
+  } catch (error) {
+    console.error((error as Error).message);
+    console.error('Usage: migrate:organization -- --organization-id=<id> (--dry-run | --yes)');
+    process.exit(2);
+  }
+
+  const app = await NestFactory.createApplicationContext(CliModule, { logger: ['error'] });
+  const config = app.get(ConfigService);
+  console.log(
+    `Target: ${describeTarget({
+      FIREBASE_PROJECT_ID: config.get('FIREBASE_PROJECT_ID'),
+      FIRESTORE_EMULATOR_HOST: config.get('FIRESTORE_EMULATOR_HOST'),
+    })}`,
+  );
+  console.log(`Organization: ${args.organizationId}`);
+
+  let exitCode = 1;
+  try {
+    const result = await app
+      .get(OrganizationMigrationService)
+      .migrate(args.dryRun, args.organizationId);
 
     console.log('\n=== Migration Result ===');
-    console.log(`Mode: ${result.dryRun ? 'DRY RUN' : 'APPLY'}`);
+    console.log(`Mode: ${result.dryRun ? 'DRY RUN (nothing written)' : 'APPLY'}`);
     console.log(`Clients copied: ${result.clientsCopied}`);
     console.log(`Clients skipped: ${result.clientsSkipped}`);
     console.log(`Clients conflicts: ${result.clientsConflicts}`);
@@ -31,14 +47,13 @@ async function main() {
       console.log('\nErrors:');
       result.errors.forEach((err) => console.log(`  - ${err}`));
     }
-
-    process.exit(result.success ? 0 : 1);
+    exitCode = result.success ? 0 : 1;
   } catch (error: unknown) {
     console.error('Migration failed:', error);
-    process.exit(1);
   } finally {
     await app.close();
   }
+  process.exit(exitCode);
 }
 
-main();
+void main();
