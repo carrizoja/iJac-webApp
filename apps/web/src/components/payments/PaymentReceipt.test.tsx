@@ -8,6 +8,13 @@ import { PaymentReceipt } from './PaymentReceipt';
 describe('PaymentReceipt', () => {
   beforeEach(() => setLanguage('es'));
 
+  it('shows a client DNI as stored, without CUIT hyphens', () => {
+    const base = makePayment();
+    render(<PaymentReceipt payment={{ ...base, client: { ...base.client, taxId: '12345678' } }} />);
+
+    expect(screen.getByText('CUIT/DNI: 12345678')).toBeInTheDocument();
+  });
+
   it('renders every receipt field from the payment snapshots', () => {
     render(<PaymentReceipt payment={makePayment({ notes: 'Pago parcial' })} />);
 
@@ -18,7 +25,7 @@ describe('PaymentReceipt', () => {
     expect(within(receipt).getByText('Tel.: +54 351 555-0100')).toBeInTheDocument();
     expect(within(receipt).getByText('Fecha: 05/08/2026')).toBeInTheDocument();
     expect(within(receipt).getByText('Recibí de Acme Corp')).toBeInTheDocument();
-    expect(within(receipt).getByText('CUIT/DNI: 30712345678')).toBeInTheDocument();
+    expect(within(receipt).getByText('CUIT/DNI: 30-71234567-8')).toBeInTheDocument();
     expect(
       within(receipt).getByText('la suma de pesos ciento cincuenta mil con 00/100 ($ 150.000,00)'),
     ).toBeInTheDocument();

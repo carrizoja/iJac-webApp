@@ -698,7 +698,15 @@
     background: #fff !important;
   }
 
+  /* Zero page margins leave browsers no room for their date/title/URL
+     headers and footers; the receipt supplies its own margin instead. */
+  @page receipt {
+    margin: 0;
+  }
+
   .receipt-print-overlay {
+    page: receipt;
+    padding: 16mm !important;
     position: static !important;
     overflow: visible !important;
     background: #fff !important;

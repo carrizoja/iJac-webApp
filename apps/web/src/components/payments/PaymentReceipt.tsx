@@ -74,7 +74,7 @@ export function PaymentReceipt({ payment }: { payment: Payment }) {
 
       <div className="space-y-2 text-base leading-7">
         <p>Recibí de {payment.client.name}</p>
-        {payment.client.taxId && <p>CUIT/DNI: {payment.client.taxId}</p>}
+        {payment.client.taxId && <p>CUIT/DNI: {formatCuit(payment.client.taxId)}</p>}
         <p>{`la suma de ${words} (${figures})`}</p>
         <p>{`en concepto de: ${CONCEPT_LABELS[payment.concept]} — ${payment.workOrderTitle}`}</p>
         <p>Forma de pago: {METHOD_LABELS[payment.method]}</p>
