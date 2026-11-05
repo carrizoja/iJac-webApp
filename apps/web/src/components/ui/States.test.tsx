@@ -46,6 +46,11 @@ describe('Badge', () => {
     expect(badge).toBeInTheDocument();
   });
 
+  it('styles the default variant with the brand action style', () => {
+    render(<Badge>Brand</Badge>);
+    expect(screen.getByText(/brand/i)).toHaveClass('action-brand', 'border');
+  });
+
   it('renders with success variant', () => {
     const { container } = render(<Badge variant="success">Success</Badge>);
     const badge = container.firstChild;
@@ -222,6 +227,11 @@ describe('EmptyState', () => {
     render(<EmptyState title="Empty" action={{ label: 'Create', onClick: () => {} }} />);
     const actionBtn = screen.getByText(/create/i);
     expect(actionBtn).toBeInTheDocument();
+  });
+
+  it('styles the action like a primary button', () => {
+    render(<EmptyState title="Empty" action={{ label: 'Create', onClick: () => {} }} />);
+    expect(screen.getByRole('button', { name: /create/i })).toHaveClass('action-brand', 'border-2');
   });
 
   it('calls action handler when button is clicked', () => {
