@@ -10,6 +10,7 @@ import {
   NotFoundException,
   ConflictException,
   InternalServerErrorException,
+  Logger,
 } from '@nestjs/common';
 import { Request, Response } from 'express';
 import { ApiError } from '../errors';
@@ -23,6 +24,8 @@ interface ErrorResponse {
 
 @Catch()
 export class HttpExceptionFilter implements ExceptionFilter {
+  private readonly logger = new Logger(HttpExceptionFilter.name);
+
   catch(exception: unknown, host: ArgumentsHost) {
     const ctx = host.switchToHttp();
     const response = ctx.getResponse<Response>();
@@ -30,6 +33,15 @@ export class HttpExceptionFilter implements ExceptionFilter {
 
     const status = this.resolveStatus(exception);
     const errorResponse = this.resolveResponse(exception, request.requestId);
+
+    // The response hides the cause of a 500, so the log is the only place it shows.
+    if (status >= HttpStatus.INTERNAL_SERVER_ERROR) {
+      const reason = exception instanceof Error ? exception.message : String(exception);
+      this.logger.error(
+        `${request.method} ${request.url} failed (requestId ${request.requestId ?? 'none'}): ${reason}`,
+        exception instanceof Error ? exception.stack : undefined,
+      );
+    }
 
     response.status(status).json({ error: errorResponse });
   }
