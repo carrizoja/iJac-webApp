@@ -1,5 +1,5 @@
 import { Transform } from 'class-transformer';
-import { IsNotEmpty, IsString, MaxLength } from 'class-validator';
+import { IsNotEmpty, IsOptional, IsString, MaxLength } from 'class-validator';
 
 const trim = ({ value }: { value: unknown }) => (typeof value === 'string' ? value.trim() : value);
 
@@ -28,4 +28,11 @@ export class UpdateOrganizationProfileDto {
   @IsNotEmpty()
   @MaxLength(50)
   phone!: string;
+
+  /** Name printed under the receipt signature line; blank clears it. */
+  @IsOptional()
+  @Transform(trim)
+  @IsString()
+  @MaxLength(100)
+  signatoryName?: string;
 }

@@ -3,8 +3,11 @@ import { resolve } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 
-const { getBrandingImage } = vi.hoisted(() => ({ getBrandingImage: vi.fn() }));
-vi.mock('../../lib/resources', () => ({ getBrandingImage }));
+const { getBrandingImage, getOrganizationProfile } = vi.hoisted(() => ({
+  getBrandingImage: vi.fn(),
+  getOrganizationProfile: vi.fn(),
+}));
+vi.mock('../../lib/resources', () => ({ getBrandingImage, getOrganizationProfile }));
 
 import { setLanguage } from '../../i18n/language';
 import { makePayment } from './fixtures';
@@ -14,6 +17,28 @@ describe('ReceiptPrintView', () => {
   beforeEach(() => {
     setLanguage('es');
     getBrandingImage.mockResolvedValue({ image: null });
+    getOrganizationProfile.mockResolvedValue({ configured: false, canEdit: false });
+  });
+
+  it('prints the signatory name from the organization profile', async () => {
+    getOrganizationProfile.mockResolvedValue({
+      configured: true,
+      canEdit: false,
+      profile: {
+        businessName: 'iJac IT Solutions',
+        cuit: '20123456786',
+        address: 'Calle 1',
+        phone: '555',
+        signatoryName: 'Ing. José Carrizo',
+        updatedAt: '2026-11-05T10:00:00.000Z',
+      },
+    });
+
+    render(<ReceiptPrintView payment={makePayment()} onClose={() => {}} />);
+
+    await waitFor(() =>
+      expect(screen.getByTestId('receipt-signature')).toHaveTextContent('Ing. José Carrizo'),
+    );
   });
   afterEach(() => vi.restoreAllMocks());
 
@@ -63,6 +88,7 @@ describe('ReceiptPrintView', () => {
     render(<ReceiptPrintView payment={makePayment()} onClose={() => {}} />);
 
     expect(screen.getByRole('button', { name: 'Imprimir' })).toBeDisabled();
+    getOrganizationProfile.mockRejectedValue(new Error('network'));
     rejectors.forEach((reject) => reject(new Error('network')));
     await waitFor(() => expect(screen.getByRole('button', { name: 'Imprimir' })).toBeEnabled());
     expect(screen.queryByRole('img')).not.toBeInTheDocument();

@@ -74,8 +74,44 @@ describe('OrganizationSettings', () => {
       cuit: '20123456786',
       address: 'Calle 2',
       phone: '555-0100',
+      signatoryName: '',
     });
     expect(screen.getByLabelText(/dirección/i)).toHaveValue('Calle 2');
+  });
+
+  it('saves an optional signatory name without requiring it', async () => {
+    vi.mocked(getOrganizationProfile).mockResolvedValue({ configured: true, profile, canEdit: true });
+    vi.mocked(saveOrganizationProfile).mockResolvedValue({
+      ...profile,
+      signatoryName: 'Ing. José Carrizo',
+    });
+
+    render(<OrganizationSettings />);
+    const field = await screen.findByLabelText('Aclaración de la firma');
+    expect(field).toHaveValue('');
+    expect(field).not.toBeRequired();
+    fireEvent.change(field, { target: { value: 'Ing. José Carrizo' } });
+    fireEvent.click(screen.getByRole('button', { name: /guardar cambios/i }));
+
+    await waitFor(() =>
+      expect(saveOrganizationProfile).toHaveBeenCalledWith(
+        expect.objectContaining({ signatoryName: 'Ing. José Carrizo' }),
+      ),
+    );
+    expect(await screen.findByText(/perfil guardado/i)).toBeInTheDocument();
+    expect(screen.getByLabelText('Aclaración de la firma')).toHaveValue('Ing. José Carrizo');
+  });
+
+  it('shows the signatory name to a member when it is set', async () => {
+    vi.mocked(getOrganizationProfile).mockResolvedValue({
+      configured: true,
+      profile: { ...profile, signatoryName: 'Ing. José Carrizo' },
+      canEdit: false,
+    });
+
+    render(<OrganizationSettings />);
+
+    expect(await screen.findByText('Ing. José Carrizo')).toBeInTheDocument();
   });
 
   it('shows the logo and signature section to an admin only', async () => {

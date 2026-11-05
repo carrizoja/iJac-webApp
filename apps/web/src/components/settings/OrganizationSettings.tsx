@@ -11,7 +11,8 @@ import { useLanguage } from '../../hooks/useLanguage';
 import { BrandingSettings } from './BrandingSettings';
 import type { TranslationKey } from '../../i18n/translations';
 
-type Field = keyof OrganizationProfileInput;
+type Form = Required<OrganizationProfileInput>;
+type Field = Exclude<keyof Form, 'signatoryName'>;
 type FormErrors = Partial<Record<Field | 'general', string>>;
 
 interface LoadedState {
@@ -33,19 +34,20 @@ const FIELDS: Array<{ name: Field; labelKey: TranslationKey; requiredKey: Transl
   { name: 'phone', labelKey: 'settings.phone', requiredKey: 'settings.validation.phone' },
 ];
 
-function toForm(profile: OrganizationProfile | null): OrganizationProfileInput {
+function toForm(profile: OrganizationProfile | null): Form {
   return {
     businessName: profile?.businessName ?? '',
     cuit: profile?.cuit ?? '',
     address: profile?.address ?? '',
     phone: profile?.phone ?? '',
+    signatoryName: profile?.signatoryName ?? '',
   };
 }
 
 export function OrganizationSettings() {
   const { t } = useLanguage();
   const [state, setState] = useState<State>({ status: 'loading' });
-  const [form, setForm] = useState<OrganizationProfileInput>(toForm(null));
+  const [form, setForm] = useState<Form>(toForm(null));
   const [errors, setErrors] = useState<FormErrors>({});
   const [saved, setSaved] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -96,6 +98,12 @@ export function OrganizationSettings() {
             <dd className="mt-1 text-fg-primary">{profile[field.name]}</dd>
           </div>
         ))}
+        {profile.signatoryName && (
+          <div>
+            <dt className="text-sm font-medium text-fg-tertiary">{t('settings.signatoryName')}</dt>
+            <dd className="mt-1 text-fg-primary">{profile.signatoryName}</dd>
+          </div>
+        )}
       </dl>
     );
   }
@@ -180,6 +188,14 @@ export function OrganizationSettings() {
             required
           />
         ))}
+
+        <Input
+          id="profile-signatoryName"
+          label={t('settings.signatoryName')}
+          helpText={t('settings.signatoryNameHint')}
+          value={form.signatoryName}
+          onChange={(event) => setForm({ ...form, signatoryName: event.target.value })}
+        />
 
         <div className="flex justify-end border-t border-border-subtle pt-5">
           <Button

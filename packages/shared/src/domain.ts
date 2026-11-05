@@ -129,6 +129,8 @@ export interface OrganizationProfile {
   cuit: string;
   address: string;
   phone: string;
+  /** Printed under the receipt signature line; omitted when not set. */
+  signatoryName?: string;
   updatedAt: string;
 }
 

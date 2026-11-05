@@ -36,6 +36,7 @@ export class FirestoreOrganizationProfileRepository implements OrganizationProfi
       cuit: stored.cuit,
       address: stored.address,
       phone: stored.phone,
+      ...(stored.signatoryName ? { signatoryName: stored.signatoryName } : {}),
       updatedAt: toIsoString(stored.updatedAt) ?? '',
     };
   }
@@ -55,6 +56,8 @@ export class FirestoreOrganizationProfileRepository implements OrganizationProfi
       cuit: input.cuit,
       address: input.address,
       phone: input.phone,
+      // Always written: the merge below would otherwise keep a cleared name.
+      signatoryName: input.signatoryName ?? '',
       updatedAt: nowTimestamp(),
     };
     await this.document(organizationId).set({ profile: stored }, { merge: true });

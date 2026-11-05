@@ -58,3 +58,4 @@
 
 - [x] 6.1 API: store a logo and a signature per organization (`organizations/{id}/branding/{kind}`), PNG/JPEG up to 200 KB with format check; GET for members, PUT/DELETE for admins; JSON body limit raised to 512 KB
 - [x] 6.2 Web: upload, preview, and remove both images in Settings (admins); show them on the receipt header and signature line
+- [x] 6.3 Add an optional signatory name to the organization profile (Settings) and print it under the signature line instead of "Firma y aclaración"

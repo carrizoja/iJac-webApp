@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Printer, X } from 'lucide-react';
 import { brandingImageSrc, type BrandingKind, type Payment } from '@ijac/shared';
-import { getBrandingImage } from '../../lib/resources';
+import { getBrandingImage, getOrganizationProfile } from '../../lib/resources';
 import { useLanguage } from '../../hooks/useLanguage';
 import { Button } from '../ui';
 import { PaymentReceipt } from './PaymentReceipt';
@@ -21,7 +21,11 @@ export function ReceiptPrintView({ payment, onClose }: ReceiptPrintViewProps) {
   const closeRef = useRef(onClose);
   closeRef.current = onClose;
   const overlayRef = useRef<HTMLDivElement>(null);
-  const [branding, setBranding] = useState<Partial<Record<BrandingKind, string>> | null>(null);
+  const [branding, setBranding] = useState<{
+    logo?: string;
+    signature?: string;
+    signatoryName?: string;
+  } | null>(null);
 
   // A receipt without images is still valid, so a failed load just prints without them.
   useEffect(() => {
@@ -30,9 +34,14 @@ export function ReceiptPrintView({ payment, onClose }: ReceiptPrintViewProps) {
       getBrandingImage(kind)
         .then(({ image }) => (image ? brandingImageSrc(image) : undefined))
         .catch(() => undefined);
-    Promise.all([load('logo'), load('signature')]).then(([logo, signature]) => {
-      if (active) setBranding({ logo, signature });
-    });
+    const signatoryName = getOrganizationProfile()
+      .then((response) => (response.configured ? response.profile.signatoryName : undefined))
+      .catch(() => undefined);
+    Promise.all([load('logo'), load('signature'), signatoryName]).then(
+      ([logo, signature, name]) => {
+        if (active) setBranding({ logo, signature, signatoryName: name });
+      },
+    );
     return () => {
       active = false;
     };
@@ -93,6 +102,7 @@ export function ReceiptPrintView({ payment, onClose }: ReceiptPrintViewProps) {
             payment={payment}
             logoSrc={branding?.logo}
             signatureSrc={branding?.signature}
+            signatoryName={branding?.signatoryName}
           />
         </div>
       </div>

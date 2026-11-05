@@ -27,7 +27,15 @@ vi.mock('../../lib/resources', () => {
     }
   }
   const getBrandingImage = async () => ({ image: null });
-  return { ApiRequestError, listPayments, recordPayment, voidPayment, getBrandingImage };
+  const getOrganizationProfile = async () => ({ configured: false, canEdit: false });
+  return {
+    ApiRequestError,
+    listPayments,
+    recordPayment,
+    voidPayment,
+    getBrandingImage,
+    getOrganizationProfile,
+  };
 });
 
 import { ApiRequestError } from '../../lib/resources';

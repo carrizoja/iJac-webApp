@@ -8,6 +8,7 @@ import {
 
 class InMemoryOrganizationProfileRepository implements OrganizationProfileRepository {
   profiles = new Map<string, OrganizationProfile>();
+  lastInput?: SaveOrganizationProfileInput;
 
   async find(organizationId: string): Promise<OrganizationProfile | null> {
     return this.profiles.get(organizationId) ?? null;
@@ -17,7 +18,13 @@ class InMemoryOrganizationProfileRepository implements OrganizationProfileReposi
     organizationId: string,
     input: SaveOrganizationProfileInput,
   ): Promise<OrganizationProfile> {
-    const profile = { ...input, updatedAt: '2026-08-07T10:00:00.000Z' };
+    this.lastInput = input;
+    const { signatoryName, ...rest } = input;
+    const profile = {
+      ...rest,
+      ...(signatoryName ? { signatoryName } : {}),
+      updatedAt: '2026-08-07T10:00:00.000Z',
+    };
     this.profiles.set(organizationId, profile);
     return profile;
   }
@@ -73,6 +80,18 @@ describe('OrganizationProfileService', () => {
       phone: '555-0100',
       updatedAt: '2026-08-07T10:00:00.000Z',
     });
+  });
+
+  it('trims the optional signatory name and stores an empty one as blank', async () => {
+    await expect(
+      service.save('org-1', { ...validInput, signatoryName: '  Ing. José Carrizo  ' }),
+    ).resolves.toMatchObject({ signatoryName: 'Ing. José Carrizo' });
+
+    await service.save('org-1', { ...validInput, signatoryName: '   ' });
+    expect(repository.lastInput?.signatoryName).toBe('');
+
+    await service.save('org-1', validInput);
+    expect(repository.lastInput?.signatoryName).toBe('');
   });
 
   it.each(['20123456787', '2012345678', '2012345678a', '---'])(
