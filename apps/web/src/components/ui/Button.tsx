@@ -19,11 +19,10 @@ const buttonVariants = cva(
   {
     variants: {
       variant: {
-        /* Primary: cyan/blue gradient */
+        /* Primary: brand action (same look as the "New client" button) */
         primary: [
-          'bg-gradient-primary text-white',
-          'hover:opacity-90',
-          'focus-visible:ring-offset-focus',
+          'action-brand border-2',
+          'focus-visible:ring-focus',
         ],
 
         /* Secondary: panel with border */
