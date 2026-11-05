@@ -27,6 +27,14 @@ describe('PaymentReceipt', () => {
     expect(screen.getByTestId('receipt-signature')).toHaveTextContent('Firma y aclaración');
   });
 
+  it('prints the signatory name under the signature line instead of the generic label', () => {
+    render(<PaymentReceipt payment={makePayment()} signatoryName="Ing. José Carrizo" />);
+
+    const signature = screen.getByTestId('receipt-signature');
+    expect(signature).toHaveTextContent('Ing. José Carrizo');
+    expect(signature).not.toHaveTextContent('Firma y aclaración');
+  });
+
   it('shows no images when the organization has no logo or signature', () => {
     render(<PaymentReceipt payment={makePayment()} />);
 

@@ -60,6 +60,9 @@ export const es = {
   'settings.loadError': 'No se pudo cargar el perfil de la organización.',
   'settings.saveError': 'No se pudo guardar el perfil. Intentá nuevamente.',
   'settings.saved': 'Perfil guardado.',
+  'settings.signatoryName': 'Aclaración de la firma',
+  'settings.signatoryNameHint':
+    'Opcional. Se imprime bajo la firma del recibo, por ejemplo "Ing. José Carrizo".',
   'settings.branding.title': 'Logo y firma del recibo',
   'settings.branding.hint': 'PNG o JPG de hasta 200 KB. Se imprimen en cada recibo.',
   'settings.branding.loading': 'Cargando imágenes...',
@@ -357,6 +360,9 @@ export const en = {
   'settings.loadError': 'The organization profile could not be loaded.',
   'settings.saveError': 'The profile could not be saved. Try again.',
   'settings.saved': 'Profile saved.',
+  'settings.signatoryName': 'Signatory name',
+  'settings.signatoryNameHint':
+    'Optional. Printed under the receipt signature, for example "Ing. José Carrizo".',
   'settings.branding.title': 'Receipt logo and signature',
   'settings.branding.hint': 'PNG or JPG up to 200 KB. Printed on every receipt.',
   'settings.branding.loading': 'Loading images...',

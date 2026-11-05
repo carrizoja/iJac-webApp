@@ -70,6 +70,10 @@ An admin SHALL be able to upload, replace, and remove an organization logo and a
 - **WHEN** the organization has a logo and a signature and a member opens a receipt
 - **THEN** the receipt header shows the logo and the signature appears above "Firma y aclaración"
 
+#### Scenario: Print the signatory name
+- **WHEN** the organization profile has the optional signatory name "Ing. José Carrizo"
+- **THEN** the receipt prints "Ing. José Carrizo" under the signature line instead of "Firma y aclaración", and prints "Firma y aclaración" when the name is blank
+
 #### Scenario: Print a receipt without images
 - **WHEN** the organization has no logo or signature
 - **THEN** the receipt prints as before, with an empty signature line

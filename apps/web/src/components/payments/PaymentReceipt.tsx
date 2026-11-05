@@ -45,9 +45,16 @@ interface PaymentReceiptProps {
   logoSrc?: string;
   /** Signature image printed above the signature line. */
   signatureSrc?: string;
+  /** Name printed under the signature line in place of "Firma y aclaración". */
+  signatoryName?: string;
 }
 
-export function PaymentReceipt({ payment, logoSrc, signatureSrc }: PaymentReceiptProps) {
+export function PaymentReceipt({
+  payment,
+  logoSrc,
+  signatureSrc,
+  signatoryName,
+}: PaymentReceiptProps) {
   const receiptNumber = formatReceiptNumber(payment.receiptNumber);
   const voided = payment.status === PaymentStatus.VOIDED;
   const words = amountToSpanishWords(payment.amountMinor, payment.currency);
@@ -102,7 +109,9 @@ export function PaymentReceipt({ payment, logoSrc, signatureSrc }: PaymentReceip
         {signatureSrc && (
           <img src={signatureSrc} alt="Firma" className="mb-1 h-16 w-64 object-contain" />
         )}
-        <div className="w-64 border-t border-gray-900 pt-1 text-sm">Firma y aclaración</div>
+        <div className="w-64 border-t border-gray-900 pt-1 text-sm">
+          {signatoryName || 'Firma y aclaración'}
+        </div>
       </div>
 
       <footer className="border-t border-gray-400 pt-3 text-center text-sm">

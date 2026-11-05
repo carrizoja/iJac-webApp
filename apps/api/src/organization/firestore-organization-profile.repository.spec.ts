@@ -75,7 +75,34 @@ describe('FirestoreOrganizationProfileRepository', () => {
     await repository.save('org-1', input);
 
     expect(docRef.set).toHaveBeenCalledWith(
-      { profile: { ...input, updatedAt: expect.any(Timestamp) } },
+      { profile: { ...input, signatoryName: '', updatedAt: expect.any(Timestamp) } },
+      { merge: true },
+    );
+  });
+
+  it('returns the signatory name when one is stored and omits a blank one', async () => {
+    const { repository, docRef } = setup('organization');
+    const stored = (signatoryName: string) => ({
+      exists: true,
+      get: () => ({ ...input, signatoryName, updatedAt: Timestamp.now() }),
+    });
+
+    docRef.get.mockResolvedValue(stored('Ing. José Carrizo'));
+    await expect(repository.find('org-1')).resolves.toMatchObject({
+      signatoryName: 'Ing. José Carrizo',
+    });
+
+    docRef.get.mockResolvedValue(stored(''));
+    expect(await repository.find('org-1')).not.toHaveProperty('signatoryName');
+  });
+
+  it('always writes the signatory name so that clearing it replaces the old value', async () => {
+    const { repository, docRef } = setup('organization');
+
+    await repository.save('org-1', { ...input, signatoryName: '' });
+
+    expect(docRef.set).toHaveBeenCalledWith(
+      { profile: { ...input, signatoryName: '', updatedAt: expect.any(Timestamp) } },
       { merge: true },
     );
   });

@@ -35,6 +35,7 @@ export class OrganizationProfileService {
       cuit: normalizeTaxId(input.cuit),
       address: input.address.trim(),
       phone: input.phone.trim(),
+      signatoryName: input.signatoryName?.trim() ?? '',
     };
 
     const fieldErrors: Record<string, string> = {};

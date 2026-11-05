@@ -26,6 +26,19 @@ describe('UpdateOrganizationProfileDto', () => {
     expect(dto.businessName).toBe('iJac');
   });
 
+  it('accepts an optional signatory name, trims it, and caps its length', async () => {
+    const dto = (await validate({
+      ...valid,
+      signatoryName: '  Ing. José Carrizo  ',
+    })) as UpdateOrganizationProfileDto;
+    expect(dto.signatoryName).toBe('Ing. José Carrizo');
+
+    await expect(validate(valid)).resolves.toBeDefined();
+    await expect(validate({ ...valid, signatoryName: 'x'.repeat(101) })).rejects.toBeInstanceOf(
+      ValidationError,
+    );
+  });
+
   it.each(['businessName', 'cuit', 'address', 'phone'])(
     'reports a field-level error when %s is missing',
     async (field) => {
