@@ -50,6 +50,27 @@ The API accepts a single browser origin (`CORS_ORIGIN`). Production values on Cl
 
 Change them with `gcloud run services update ijac-api --project=ijac-webapp --region=southamerica-west1 --update-env-vars=...`, which rolls out a new revision. The redirect URI must also be listed in the Google OAuth client's authorized redirect URIs.
 
+### Google Calendar OAuth client
+
+The Calendar connection uses the OAuth client set in `GOOGLE_CLIENT_ID`, which is `835784340797-11pmkptnd2dobnom10nt1j8pvm2h87jv.apps.googleusercontent.com`. **This client does not belong to `ijac-webapp`.** It lives in the Google Cloud project with number `835784340797`. The leading number of a client ID is the number of the project that owns it, so compare it with `gcloud projects describe ijac-webapp --format='value(projectNumber)'`. Edit the redirect URIs and secrets of this client in that project's console, under APIs & Services → Credentials.
+
+- `GOOGLE_CLIENT_SECRET` must be the secret of that same client. Production reads it from Secret Manager `ijac-google-client-secret`, **version 2**, pinned on the service. To rotate it, add a new version, then repin the service:
+  ```bash
+  read -rsp "Client secret: " SECRET; echo; echo "length: ${#SECRET}"
+  printf '%s' "$SECRET" | gcloud secrets versions add ijac-google-client-secret --project=ijac-webapp --data-file=- ; unset SECRET
+  gcloud run services update ijac-api --region=southamerica-west1 --project=ijac-webapp \
+    --update-secrets=GOOGLE_CLIENT_SECRET=ijac-google-client-secret:<new-version>
+  ```
+- If `CREDENTIAL_ENCRYPTION_KEY` changes, the stored refresh tokens can no longer be decrypted. Sync then marks the connection `reconnect_required`, and the user has to connect Google Calendar again.
+
+When something fails, these symptoms point to the cause:
+
+| Symptom | Cause |
+| --- | --- |
+| Google shows `Error 400: redirect_uri_mismatch` | `GOOGLE_REDIRECT_URI` is not in the authorized redirect URIs of the client named by `GOOGLE_CLIENT_ID`. Check the client's project first. |
+| The app shows "No se pudo conectar Google Calendar" and the log reads `OAuth callback failed at stage: token_exchange` | `GOOGLE_CLIENT_SECRET` does not belong to that client. |
+| Sync shows "No se pudo sincronizar el calendario" and the log reads `cannot be decrypted` | The stored credential was encrypted with another key. Reconnect Google Calendar. |
+
 Because CORS allows only the custom domain, `https://ijac-webapp.web.app` serves the UI but its API calls are blocked; use `https://app.ijac.com.ar`.
 
 The API service allows unauthenticated invocation (`allUsers` → `roles/run.invoker`); authorization is enforced in the application by the Firebase ID token guard.
