@@ -8,6 +8,7 @@ import {
   CALENDAR_CONNECTION_REPOSITORY,
   CALENDAR_EVENT_MAPPING_REPOSITORY,
 } from './calendar-connection.constants';
+import { CredentialEncryption } from './credential-encryption';
 
 class InMemoryConnectionRepository implements CalendarConnectionRepository {
   private connections: Map<string, CalendarConnection> = new Map();
@@ -172,6 +173,32 @@ describe('CalendarSyncService', () => {
 
     expect(result.success).toBe(true);
     expect(events.update).toHaveBeenCalled();
+  });
+
+  it('asks to reconnect when the stored credential was encrypted with another key', async () => {
+    jest.restoreAllMocks();
+    const otherKey = Buffer.alloc(32, 7).toString('base64');
+    await connectionRepo.save({
+      uid: 'uid-1',
+      connected: true,
+      grantedScopes: [],
+      credential: new CredentialEncryption(otherKey).encrypt('refresh-token'),
+      status: 'active',
+      updatedAt: '2026-11-01T00:00:00.000Z',
+    });
+    const updateStatus = jest.spyOn(connectionRepo, 'updateStatus');
+
+    const result = await service.syncWorkOrder('uid-1', 'org-1', {
+      id: 'wo-1',
+      title: 'Work order',
+      status: 'open',
+    });
+
+    expect(result.success).toBe(false);
+    expect(result.mapping.status).toBe('reconnect_required');
+    expect(updateStatus).toHaveBeenCalledWith('uid-1', 'reconnect_required');
+    const mapping = await mappingRepo.findByWorkOrderId('org-1', 'wo-1');
+    expect(mapping?.status).toBe('reconnect_required');
   });
 
   it('marks mapping as failed when Google API returns an error', async () => {

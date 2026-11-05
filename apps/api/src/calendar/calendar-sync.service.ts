@@ -1,4 +1,4 @@
-import { Injectable, Inject } from '@nestjs/common';
+import { Injectable, Inject, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { OAuth2Client } from 'google-auth-library';
 import { google, calendar_v3 } from 'googleapis';
@@ -23,6 +23,7 @@ export interface SyncResult {
 
 @Injectable()
 export class CalendarSyncService {
+  private readonly logger = new Logger(CalendarSyncService.name);
   private readonly encryption: CredentialEncryption;
 
   constructor(
@@ -41,7 +42,19 @@ export class CalendarSyncService {
       return null;
     }
 
-    const refreshToken = this.encryption.decrypt(connection.credential);
+    let refreshToken: string;
+    try {
+      refreshToken = this.encryption.decrypt(connection.credential);
+    } catch (err) {
+      // Typically the credential was encrypted with a different key. Only a
+      // new connection can recover it, so ask the user to reconnect.
+      this.logger.warn(
+        `Stored Google Calendar credential for ${uid} cannot be decrypted: ${this.errorMessage(err)}`,
+      );
+      await this.connectionRepository.updateStatus(uid, 'reconnect_required');
+      return null;
+    }
+
     const oauthClient = new OAuth2Client(
       this.config.getOrThrow('GOOGLE_CLIENT_ID'),
       this.config.getOrThrow('GOOGLE_CLIENT_SECRET'),
