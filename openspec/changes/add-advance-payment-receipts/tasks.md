@@ -57,4 +57,4 @@
 ## 6. Receipt logo and signature
 
 - [x] 6.1 API: store a logo and a signature per organization (`organizations/{id}/branding/{kind}`), PNG/JPEG up to 200 KB with format check; GET for members, PUT/DELETE for admins; JSON body limit raised to 512 KB
-- [ ] 6.2 Web: upload, preview, and remove both images in Settings (admins); show them on the receipt header and signature line
+- [x] 6.2 Web: upload, preview, and remove both images in Settings (admins); show them on the receipt header and signature line
