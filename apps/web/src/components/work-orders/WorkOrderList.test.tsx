@@ -3,12 +3,17 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import type { WorkOrderClientSummary, Client } from '@ijac/shared';
 import { WorkOrderStatus, WorkOrderPriority } from '@ijac/shared';
 
-const { listWorkOrders, deleteWorkOrder } = vi.hoisted(() => ({
+const { listWorkOrders, deleteWorkOrder, ApiRequestError } = vi.hoisted(() => ({
   listWorkOrders: vi.fn(),
   deleteWorkOrder: vi.fn(),
+  ApiRequestError: class ApiRequestError extends Error {
+    constructor(readonly code: string) {
+      super(code);
+    }
+  },
 }));
 
-vi.mock('../../lib/resources', () => ({ listWorkOrders, deleteWorkOrder }));
+vi.mock('../../lib/resources', () => ({ listWorkOrders, deleteWorkOrder, ApiRequestError }));
 
 import { WorkOrderList } from './WorkOrderList';
 
@@ -129,6 +134,37 @@ describe('WorkOrderList', () => {
 
     const cardLink = screen.getByRole('link', { name: 'Reparación de Servidor' });
     expect(cardLink).toHaveAttribute('href', '/work-orders/details?id=wo%2F1%20a');
+  });
+
+  it('explains that an order with payments cannot be deleted', async () => {
+    listWorkOrders.mockResolvedValue({ items: [sampleWorkOrder] });
+    deleteWorkOrder.mockRejectedValue(new ApiRequestError('WORK_ORDER_HAS_PAYMENTS'));
+    render(<WorkOrderList clients={[sampleClient]} onCreate={vi.fn()} onEdit={vi.fn()} />);
+
+    await waitFor(() => expect(screen.getByText('Reparación de Servidor')).toBeInTheDocument());
+    fireEvent.click(screen.getByRole('button', { name: 'Eliminar Reparación de Servidor' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Eliminar' }));
+
+    expect(
+      await screen.findByText(
+        'No se puede eliminar una orden con pagos registrados. Cancelala en su lugar.',
+      ),
+    ).toBeInTheDocument();
+    expect(screen.queryByText('No se pudo eliminar la orden. Intentá nuevamente.')).not.toBeInTheDocument();
+  });
+
+  it('shows the generic delete error for other failures', async () => {
+    listWorkOrders.mockResolvedValue({ items: [sampleWorkOrder] });
+    deleteWorkOrder.mockRejectedValue(new Error('network'));
+    render(<WorkOrderList clients={[sampleClient]} onCreate={vi.fn()} onEdit={vi.fn()} />);
+
+    await waitFor(() => expect(screen.getByText('Reparación de Servidor')).toBeInTheDocument());
+    fireEvent.click(screen.getByRole('button', { name: 'Eliminar Reparación de Servidor' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Eliminar' }));
+
+    expect(
+      await screen.findByText('No se pudo eliminar la orden. Intentá nuevamente.'),
+    ).toBeInTheDocument();
   });
 
   it('shows request error alert when fetch fails', async () => {

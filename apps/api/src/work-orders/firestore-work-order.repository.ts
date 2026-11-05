@@ -1,6 +1,7 @@
 import {
   computeBalance,
   Payment,
+  PAYMENT_ERROR_CODES,
   WorkOrder,
   WorkOrderClientSummary,
   WorkOrderStatus,
@@ -245,6 +246,15 @@ export class FirestoreWorkOrderRepository implements WorkOrderRepository {
       const doc = await tx.get(ref);
       if (!doc.exists) {
         throw new NotFoundError('Work order');
+      }
+      // Payments (voided ones included) carry issued receipt numbers. Deleting
+      // the order would make them unreachable, so it has to be cancelled instead.
+      const payments = await tx.get(ref.collection('payments'));
+      if (payments.docs.length > 0) {
+        throw new ConflictError(
+          'Cannot delete a work order with payments; cancel it instead',
+          PAYMENT_ERROR_CODES.WORK_ORDER_HAS_PAYMENTS,
+        );
       }
       const clientId = doc.get('clientId') as string;
       tx.update(this.clientsCollection(organizationId).doc(clientId), {
