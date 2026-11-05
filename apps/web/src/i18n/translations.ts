@@ -128,6 +128,8 @@ export const es = {
   'workOrders.saveError': 'No se pudo guardar la orden. Intentá nuevamente.',
   'workOrders.loadError': 'No se pudieron cargar las órdenes. Intentá nuevamente.',
   'workOrders.deleteError': 'No se pudo eliminar la orden. Intentá nuevamente.',
+  'workOrders.deleteHasPayments':
+    'No se puede eliminar una orden con pagos registrados. Cancelala en su lugar.',
   'workOrders.allStatuses': 'Todos los estados',
   'workOrders.allPriorities': 'Todas las prioridades',
   'workOrders.allClients': 'Todos los clientes',
@@ -404,6 +406,8 @@ export const en = {
   'workOrders.saveError': 'The order could not be saved. Try again.',
   'workOrders.loadError': 'Work orders could not be loaded. Try again.',
   'workOrders.deleteError': 'The order could not be deleted. Try again.',
+  'workOrders.deleteHasPayments':
+    'An order with recorded payments cannot be deleted. Cancel it instead.',
   'workOrders.allStatuses': 'All statuses',
   'workOrders.allPriorities': 'All priorities',
   'workOrders.allClients': 'All clients',

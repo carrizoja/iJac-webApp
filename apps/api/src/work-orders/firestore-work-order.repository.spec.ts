@@ -3,6 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { FirestoreWorkOrderRepository } from './firestore-work-order.repository';
 import { ApiEnvironment } from '../config/env';
 import { ConflictError, ValidationError } from '../common/errors';
+import { PAYMENT_ERROR_CODES } from '@ijac/shared';
 
 const stamp = new Date('2026-08-01T10:00:00.000Z');
 
@@ -40,6 +41,7 @@ function createRepository(
       ),
     create: jest.fn(),
     update: jest.fn(),
+    delete: jest.fn(),
   };
   const collection = {
     doc: jest.fn().mockImplementation((id?: string) => (id === 'c1' ? clientRef : ref)),
@@ -247,5 +249,33 @@ describe('FirestoreWorkOrderRepository payment guards', () => {
     await repository.update('org', 'wo-1', { title: 'Renamed' });
     expect(tx.get).not.toHaveBeenCalledWith(paymentsRef);
     expect(tx.update).toHaveBeenCalled();
+  });
+});
+
+describe('FirestoreWorkOrderRepository delete', () => {
+  it.each([
+    ['an active', 'active'],
+    ['only a voided', 'voided'],
+  ])('rejects deleting a work order with %s payment', async (_label, status) => {
+    const { repository, tx } = createRepository({}, [{ amountMinor: 3000000, status }]);
+
+    const error = await repository.delete('org', 'wo-1').catch((e: unknown) => e);
+
+    expect(error).toBeInstanceOf(ConflictError);
+    expect((error as ConflictError).code).toBe(PAYMENT_ERROR_CODES.WORK_ORDER_HAS_PAYMENTS);
+    expect(tx.delete).not.toHaveBeenCalled();
+    expect(tx.update).not.toHaveBeenCalled();
+  });
+
+  it('deletes a work order without payments and decrements the client count', async () => {
+    const { repository, tx, ref } = createRepository({}, []);
+
+    await repository.delete('org', 'wo-1');
+
+    expect(tx.delete).toHaveBeenCalledWith(ref);
+    expect(tx.update).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 'c1' }),
+      expect.objectContaining({ workOrderCount: expect.anything() }),
+    );
   });
 });

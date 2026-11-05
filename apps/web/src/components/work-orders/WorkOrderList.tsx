@@ -1,7 +1,12 @@
 import { useState, useEffect, useCallback, Fragment } from 'react';
 import type { WorkOrderClientSummary, Client } from '@ijac/shared';
-import { listWorkOrders, deleteWorkOrder } from '../../lib/resources';
-import { WORK_ORDER_STATUSES, WORK_ORDER_PRIORITIES, formatMoney } from '@ijac/shared';
+import { ApiRequestError, listWorkOrders, deleteWorkOrder } from '../../lib/resources';
+import {
+  WORK_ORDER_STATUSES,
+  WORK_ORDER_PRIORITIES,
+  PAYMENT_ERROR_CODES,
+  formatMoney,
+} from '@ijac/shared';
 import {
   Select,
   Button,
@@ -70,8 +75,13 @@ export function WorkOrderList({ clients, onCreate, onEdit }: WorkOrderListProps)
       await deleteWorkOrder(id);
       await load();
       setConfirmDelete(null);
-    } catch {
-      setErrorKey('workOrders.deleteError');
+    } catch (error) {
+      setErrorKey(
+        error instanceof ApiRequestError &&
+          error.code === PAYMENT_ERROR_CODES.WORK_ORDER_HAS_PAYMENTS
+          ? 'workOrders.deleteHasPayments'
+          : 'workOrders.deleteError',
+      );
     } finally {
       setDeleting(null);
     }

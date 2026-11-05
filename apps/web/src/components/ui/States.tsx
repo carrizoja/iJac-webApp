@@ -1,4 +1,5 @@
 import { cn } from './cn';
+import { Button } from './Button';
 import { useLanguage } from '../../hooks/useLanguage';
 
 /**
@@ -67,7 +68,7 @@ export function Badge({
 }: BadgeProps) {
   const { t } = useLanguage();
   const variantClasses = {
-    default: 'bg-gradient-primary text-white border border-transparent',
+    default: 'action-brand border',
     success: 'status-success text-status-completed bg-opacity-20',
     warning: 'status-warning text-priority-high bg-opacity-20',
     error: 'status-error text-destructive bg-opacity-20',
@@ -272,12 +273,9 @@ export function EmptyState({
       </div>
 
       {action && (
-        <button
-          onClick={action.onClick}
-          className="mt-4 px-4 py-2 text-sm font-medium bg-gradient-primary text-white rounded-md hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
-        >
+        <Button onClick={action.onClick} className="mt-4">
           {action.label}
-        </button>
+        </Button>
       )}
     </div>
   );

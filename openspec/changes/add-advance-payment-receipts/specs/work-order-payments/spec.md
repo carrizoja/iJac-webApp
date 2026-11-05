@@ -98,6 +98,17 @@ The system SHALL NOT allow a payment to be edited or deleted. An admin SHALL be 
 - **WHEN** an admin voids an active payment of a work order whose status is `cancelled`
 - **THEN** the system voids the payment
 
+### Requirement: Work orders with payments cannot be deleted
+The system SHALL reject deleting a work order that has any payment, `active` or `voided`, with a conflict error carrying the code `WORK_ORDER_HAS_PAYMENTS`, so that every issued receipt stays reachable. The web SHALL tell the user that an order with recorded payments cannot be deleted and should be cancelled instead.
+
+#### Scenario: Delete a work order with payments
+- **WHEN** a user deletes a work order that has an active or a voided payment
+- **THEN** the system rejects the request with `WORK_ORDER_HAS_PAYMENTS`, keeps the work order and its payments, and the web shows "No se puede eliminar una orden con pagos registrados. Cancelala en su lugar."
+
+#### Scenario: Delete a work order without payments
+- **WHEN** a user deletes a work order that has no payments
+- **THEN** the system deletes it as before
+
 ### Requirement: Work-order balance
 The system SHALL report, for each priced work order, the total price, the paid amount as the sum of its `active` payments, and the remaining balance as total price minus paid amount, all in the work order's currency.
 
