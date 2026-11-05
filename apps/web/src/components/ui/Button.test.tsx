@@ -1,6 +1,10 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { Button } from './Button';
+
+const globalCss = readFileSync(resolve(process.cwd(), 'src/styles/global.css'), 'utf8');
 
 describe('Button', () => {
   it('renders as a button element', () => {
@@ -12,7 +16,11 @@ describe('Button', () => {
   it('renders with primary variant by default', () => {
     render(<Button>Primary</Button>);
     const button = screen.getByRole('button', { name: /primary/i });
-    expect(button).toHaveClass('bg-gradient-primary', 'text-white');
+    expect(button).toHaveClass('action-brand', 'border-2');
+  });
+
+  it('styles the primary variant with a class that global.css defines', () => {
+    expect(globalCss).toMatch(/\.action-brand\s*{[^}]*background:/);
   });
 
   it('renders with secondary variant', () => {
@@ -25,7 +33,7 @@ describe('Button', () => {
     render(<Button variant="ghost">Ghost</Button>);
     const button = screen.getByRole('button', { name: /ghost/i });
     expect(button).toHaveClass('text-fg-primary');
-    expect(button).not.toHaveClass('bg-gradient-primary');
+    expect(button).not.toHaveClass('action-brand');
   });
 
   it('renders with destructive variant', () => {
