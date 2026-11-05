@@ -62,3 +62,22 @@ A receipt for a voided payment SHALL remain viewable and printable and SHALL dis
 #### Scenario: Open a voided receipt
 - **WHEN** a user opens the receipt of a voided payment
 - **THEN** the receipt shows the "ANULADO" mark and the void reason
+
+### Requirement: Receipt logo and signature
+An admin SHALL be able to upload, replace, and remove an organization logo and a signature image, each a PNG or JPEG of at most 200 KB whose bytes match its declared type. The system SHALL store them with the organization, SHALL serve them only to authenticated members of that organization, and SHALL NOT publish them as public files. A receipt SHALL show the logo in its header and the signature above the "Firma y aclaración" line when they exist, using the images current at print time.
+
+#### Scenario: Print a receipt with logo and signature
+- **WHEN** the organization has a logo and a signature and a member opens a receipt
+- **THEN** the receipt header shows the logo and the signature appears above "Firma y aclaración"
+
+#### Scenario: Print a receipt without images
+- **WHEN** the organization has no logo or signature
+- **THEN** the receipt prints as before, with an empty signature line
+
+#### Scenario: Reject an unsupported image
+- **WHEN** an admin uploads an SVG, a file whose bytes are not a PNG or JPEG, or an image over 200 KB
+- **THEN** the system rejects it and keeps the previous image
+
+#### Scenario: Members cannot change the images
+- **WHEN** a member who is not an admin tries to upload or remove a logo or signature
+- **THEN** the system rejects the request with 403
