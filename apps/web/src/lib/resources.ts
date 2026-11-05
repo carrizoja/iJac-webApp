@@ -12,6 +12,10 @@ import type {
   RecordPaymentInput,
   VoidPaymentInput,
   WorkOrderPaymentsResponse,
+  BrandingImage,
+  BrandingImageInput,
+  BrandingImageResponse,
+  BrandingKind,
 } from '@ijac/shared';
 
 /** API failure that keeps the error code as its message plus any field-level details. */
@@ -154,4 +158,19 @@ export async function voidPayment(
       token,
     ),
   );
+}
+
+export async function getBrandingImage(kind: BrandingKind): Promise<BrandingImageResponse> {
+  return withToken((token) => apiGet(`/organization/branding/${kind}`, token));
+}
+
+export async function saveBrandingImage(
+  kind: BrandingKind,
+  input: BrandingImageInput,
+): Promise<BrandingImage> {
+  return withToken((token) => apiPut(`/organization/branding/${kind}`, input, token));
+}
+
+export async function deleteBrandingImage(kind: BrandingKind): Promise<void> {
+  return withToken((token) => apiDelete(`/organization/branding/${kind}`, token));
 }

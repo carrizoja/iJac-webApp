@@ -1,13 +1,20 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+
+const { getBrandingImage } = vi.hoisted(() => ({ getBrandingImage: vi.fn() }));
+vi.mock('../../lib/resources', () => ({ getBrandingImage }));
+
 import { setLanguage } from '../../i18n/language';
 import { makePayment } from './fixtures';
 import { ReceiptPrintView } from './ReceiptPrintView';
 
 describe('ReceiptPrintView', () => {
-  beforeEach(() => setLanguage('es'));
+  beforeEach(() => {
+    setLanguage('es');
+    getBrandingImage.mockResolvedValue({ image: null });
+  });
   afterEach(() => vi.restoreAllMocks());
 
   it('shows the receipt in a modal dialog attached to the body', () => {
@@ -24,10 +31,48 @@ describe('ReceiptPrintView', () => {
     expect(screen.getByTestId('payment-receipt')).toBeInTheDocument();
   });
 
-  it('calls window.print from the print button', () => {
+  it('loads the organization logo and signature into the receipt', async () => {
+    getBrandingImage.mockImplementation(async (kind: string) => ({
+      image: {
+        contentType: 'image/png',
+        data: kind === 'logo' ? 'TE9HTw==' : 'U0lHTg==',
+        updatedAt: '2026-11-05T10:00:00.000Z',
+      },
+    }));
+
+    render(<ReceiptPrintView payment={makePayment()} onClose={() => {}} />);
+
+    expect(await screen.findByRole('img', { name: 'Logo de iJac IT Solutions' })).toHaveAttribute(
+      'src',
+      'data:image/png;base64,TE9HTw==',
+    );
+    expect(screen.getByRole('img', { name: 'Firma' })).toHaveAttribute(
+      'src',
+      'data:image/png;base64,U0lHTg==',
+    );
+    expect(getBrandingImage).toHaveBeenCalledWith('logo');
+    expect(getBrandingImage).toHaveBeenCalledWith('signature');
+  });
+
+  it('waits for the images before enabling print, and still prints when they fail to load', async () => {
+    const rejectors: Array<(error: Error) => void> = [];
+    getBrandingImage.mockImplementation(
+      () => new Promise((_resolve, reject) => rejectors.push(reject)),
+    );
+
+    render(<ReceiptPrintView payment={makePayment()} onClose={() => {}} />);
+
+    expect(screen.getByRole('button', { name: 'Imprimir' })).toBeDisabled();
+    rejectors.forEach((reject) => reject(new Error('network')));
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Imprimir' })).toBeEnabled());
+    expect(screen.queryByRole('img')).not.toBeInTheDocument();
+  });
+
+  it('calls window.print from the print button', async () => {
     const printSpy = vi.spyOn(window, 'print').mockImplementation(() => {});
     render(<ReceiptPrintView payment={makePayment()} onClose={() => {}} />);
 
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Imprimir' })).toBeEnabled());
     fireEvent.click(screen.getByRole('button', { name: 'Imprimir' }));
 
     expect(printSpy).toHaveBeenCalledTimes(1);

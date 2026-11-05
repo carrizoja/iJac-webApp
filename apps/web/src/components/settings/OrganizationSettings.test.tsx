@@ -15,6 +15,9 @@ vi.mock('../../lib/resources', async () => {
     ApiRequestError,
     getOrganizationProfile: vi.fn(),
     saveOrganizationProfile: vi.fn(),
+    getBrandingImage: vi.fn(async () => ({ image: null })),
+    saveBrandingImage: vi.fn(),
+    deleteBrandingImage: vi.fn(),
   };
 });
 
@@ -73,6 +76,19 @@ describe('OrganizationSettings', () => {
       phone: '555-0100',
     });
     expect(screen.getByLabelText(/dirección/i)).toHaveValue('Calle 2');
+  });
+
+  it('shows the logo and signature section to an admin only', async () => {
+    vi.mocked(getOrganizationProfile).mockResolvedValue({ configured: true, profile, canEdit: true });
+    const { unmount } = render(<OrganizationSettings />);
+    expect(await screen.findByLabelText('Subir logo')).toBeInTheDocument();
+    expect(screen.getByLabelText('Subir firma')).toBeInTheDocument();
+    unmount();
+
+    vi.mocked(getOrganizationProfile).mockResolvedValue({ configured: true, profile, canEdit: false });
+    render(<OrganizationSettings />);
+    expect(await screen.findByTestId('organization-profile-readonly')).toBeInTheDocument();
+    expect(screen.queryByLabelText('Subir logo')).not.toBeInTheDocument();
   });
 
   it('shows read-only values without inputs or a save action for a member', async () => {

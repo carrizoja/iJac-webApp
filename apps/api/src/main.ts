@@ -4,6 +4,8 @@ import { createValidationPipe } from './common/validation';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 import { ConfigService } from '@nestjs/config';
 import { ApiEnvironment } from './config/env';
+import { NestExpressApplication } from '@nestjs/platform-express';
+import { configureBodyParser } from './common/body-limit';
 
 process.on('unhandledRejection', (reason: unknown) => {
   console.error('Unhandled rejection:', reason);
@@ -11,7 +13,7 @@ process.on('unhandledRejection', (reason: unknown) => {
 });
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule, {
+  const app = await NestFactory.create<NestExpressApplication>(AppModule, {
     logger: ['error', 'warn', 'log'],
   });
 
@@ -29,6 +31,7 @@ async function bootstrap() {
     methods: ['GET', 'POST', 'PATCH', 'PUT', 'DELETE', 'OPTIONS'],
   });
 
+  configureBodyParser(app);
   app.setGlobalPrefix('api');
   app.useGlobalPipes(createValidationPipe());
   app.useGlobalFilters(new HttpExceptionFilter());

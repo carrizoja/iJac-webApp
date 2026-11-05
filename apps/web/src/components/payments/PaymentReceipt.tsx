@@ -39,7 +39,15 @@ function formatReceiptDate(isoDate: string): string {
   return match ? `${match[3]}/${match[2]}/${match[1]}` : isoDate;
 }
 
-export function PaymentReceipt({ payment }: { payment: Payment }) {
+interface PaymentReceiptProps {
+  payment: Payment;
+  /** Organization logo for the header, as an image URL. */
+  logoSrc?: string;
+  /** Signature image printed above the signature line. */
+  signatureSrc?: string;
+}
+
+export function PaymentReceipt({ payment, logoSrc, signatureSrc }: PaymentReceiptProps) {
   const receiptNumber = formatReceiptNumber(payment.receiptNumber);
   const voided = payment.status === PaymentStatus.VOIDED;
   const words = amountToSpanishWords(payment.amountMinor, payment.currency);
@@ -53,11 +61,20 @@ export function PaymentReceipt({ payment }: { payment: Payment }) {
       data-testid="payment-receipt"
     >
       <header className="flex flex-wrap items-start justify-between gap-4 border-b border-gray-400 pb-4">
-        <div className="space-y-0.5">
-          <p className="text-xl font-bold">{payment.issuer.businessName}</p>
-          <p>CUIT: {formatCuit(payment.issuer.cuit)}</p>
-          <p>{payment.issuer.address}</p>
-          <p>Tel.: {payment.issuer.phone}</p>
+        <div className="flex items-start gap-4">
+          {logoSrc && (
+            <img
+              src={logoSrc}
+              alt={`Logo de ${payment.issuer.businessName}`}
+              className="max-h-20 max-w-40 object-contain"
+            />
+          )}
+          <div className="space-y-0.5">
+            <p className="text-xl font-bold">{payment.issuer.businessName}</p>
+            <p>CUIT: {formatCuit(payment.issuer.cuit)}</p>
+            <p>{payment.issuer.address}</p>
+            <p>Tel.: {payment.issuer.phone}</p>
+          </div>
         </div>
         <div className="space-y-0.5 text-right">
           <p className="text-xl font-bold">Recibo N° {receiptNumber}</p>
@@ -81,7 +98,10 @@ export function PaymentReceipt({ payment }: { payment: Payment }) {
         {payment.notes && <p>Observaciones: {payment.notes}</p>}
       </div>
 
-      <div className="pt-12">
+      <div className={signatureSrc ? 'pt-4' : 'pt-12'} data-testid="receipt-signature">
+        {signatureSrc && (
+          <img src={signatureSrc} alt="Firma" className="mb-1 h-16 w-64 object-contain" />
+        )}
         <div className="w-64 border-t border-gray-900 pt-1 text-sm">Firma y aclaración</div>
       </div>
 

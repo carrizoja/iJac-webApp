@@ -1,7 +1,8 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Printer, X } from 'lucide-react';
-import type { Payment } from '@ijac/shared';
+import { brandingImageSrc, type BrandingKind, type Payment } from '@ijac/shared';
+import { getBrandingImage } from '../../lib/resources';
 import { useLanguage } from '../../hooks/useLanguage';
 import { Button } from '../ui';
 import { PaymentReceipt } from './PaymentReceipt';
@@ -20,6 +21,22 @@ export function ReceiptPrintView({ payment, onClose }: ReceiptPrintViewProps) {
   const closeRef = useRef(onClose);
   closeRef.current = onClose;
   const overlayRef = useRef<HTMLDivElement>(null);
+  const [branding, setBranding] = useState<Partial<Record<BrandingKind, string>> | null>(null);
+
+  // A receipt without images is still valid, so a failed load just prints without them.
+  useEffect(() => {
+    let active = true;
+    const load = (kind: BrandingKind) =>
+      getBrandingImage(kind)
+        .then(({ image }) => (image ? brandingImageSrc(image) : undefined))
+        .catch(() => undefined);
+    Promise.all([load('logo'), load('signature')]).then(([logo, signature]) => {
+      if (active) setBranding({ logo, signature });
+    });
+    return () => {
+      active = false;
+    };
+  }, []);
 
   useEffect(() => {
     const previous = document.activeElement as HTMLElement | null;
@@ -57,6 +74,7 @@ export function ReceiptPrintView({ payment, onClose }: ReceiptPrintViewProps) {
             type="button"
             variant="primary"
             onClick={() => window.print()}
+            disabled={branding === null}
             startIcon={<Printer aria-hidden="true" focusable="false" className="h-4 w-4" />}
           >
             {t('payments.print')}
@@ -71,7 +89,11 @@ export function ReceiptPrintView({ payment, onClose }: ReceiptPrintViewProps) {
           </Button>
         </div>
         <div className="receipt-print-area">
-          <PaymentReceipt payment={payment} />
+          <PaymentReceipt
+            payment={payment}
+            logoSrc={branding?.logo}
+            signatureSrc={branding?.signature}
+          />
         </div>
       </div>
     </div>,

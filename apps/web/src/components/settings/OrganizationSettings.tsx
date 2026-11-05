@@ -8,6 +8,7 @@ import {
 } from '../../lib/resources';
 import { Alert, Button, Input, LoadingState } from '../ui';
 import { useLanguage } from '../../hooks/useLanguage';
+import { BrandingSettings } from './BrandingSettings';
 import type { TranslationKey } from '../../i18n/translations';
 
 type Field = keyof OrganizationProfileInput;
@@ -145,46 +146,55 @@ export function OrganizationSettings() {
   };
 
   return (
-    <form
-      onSubmit={handleSubmit}
-      className="space-y-5"
-      data-testid="organization-profile-form"
-      noValidate
-    >
-      {!profile && notConfigured}
-      {saved && (
-        <Alert type="success" icon="✓" role="status" onClose={() => setSaved(false)}>
-          {t('settings.saved')}
-        </Alert>
-      )}
-      {errors.general && (
-        <Alert type="error" icon="⚠️" onClose={() => setErrors({ ...errors, general: undefined })}>
-          {errors.general}
-        </Alert>
-      )}
+    <div className="space-y-10">
+      <form
+        onSubmit={handleSubmit}
+        className="space-y-5"
+        data-testid="organization-profile-form"
+        noValidate
+      >
+        {!profile && notConfigured}
+        {saved && (
+          <Alert type="success" icon="✓" role="status" onClose={() => setSaved(false)}>
+            {t('settings.saved')}
+          </Alert>
+        )}
+        {errors.general && (
+          <Alert
+            type="error"
+            icon="⚠️"
+            onClose={() => setErrors({ ...errors, general: undefined })}
+          >
+            {errors.general}
+          </Alert>
+        )}
 
-      {FIELDS.map((field) => (
-        <Input
-          key={field.name}
-          id={`profile-${field.name}`}
-          label={t(field.labelKey)}
-          value={form[field.name]}
-          onChange={(event) => setForm({ ...form, [field.name]: event.target.value })}
-          error={errors[field.name]}
-          required
-        />
-      ))}
+        {FIELDS.map((field) => (
+          <Input
+            key={field.name}
+            id={`profile-${field.name}`}
+            label={t(field.labelKey)}
+            value={form[field.name]}
+            onChange={(event) => setForm({ ...form, [field.name]: event.target.value })}
+            error={errors[field.name]}
+            required
+          />
+        ))}
 
-      <div className="flex justify-end border-t border-border-subtle pt-5">
-        <Button
-          type="submit"
-          isLoading={submitting}
-          variant="ghost"
-          className="action-brand min-h-11 shrink-0 whitespace-nowrap rounded-xl border-2 px-6 transition-all duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] active:translate-y-0"
-        >
-          {submitting ? t('common.saving') : t('common.saveChanges')}
-        </Button>
+        <div className="flex justify-end border-t border-border-subtle pt-5">
+          <Button
+            type="submit"
+            isLoading={submitting}
+            variant="ghost"
+            className="action-brand min-h-11 shrink-0 whitespace-nowrap rounded-xl border-2 px-6 transition-all duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] active:translate-y-0"
+          >
+            {submitting ? t('common.saving') : t('common.saveChanges')}
+          </Button>
+        </div>
+      </form>
+      <div className="border-t border-border-subtle pt-8">
+        <BrandingSettings />
       </div>
-    </form>
+    </div>
   );
 }

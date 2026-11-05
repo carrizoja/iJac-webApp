@@ -26,7 +26,8 @@ vi.mock('../../lib/resources', () => {
       super(code);
     }
   }
-  return { ApiRequestError, listPayments, recordPayment, voidPayment };
+  const getBrandingImage = async () => ({ image: null });
+  return { ApiRequestError, listPayments, recordPayment, voidPayment, getBrandingImage };
 });
 
 import { ApiRequestError } from '../../lib/resources';

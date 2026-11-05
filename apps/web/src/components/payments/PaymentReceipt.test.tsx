@@ -8,6 +8,32 @@ import { PaymentReceipt } from './PaymentReceipt';
 describe('PaymentReceipt', () => {
   beforeEach(() => setLanguage('es'));
 
+  it('shows the logo in the header and the signature above the signature line', () => {
+    render(
+      <PaymentReceipt
+        payment={makePayment()}
+        logoSrc="data:image/png;base64,TE9HTw=="
+        signatureSrc="data:image/png;base64,U0lHTg=="
+      />,
+    );
+
+    const receipt = screen.getByTestId('payment-receipt');
+    const logo = within(receipt).getByRole('img', { name: 'Logo de iJac IT Solutions' });
+    expect(logo).toHaveAttribute('src', 'data:image/png;base64,TE9HTw==');
+    expect(logo.closest('header')).not.toBeNull();
+    const signature = within(receipt).getByRole('img', { name: 'Firma' });
+    expect(signature).toHaveAttribute('src', 'data:image/png;base64,U0lHTg==');
+    expect(screen.getByTestId('receipt-signature')).toContainElement(signature);
+    expect(screen.getByTestId('receipt-signature')).toHaveTextContent('Firma y aclaración');
+  });
+
+  it('shows no images when the organization has no logo or signature', () => {
+    render(<PaymentReceipt payment={makePayment()} />);
+
+    expect(screen.queryByRole('img')).not.toBeInTheDocument();
+    expect(screen.getByTestId('receipt-signature')).toHaveTextContent('Firma y aclaración');
+  });
+
   it('shows a client DNI as stored, without CUIT hyphens', () => {
     const base = makePayment();
     render(<PaymentReceipt payment={{ ...base, client: { ...base.client, taxId: '12345678' } }} />);

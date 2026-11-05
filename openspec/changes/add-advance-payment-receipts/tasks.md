@@ -53,3 +53,8 @@
 - [x] 5.1 Link each work-order list row to its details page; today only the calendar links there, so the payments panel is otherwise unreachable
 - [x] 5.2 Show the client tax ID on the receipt with CUIT hyphens (`30-71234567-1`), matching the issuer CUIT
 - [x] 5.3 Hide browser print headers and footers on the receipt (date, title, URL), for example with `@page { margin: 0 }` and inner padding
+
+## 6. Receipt logo and signature
+
+- [x] 6.1 API: store a logo and a signature per organization (`organizations/{id}/branding/{kind}`), PNG/JPEG up to 200 KB with format check; GET for members, PUT/DELETE for admins; JSON body limit raised to 512 KB
+- [x] 6.2 Web: upload, preview, and remove both images in Settings (admins); show them on the receipt header and signature line
