@@ -23,6 +23,8 @@ Put production overrides in `apps/web/.env.production` (gitignored). Astro loads
 
 ## Deploy
 
+For a routine release, use `scripts/deploy.sh` (see `cloud-run-api-v1.md`, "Routine Deploys"). It deploys the API first, checks it, and only then deploys the web. To deploy only the web by hand:
+
 ```bash
 pnpm --filter @ijac/shared build
 pnpm --filter @ijac/web build

@@ -63,6 +63,26 @@ GOOGLE_CLIENT_SECRET=projects/ijac-webapp/secrets/GOOGLE_CLIENT_SECRET/versions/
 CREDENTIAL_ENCRYPTION_KEY=projects/ijac-webapp/secrets/CREDENTIAL_ENCRYPTION_KEY/versions/<version>
 ```
 
+## Routine Deploys
+
+For a routine release of `main`, run `scripts/deploy.sh` from the repository. Deploy steps done by hand were often skipped, so the script runs them in a fixed order:
+
+1. It refuses anything that isn't `main` with no uncommitted changes.
+2. It pulls `origin/main`, and refuses local commits that aren't on `origin/main`.
+3. It builds and pushes the API image tagged with the commit, then deploys it.
+4. It checks that the new revision runs that image, serves 100% of traffic, has `REPOSITORY_MODE=organization`, and answers `/api/health`.
+5. Only if all of that passes, it builds and deploys the web.
+
+Options:
+
+- `--dry-run` prints the steps without running them.
+- `--api-only` or `--web-only` deploy one part.
+- `--yes` skips the confirmation prompt.
+
+The script's tests run with `bash scripts/deploy.test.sh`. They replace `docker`, `gcloud`, `pnpm`, `firebase` and `curl` with stubs, so they never touch production.
+
+The procedure below is for a first deploy, or when the service settings themselves change.
+
 ## Release Procedure
 
 1. Confirm Firestore `(default)` remains in `southamerica-west1` and deploy the Cloud Run revision in the same region.
