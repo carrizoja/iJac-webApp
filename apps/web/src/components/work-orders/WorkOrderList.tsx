@@ -34,6 +34,8 @@ import {
 } from './workOrderSort';
 import { collectAllPages } from '../../lib/collectAllPages';
 import { readStoredTableSort, storeTableSort } from '../../lib/tableSort';
+import { isOverdue, localDateKey } from '../home/todaySummary';
+import { priorityBadgeClass, statusBadgeClass } from './workOrderBadges';
 
 const SORT_STORAGE_KEY = 'ijac.workOrders.sort';
 const COLUMN_SORT_KEYS = [
@@ -147,11 +149,13 @@ export function WorkOrderList({ clients, onCreate, onEdit }: WorkOrderListProps)
     }
   };
 
-  const getPriorityColor = (priority: string) => {
-    if (priority === 'high' || priority === 'urgent') return 'priority-high-badge';
-    if (priority === 'normal') return 'priority-normal-badge';
-    return 'priority-low-badge';
+  const filtered = Boolean(statusFilter || priorityFilter || clientFilter);
+  const clearFilters = () => {
+    setStatusFilter('');
+    setPriorityFilter('');
+    setClientFilter('');
   };
+  const todayKey = localDateKey(new Date());
 
   return (
     <div className="space-y-5" data-testid="work-order-list">
@@ -250,11 +254,19 @@ export function WorkOrderList({ clients, onCreate, onEdit }: WorkOrderListProps)
           </Panel>
         ) : workOrders.length === 0 ? (
           <Panel className="work-orders-state-panel">
-            <EmptyState
-              icon="📋"
-              title={t('workOrders.emptyTitle')}
-              description={t('workOrders.emptyDescription')}
-            />
+            {filtered ? (
+              <EmptyState
+                title={t('workOrders.noResultsTitle')}
+                description={t('workOrders.noResultsDescription')}
+                action={{ label: t('workOrders.clearFilters'), onClick: clearFilters }}
+              />
+            ) : (
+              <EmptyState
+                icon="📋"
+                title={t('workOrders.emptyTitle')}
+                description={t('workOrders.emptyDescription')}
+              />
+            )}
           </Panel>
         ) : viewMode === 'table' ? (
           <div
@@ -297,15 +309,34 @@ export function WorkOrderList({ clients, onCreate, onEdit }: WorkOrderListProps)
                       </td>
                       <td className="px-4 py-3.5 text-fg-muted">{wo.clientName}</td>
                       <td className="px-4 py-3.5">
-                        <Badge variant="neutral">{statusLabel(wo.status, language)}</Badge>
+                        <Badge variant="neutral" className={statusBadgeClass(wo.status)}>
+                          {statusLabel(wo.status, language)}
+                        </Badge>
                       </td>
                       <td className="px-4 py-3.5">
-                        <Badge variant="neutral" className={getPriorityColor(wo.priority)}>
+                        <Badge variant="neutral" className={priorityBadgeClass(wo.priority)}>
                           {priorityLabel(wo.priority, language)}
                         </Badge>
                       </td>
                       <td className="px-4 py-3.5 text-fg-muted">
-                        {wo.dueDate ? formatDateOnly(wo.dueDate, language) : '—'}
+                        {wo.dueDate ? (
+                          <span className="inline-flex flex-wrap items-center gap-2">
+                            <span
+                              className={
+                                isOverdue(wo, todayKey) ? 'font-medium text-destructive' : undefined
+                              }
+                            >
+                              {formatDateOnly(wo.dueDate, language)}
+                            </span>
+                            {isOverdue(wo, todayKey) && (
+                              <Badge variant="error" size="xs">
+                                {t('workOrders.overdue')}
+                              </Badge>
+                            )}
+                          </span>
+                        ) : (
+                          '—'
+                        )}
                       </td>
                       <td className="px-4 py-3.5 text-fg-muted">
                         {wo.totalPriceMinor !== undefined && wo.currency
@@ -429,12 +460,19 @@ export function WorkOrderList({ clients, onCreate, onEdit }: WorkOrderListProps)
                       </h3>
                       <p className="text-sm text-fg-muted">{wo.clientName}</p>
                       <div className="mt-2 flex flex-wrap gap-2 text-xs">
-                        <Badge variant="neutral">{statusLabel(wo.status, language)}</Badge>
-                        <Badge variant="neutral" className={getPriorityColor(wo.priority)}>
+                        <Badge variant="neutral" className={statusBadgeClass(wo.status)}>
+                          {statusLabel(wo.status, language)}
+                        </Badge>
+                        <Badge variant="neutral" className={priorityBadgeClass(wo.priority)}>
                           {priorityLabel(wo.priority, language)}
                         </Badge>
                         {wo.dueDate && (
-                          <Badge variant="neutral">{formatDateOnly(wo.dueDate, language)}</Badge>
+                          <Badge variant={isOverdue(wo, todayKey) ? 'error' : 'neutral'}>
+                            {formatDateOnly(wo.dueDate, language)}
+                          </Badge>
+                        )}
+                        {isOverdue(wo, todayKey) && (
+                          <Badge variant="error">{t('workOrders.overdue')}</Badge>
                         )}
                         {wo.totalPriceMinor !== undefined && wo.currency && (
                           <Badge variant="neutral">

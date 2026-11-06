@@ -7,18 +7,13 @@ import { useLanguage } from '../../hooks/useLanguage';
 import { formatDateOnly, localeFor, priorityLabel, statusLabel } from '../../i18n/format';
 import type { TranslationKey } from '../../i18n/translations';
 import { Badge, LoadingState, Panel } from '../ui';
+import { priorityBadgeClass, statusBadgeClass } from '../work-orders/workOrderBadges';
 import { localDateKey, summarizeToday } from './todaySummary';
 
 const linkClass =
   'rounded font-medium text-fg-primary underline-offset-4 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus';
 
 const detailsHref = (id: string) => `/work-orders/details?id=${encodeURIComponent(id)}`;
-
-function priorityClass(priority: WorkOrderClientSummary['priority']): string {
-  if (priority === 'high' || priority === 'urgent') return 'priority-high-badge';
-  if (priority === 'normal') return 'priority-normal-badge';
-  return 'priority-low-badge';
-}
 
 type OrdersState =
   { kind: 'loading' } | { kind: 'error' } | { kind: 'ready'; items: WorkOrderClientSummary[] };
@@ -94,10 +89,10 @@ function OrderRow({ order, overdue }: { order: WorkOrderClientSummary; overdue?:
         <span className="tabular-nums text-fg-secondary">
           {t('home.dueOn', { date: formatDateOnly(order.dueDate, language) })}
         </span>
-        <Badge variant="neutral" size="xs">
+        <Badge variant="neutral" size="xs" className={statusBadgeClass(order.status)}>
           {statusLabel(order.status, language)}
         </Badge>
-        <Badge variant="neutral" size="xs" className={priorityClass(order.priority)}>
+        <Badge variant="neutral" size="xs" className={priorityBadgeClass(order.priority)}>
           {priorityLabel(order.priority, language)}
         </Badge>
       </div>
