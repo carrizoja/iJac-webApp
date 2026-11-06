@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import type { Client } from '@ijac/shared';
 
 const { listClients, deleteClient } = vi.hoisted(() => ({
@@ -44,6 +44,7 @@ function deferred<T>() {
 describe('ClientList', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    window.localStorage.clear();
     listClients.mockResolvedValue({ items: [] });
     deleteClient.mockResolvedValue(undefined);
   });
@@ -241,5 +242,107 @@ describe('ClientList', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Tarjetas' }));
     expect(screen.getAllByText(/20123456786/)).toHaveLength(1);
+  });
+
+  describe('sorting and row actions', () => {
+    const clients: Client[] = [
+      {
+        ...client,
+        id: 'old',
+        name: 'Bravo',
+        createdAt: '2026-01-10T00:00:00.000Z',
+        updatedAt: '2026-11-06T00:00:00.000Z',
+      },
+      { ...client, id: 'new', name: 'Charlie', createdAt: '2026-11-01T00:00:00.000Z' },
+      { ...client, id: 'mid', name: 'Alfa', createdAt: '2026-06-01T00:00:00.000Z' },
+    ];
+
+    const rowNames = () =>
+      within(screen.getByTestId('client-table'))
+        .getAllByRole('row')
+        .slice(1)
+        .map((row) => row.querySelector('td')?.textContent);
+
+    it('shows the newest created client first by default', async () => {
+      listClients.mockResolvedValue({ items: clients });
+      render(<ClientList />);
+
+      await waitFor(() => expect(rowNames()).toEqual(['Charlie', 'Alfa', 'Bravo']));
+    });
+
+    it('sorts by a column header: ascending, descending, then back to newest first', async () => {
+      listClients.mockResolvedValue({ items: clients });
+      render(<ClientList />);
+      await screen.findByText('Charlie');
+
+      const nameHeader = screen.getByRole('columnheader', { name: /Nombre/ });
+      fireEvent.click(within(nameHeader).getByRole('button'));
+      expect(rowNames()).toEqual(['Alfa', 'Bravo', 'Charlie']);
+      expect(nameHeader).toHaveAttribute('aria-sort', 'ascending');
+
+      fireEvent.click(within(nameHeader).getByRole('button'));
+      expect(rowNames()).toEqual(['Charlie', 'Bravo', 'Alfa']);
+
+      fireEvent.click(within(nameHeader).getByRole('button'));
+      expect(rowNames()).toEqual(['Charlie', 'Alfa', 'Bravo']);
+      expect(nameHeader).toHaveAttribute('aria-sort', 'none');
+    });
+
+    it('remembers the chosen sort for the next visit', async () => {
+      listClients.mockResolvedValue({ items: clients });
+      const { unmount } = render(<ClientList />);
+      await screen.findByText('Charlie');
+      fireEvent.click(
+        within(screen.getByRole('columnheader', { name: /Nombre/ })).getByRole('button'),
+      );
+      unmount();
+
+      render(<ClientList />);
+      await waitFor(() => expect(rowNames()).toEqual(['Alfa', 'Bravo', 'Charlie']));
+    });
+
+    it('sorts the card view with the sort selector', async () => {
+      listClients.mockResolvedValue({ items: clients });
+      render(<ClientList />);
+      await screen.findByText('Charlie');
+      fireEvent.click(screen.getByRole('button', { name: 'Tarjetas' }));
+
+      fireEvent.change(screen.getByLabelText('Ordenar por'), { target: { value: 'name:asc' } });
+
+      const cards = within(screen.getByTestId('client-cards'));
+      const names = ['Alfa', 'Bravo', 'Charlie'].map((name) => cards.getByText(name));
+      expect(
+        names[0].compareDocumentPosition(names[1]) & Node.DOCUMENT_POSITION_FOLLOWING,
+      ).toBeTruthy();
+      expect(
+        names[1].compareDocumentPosition(names[2]) & Node.DOCUMENT_POSITION_FOLLOWING,
+      ).toBeTruthy();
+    });
+
+    it('loads every page of clients, not only the first one', async () => {
+      listClients
+        .mockResolvedValueOnce({ items: [clients[0]], nextCursor: 'old' })
+        .mockResolvedValueOnce({ items: [clients[1], clients[2]] });
+      render(<ClientList />);
+
+      await waitFor(() => expect(rowNames()).toEqual(['Charlie', 'Alfa', 'Bravo']));
+      expect(listClients).toHaveBeenLastCalledWith(expect.objectContaining({ cursor: 'old' }));
+    });
+
+    it('shows edit and delete as icon buttons that appear on row hover', async () => {
+      listClients.mockResolvedValue({ items: [client] });
+      render(<ClientList />);
+      await screen.findByText('Acme Inc');
+
+      const edit = screen.getByRole('button', { name: 'Editar Acme Inc' });
+      const remove = screen.getByRole('button', { name: 'Eliminar Acme Inc' });
+      for (const button of [edit, remove]) {
+        expect(button).toHaveTextContent('');
+        expect(button.querySelector('svg')).not.toBeNull();
+      }
+      expect(edit).toHaveAttribute('title', 'Editar');
+      expect(remove).toHaveAttribute('title', 'Eliminar');
+      expect(screen.getByTestId('client-row-actions')).toHaveClass('row-actions');
+    });
   });
 });
