@@ -3,8 +3,16 @@ import { cn } from './cn';
 import { Button } from './Button';
 import { useLanguage } from '../../hooks/useLanguage';
 
+const FOCUSABLE =
+  'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+
+function focusableIn(root: HTMLElement | null): HTMLElement[] {
+  return root ? Array.from(root.querySelectorAll<HTMLElement>(FOCUSABLE)) : [];
+}
+
 /**
- * Dialog/Modal component with accessible focus management and Escape key support
+ * Dialog/Modal component with accessible focus management and Escape key support.
+ * A destructive primary action makes it an `alertdialog`; everything else is a `dialog`.
  */
 interface DialogProps {
   /** Whether the dialog is open */
@@ -51,6 +59,8 @@ export function Dialog({
   const dialogRef = useRef<HTMLDivElement>(null);
   const previousActiveElement = useRef<HTMLElement | null>(null);
   const contentRef = useRef<HTMLDivElement>(null);
+  const bodyRef = useRef<HTMLDivElement>(null);
+  const actionsRef = useRef<HTMLDivElement>(null);
 
   // Keep the latest onClose without re-running the open effect on every
   // parent render; re-running it would steal focus from the active field.
@@ -81,21 +91,36 @@ export function Dialog({
       if (e.key === 'Escape') {
         e.preventDefault();
         onCloseRef.current();
+        return;
+      }
+      if (e.key !== 'Tab') return;
+
+      // Keep keyboard focus inside the dialog while it is open.
+      const focusable = focusableIn(contentRef.current);
+      if (focusable.length === 0) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      const active = document.activeElement;
+      // The panel itself counts as outside so Shift+Tab from it cannot escape.
+      const inside =
+        active !== contentRef.current && (contentRef.current?.contains(active) ?? false);
+      if (!inside || (e.shiftKey ? active === first : active === last)) {
+        e.preventDefault();
+        (e.shiftKey && inside ? last : first).focus();
       }
     };
     document.addEventListener('keydown', handleKeyDown);
 
-    // Move focus to dialog or first focusable element
-    if (contentRef.current) {
-      const firstFocusable = contentRef.current.querySelector(
-        'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
-      ) as HTMLElement;
-
-      if (firstFocusable) {
-        setTimeout(() => firstFocusable.focus(), 0);
-      } else {
-        contentRef.current.focus();
-      }
+    // Start on the first field of the content, then the first action; the close
+    // button is only a fallback so typing can begin right away.
+    const initial =
+      focusableIn(bodyRef.current)[0] ??
+      focusableIn(actionsRef.current)[0] ??
+      focusableIn(contentRef.current)[0];
+    if (initial) {
+      setTimeout(() => initial.focus(), 0);
+    } else {
+      contentRef.current?.focus();
     }
 
     return () => {
@@ -125,7 +150,7 @@ export function Dialog({
   return (
     <div
       ref={dialogRef}
-      className="fixed inset-0 z-50 flex items-center justify-center"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4"
       onClick={handleBackdropClick}
       role="presentation"
     >
@@ -135,13 +160,13 @@ export function Dialog({
       {/* Dialog Content */}
       <div
         ref={contentRef}
-        role="alertdialog"
+        role={primaryAction?.destructive ? 'alertdialog' : 'dialog'}
         aria-modal="true"
         aria-labelledby="dialog-title"
         aria-describedby={description ? 'dialog-description' : undefined}
         className={cn(
           'relative z-10 rounded-lg bg-panel-default border border-border-default',
-          'shadow-lg p-6 space-y-4',
+          'shadow-lg p-6 space-y-4 max-h-[calc(100dvh-2rem)] overflow-y-auto',
           'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus',
           sizeClasses[size],
         )}
@@ -171,10 +196,12 @@ export function Dialog({
         )}
 
         {/* Content */}
-        <div className="text-sm text-fg-secondary space-y-3">{children}</div>
+        <div ref={bodyRef} className="text-sm text-fg-secondary space-y-3">
+          {children}
+        </div>
 
         {/* Action Buttons */}
-        <div className="flex gap-3 justify-end pt-4">
+        <div ref={actionsRef} className="flex gap-3 justify-end pt-4">
           {resolvedSecondaryAction && (
             <Button
               variant="secondary"

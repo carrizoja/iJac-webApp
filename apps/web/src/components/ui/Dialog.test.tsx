@@ -17,7 +17,7 @@ describe('Dialog', () => {
 
   it('does not render when isOpen is false', () => {
     const { container } = render(<Dialog {...defaultProps} isOpen={false} />);
-    const dialog = container.querySelector('[role="alertdialog"]');
+    const dialog = container.querySelector('[role="dialog"]');
     expect(dialog).not.toBeInTheDocument();
   });
 
@@ -29,15 +29,93 @@ describe('Dialog', () => {
     expect(content).toBeInTheDocument();
   });
 
-  it('has alertdialog role', () => {
+  it('uses the dialog role by default', () => {
     render(<Dialog {...defaultProps} />);
-    const dialog = screen.getByRole('alertdialog');
-    expect(dialog).toBeInTheDocument();
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+    expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
+  });
+
+  it('uses the alertdialog role for destructive confirmations', () => {
+    render(
+      <Dialog
+        {...defaultProps}
+        primaryAction={{ label: 'Void', onClick: vi.fn(), destructive: true }}
+      />,
+    );
+    expect(screen.getByRole('alertdialog')).toBeInTheDocument();
+  });
+
+  it('moves initial focus to the first field in the content, not the close button', () => {
+    vi.useFakeTimers();
+    render(
+      <Dialog {...defaultProps} primaryAction={{ label: 'Save', onClick: vi.fn() }}>
+        <input aria-label="Amount" />
+      </Dialog>,
+    );
+    act(() => {
+      vi.runAllTimers();
+    });
+    expect(screen.getByLabelText('Amount')).toHaveFocus();
+    vi.useRealTimers();
+  });
+
+  it('focuses the first action when the content has nothing focusable', () => {
+    vi.useFakeTimers();
+    render(<Dialog {...defaultProps} />);
+    act(() => {
+      vi.runAllTimers();
+    });
+    expect(screen.getByRole('button', { name: 'Cancelar' })).toHaveFocus();
+    vi.useRealTimers();
+  });
+
+  it('keeps Tab and Shift+Tab focus inside the dialog', () => {
+    render(
+      <>
+        <button>Outside</button>
+        <Dialog {...defaultProps} primaryAction={{ label: 'Save', onClick: vi.fn() }}>
+          <input aria-label="Amount" />
+        </Dialog>
+      </>,
+    );
+    const close = screen.getByRole('button', { name: 'Cerrar diálogo' });
+    const save = screen.getByRole('button', { name: 'Save' });
+
+    save.focus();
+    fireEvent.keyDown(document, { key: 'Tab' });
+    expect(close).toHaveFocus();
+
+    fireEvent.keyDown(document, { key: 'Tab', shiftKey: true });
+    expect(save).toHaveFocus();
+
+    screen.getByRole('button', { name: 'Outside' }).focus();
+    fireEvent.keyDown(document, { key: 'Tab' });
+    expect(close).toHaveFocus();
+  });
+
+  it('leaves Tab alone between fields in the middle of the dialog', () => {
+    render(
+      <Dialog {...defaultProps}>
+        <input aria-label="Amount" />
+      </Dialog>,
+    );
+    const input = screen.getByLabelText('Amount');
+    input.focus();
+    const event = new KeyboardEvent('keydown', { key: 'Tab', bubbles: true, cancelable: true });
+    document.dispatchEvent(event);
+    expect(event.defaultPrevented).toBe(false);
+  });
+
+  it('keeps a side margin and scrolls when the content is taller than the screen', () => {
+    render(<Dialog {...defaultProps} />);
+    const dialog = screen.getByRole('dialog');
+    expect(dialog).toHaveClass('overflow-y-auto', 'max-h-[calc(100dvh-2rem)]');
+    expect(dialog.parentElement).toHaveClass('p-4');
   });
 
   it('has modal attribute for accessibility', () => {
     render(<Dialog {...defaultProps} />);
-    const dialog = screen.getByRole('alertdialog');
+    const dialog = screen.getByRole('dialog');
     expect(dialog).toHaveAttribute('aria-modal', 'true');
   });
 
@@ -90,7 +168,7 @@ describe('Dialog', () => {
 
   it('renders with description for accessibility', () => {
     render(<Dialog {...defaultProps} description="This action cannot be undone" />);
-    const dialog = screen.getByRole('alertdialog');
+    const dialog = screen.getByRole('dialog');
     expect(dialog).toHaveAttribute('aria-describedby', 'dialog-description');
     const description = screen.getByText(/this action cannot be undone/i);
     expect(description).toHaveAttribute('id', 'dialog-description');
@@ -205,11 +283,11 @@ describe('Dialog', () => {
 
   it('renders with different sizes', () => {
     const { rerender, container } = render(<Dialog {...defaultProps} size="sm" />);
-    let dialog = container.querySelector('[role="alertdialog"]');
+    let dialog = container.querySelector('[role="dialog"]');
     expect(dialog).toHaveClass('max-w-sm');
 
     rerender(<Dialog {...defaultProps} size="lg" />);
-    dialog = container.querySelector('[role="alertdialog"]');
+    dialog = container.querySelector('[role="dialog"]');
     expect(dialog).toHaveClass('max-w-lg');
   });
 
@@ -227,7 +305,7 @@ describe('Dialog', () => {
 
   it('has correct aria-labelledby', () => {
     render(<Dialog {...defaultProps} />);
-    const dialog = screen.getByRole('alertdialog');
+    const dialog = screen.getByRole('dialog');
     expect(dialog).toHaveAttribute('aria-labelledby', 'dialog-title');
   });
   it('keeps focus on a field while typing when onClose is an inline function', () => {
