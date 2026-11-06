@@ -73,7 +73,9 @@ export async function apiCall<T>(
       return { data: undefined as T };
     }
 
-    const body = (await response.json()) as unknown;
+    // A handler that returns nothing (e.g. a DELETE) answers with an empty body.
+    const text = await response.text();
+    const body = (text ? JSON.parse(text) : undefined) as unknown;
     if (!response.ok) {
       if (isObject(body) && isApiError(body.error)) {
         return { error: body.error };
