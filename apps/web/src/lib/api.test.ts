@@ -83,6 +83,24 @@ describe('apiCall', () => {
     expect(result.data).toBeUndefined();
   });
 
+  it('treats a 200 with an empty body as a successful empty payload', async () => {
+    // Nest answers 200 with no body when a DELETE handler returns nothing.
+    vi.mocked(fetch).mockResolvedValue(new Response('', { status: 200 }));
+
+    const result = await apiCall<void>('/work-orders/wo-1', { method: 'DELETE' }, 'token');
+
+    expect(result.error).toBeUndefined();
+    expect(result.data).toBeUndefined();
+  });
+
+  it('falls back to HTTP_ERROR when an error response has an empty body', async () => {
+    vi.mocked(fetch).mockResolvedValue(new Response('', { status: 502 }));
+
+    const result = await apiCall('/work-orders/wo-1', { method: 'DELETE' }, 'token');
+
+    expect(result.error).toEqual({ code: 'HTTP_ERROR', message: 'HTTP 502' });
+  });
+
   it('sends the bearer token and JSON headers', async () => {
     vi.mocked(fetch).mockResolvedValue(jsonResponse({ ok: true }));
 
