@@ -74,6 +74,8 @@ export function WorkOrderList({ clients, onCreate, onEdit }: WorkOrderListProps)
   const [workOrders, setWorkOrders] = useState<WorkOrderClientSummary[]>([]);
   const [viewMode, setViewMode] = useState<ViewMode>('table');
   const [loading, setLoading] = useState(true);
+  // Only the first load replaces the list; later reloads keep the filters and rows on screen.
+  const [loaded, setLoaded] = useState(false);
   const [errorKey, setErrorKey] = useState<TranslationKey | null>(null);
   const [statusFilter, setStatusFilter] = useState('');
   const [priorityFilter, setPriorityFilter] = useState('');
@@ -108,6 +110,7 @@ export function WorkOrderList({ clients, onCreate, onEdit }: WorkOrderListProps)
       setErrorKey('workOrders.loadError');
     } finally {
       setLoading(false);
+      setLoaded(true);
     }
   }, [statusFilter, priorityFilter, clientFilter]);
 
@@ -139,20 +142,13 @@ export function WorkOrderList({ clients, onCreate, onEdit }: WorkOrderListProps)
     return 'priority-low-badge';
   };
 
-  if (loading) {
-    return (
-      <Panel className="work-orders-state-panel" data-testid="work-orders-loading-state">
-        <LoadingState message={t('workOrders.loading')} />
-      </Panel>
-    );
-  }
-
   return (
     <div className="space-y-5" data-testid="work-order-list">
       <div className="flex flex-col gap-3 rounded-xl border border-border-subtle bg-bg-primary/60 p-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex flex-wrap gap-2">
           <Select
             id="statusFilter"
+            aria-label={t('workOrders.filterStatus')}
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
             className="w-full rounded-xl sm:w-40"
@@ -166,6 +162,7 @@ export function WorkOrderList({ clients, onCreate, onEdit }: WorkOrderListProps)
           </Select>
           <Select
             id="priorityFilter"
+            aria-label={t('workOrders.filterPriority')}
             value={priorityFilter}
             onChange={(e) => setPriorityFilter(e.target.value)}
             className="w-full rounded-xl sm:w-48"
@@ -179,6 +176,7 @@ export function WorkOrderList({ clients, onCreate, onEdit }: WorkOrderListProps)
           </Select>
           <Select
             id="clientFilter"
+            aria-label={t('workOrders.filterClient')}
             value={clientFilter}
             onChange={(e) => setClientFilter(e.target.value)}
             className="w-full rounded-xl sm:w-40"
@@ -224,226 +222,245 @@ export function WorkOrderList({ clients, onCreate, onEdit }: WorkOrderListProps)
         </Alert>
       )}
 
-      {workOrders.length === 0 ? (
-        <Panel className="work-orders-state-panel">
-          <EmptyState
-            icon="📋"
-            title={t('workOrders.emptyTitle')}
-            description={t('workOrders.emptyDescription')}
-          />
-        </Panel>
-      ) : viewMode === 'table' ? (
-        <div
-          className="w-full max-w-full overflow-x-auto rounded-xl border border-border-subtle bg-bg-primary/60"
-          data-testid="work-order-table-container"
-        >
-          <table className="w-full min-w-[700px] text-left text-sm" data-testid="work-order-table">
-            <caption className="sr-only">{t('workOrders.listCaption')}</caption>
-            <thead className="table-head border-b border-border-subtle text-xs font-semibold uppercase tracking-wider text-fg-muted">
-              <tr>
-                {COLUMN_SORT_KEYS.map((key) => (
-                  <SortableHeader
-                    key={key}
-                    sortKey={key}
-                    sort={sort}
-                    onSort={(k) => changeSort(nextWorkOrderSort(sort, k))}
-                  >
-                    {t(SORT_LABEL_KEYS[key])}
-                  </SortableHeader>
-                ))}
-                <th scope="col" className="px-4 py-3 text-right">
-                  {t('common.actions')}
-                </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border-subtle/50 text-fg-primary">
-              {sortedWorkOrders.map((wo) => (
-                <Fragment key={wo.id}>
-                  <tr className={confirmDelete === wo.id ? 'bg-priority-high/5' : 'table-row'}>
-                    <td className="px-4 py-3.5 font-medium">
-                      <a
-                        href={workOrderDetailsHref(wo.id)}
-                        className="text-fg-primary underline-offset-4 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus rounded"
-                      >
-                        {wo.title}
-                      </a>
-                    </td>
-                    <td className="px-4 py-3.5 text-fg-muted">{wo.clientName}</td>
-                    <td className="px-4 py-3.5">
-                      <Badge variant="neutral">{statusLabel(wo.status, language)}</Badge>
-                    </td>
-                    <td className="px-4 py-3.5">
-                      <Badge variant="neutral" className={getPriorityColor(wo.priority)}>
-                        {priorityLabel(wo.priority, language)}
-                      </Badge>
-                    </td>
-                    <td className="px-4 py-3.5 text-fg-muted">
-                      {wo.dueDate ? formatDateOnly(wo.dueDate, language) : '—'}
-                    </td>
-                    <td className="px-4 py-3.5 text-fg-muted">
-                      {wo.totalPriceMinor !== undefined && wo.currency
-                        ? formatMoney(wo.totalPriceMinor, wo.currency)
-                        : '—'}
-                    </td>
-                    <td className="px-4 py-3.5 text-right">
-                      <div
-                        className="row-actions inline-flex gap-2 justify-end"
-                        data-testid="work-order-row-actions"
-                      >
-                        <RowActionButton
-                          action="edit"
-                          label={t('workOrders.editNamed', { name: wo.title })}
-                          title={t('common.edit')}
-                          onClick={() => onEdit?.(wo)}
-                          disabled={confirmDelete !== null}
-                        />
-                        <RowActionButton
-                          action="delete"
-                          label={t('workOrders.deleteNamed', { name: wo.title })}
-                          title={t('common.delete')}
-                          onClick={() => setConfirmDelete(wo.id)}
-                          disabled={confirmDelete !== null || deleting === wo.id}
-                        />
-                      </div>
-                    </td>
-                  </tr>
-                  {confirmDelete === wo.id && (
-                    <tr key={`${wo.id}-delete`}>
-                      <td
-                        colSpan={7}
-                        className="bg-priority-high/10 px-4 py-3"
-                        data-testid="delete-confirmation"
-                      >
-                        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                          <p className="text-sm font-medium text-fg-primary">
-                            {t('workOrders.confirmDelete', { name: wo.title })}
-                          </p>
-                          <div className="flex gap-2 justify-end">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="action-surface rounded-lg border transition-colors duration-200"
-                              onClick={() => setConfirmDelete(null)}
-                              disabled={deleting === wo.id}
-                            >
-                              {t('common.cancel')}
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className={deleteActionButtonClass}
-                              onClick={() => handleDelete(wo.id)}
-                              isLoading={deleting === wo.id}
-                            >
-                              {t('common.delete')}
-                            </Button>
-                          </div>
+      {loading && loaded && (
+        <LoadingState
+          role="status"
+          aria-live="polite"
+          size="sm"
+          message={t('workOrders.updating')}
+          className="flex-row justify-start py-1"
+        />
+      )}
+
+      <div aria-busy={loading} data-testid="work-order-results">
+        {!loaded ? (
+          <Panel className="work-orders-state-panel" data-testid="work-orders-loading-state">
+            <LoadingState message={t('workOrders.loading')} />
+          </Panel>
+        ) : workOrders.length === 0 ? (
+          <Panel className="work-orders-state-panel">
+            <EmptyState
+              icon="📋"
+              title={t('workOrders.emptyTitle')}
+              description={t('workOrders.emptyDescription')}
+            />
+          </Panel>
+        ) : viewMode === 'table' ? (
+          <div
+            className="w-full max-w-full overflow-x-auto rounded-xl border border-border-subtle bg-bg-primary/60"
+            data-testid="work-order-table-container"
+          >
+            <table
+              className="w-full min-w-[700px] text-left text-sm"
+              data-testid="work-order-table"
+            >
+              <caption className="sr-only">{t('workOrders.listCaption')}</caption>
+              <thead className="table-head border-b border-border-subtle text-xs font-semibold uppercase tracking-wider text-fg-muted">
+                <tr>
+                  {COLUMN_SORT_KEYS.map((key) => (
+                    <SortableHeader
+                      key={key}
+                      sortKey={key}
+                      sort={sort}
+                      onSort={(k) => changeSort(nextWorkOrderSort(sort, k))}
+                    >
+                      {t(SORT_LABEL_KEYS[key])}
+                    </SortableHeader>
+                  ))}
+                  <th scope="col" className="px-4 py-3 text-right">
+                    {t('common.actions')}
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border-subtle/50 text-fg-primary">
+                {sortedWorkOrders.map((wo) => (
+                  <Fragment key={wo.id}>
+                    <tr className={confirmDelete === wo.id ? 'bg-priority-high/5' : 'table-row'}>
+                      <td className="px-4 py-3.5 font-medium">
+                        <a
+                          href={workOrderDetailsHref(wo.id)}
+                          className="text-fg-primary underline-offset-4 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus rounded"
+                        >
+                          {wo.title}
+                        </a>
+                      </td>
+                      <td className="px-4 py-3.5 text-fg-muted">{wo.clientName}</td>
+                      <td className="px-4 py-3.5">
+                        <Badge variant="neutral">{statusLabel(wo.status, language)}</Badge>
+                      </td>
+                      <td className="px-4 py-3.5">
+                        <Badge variant="neutral" className={getPriorityColor(wo.priority)}>
+                          {priorityLabel(wo.priority, language)}
+                        </Badge>
+                      </td>
+                      <td className="px-4 py-3.5 text-fg-muted">
+                        {wo.dueDate ? formatDateOnly(wo.dueDate, language) : '—'}
+                      </td>
+                      <td className="px-4 py-3.5 text-fg-muted">
+                        {wo.totalPriceMinor !== undefined && wo.currency
+                          ? formatMoney(wo.totalPriceMinor, wo.currency)
+                          : '—'}
+                      </td>
+                      <td className="px-4 py-3.5 text-right">
+                        <div
+                          className="row-actions inline-flex gap-2 justify-end"
+                          data-testid="work-order-row-actions"
+                        >
+                          <RowActionButton
+                            action="edit"
+                            label={t('workOrders.editNamed', { name: wo.title })}
+                            title={t('common.edit')}
+                            onClick={() => onEdit?.(wo)}
+                            disabled={confirmDelete !== null}
+                          />
+                          <RowActionButton
+                            action="delete"
+                            label={t('workOrders.deleteNamed', { name: wo.title })}
+                            title={t('common.delete')}
+                            onClick={() => setConfirmDelete(wo.id)}
+                            disabled={confirmDelete !== null || deleting === wo.id}
+                          />
                         </div>
                       </td>
                     </tr>
-                  )}
-                </Fragment>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      ) : (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3" data-testid="work-order-cards">
-          {sortedWorkOrders.map((wo) => (
-            <div key={wo.id}>
-              {confirmDelete === wo.id && (
+                    {confirmDelete === wo.id && (
+                      <tr key={`${wo.id}-delete`}>
+                        <td
+                          colSpan={7}
+                          className="bg-priority-high/10 px-4 py-3"
+                          data-testid="delete-confirmation"
+                        >
+                          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                            <p className="text-sm font-medium text-fg-primary">
+                              {t('workOrders.confirmDelete', { name: wo.title })}
+                            </p>
+                            <div className="flex gap-2 justify-end">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="action-surface rounded-lg border transition-colors duration-200"
+                                onClick={() => setConfirmDelete(null)}
+                                disabled={deleting === wo.id}
+                              >
+                                {t('common.cancel')}
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className={deleteActionButtonClass}
+                                onClick={() => handleDelete(wo.id)}
+                                isLoading={deleting === wo.id}
+                              >
+                                {t('common.delete')}
+                              </Button>
+                            </div>
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                  </Fragment>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3" data-testid="work-order-cards">
+            {sortedWorkOrders.map((wo) => (
+              <div key={wo.id}>
+                {confirmDelete === wo.id && (
+                  <Panel
+                    className="mb-3 border border-priority-high bg-priority-high/10"
+                    data-testid="delete-confirmation"
+                  >
+                    <div className="space-y-3">
+                      <p className="text-sm font-medium text-fg-primary">
+                        {t('workOrders.confirmDelete', { name: wo.title })}
+                      </p>
+                      <div className="flex gap-2 justify-end">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="action-surface rounded-lg border transition-colors duration-200"
+                          onClick={() => setConfirmDelete(null)}
+                          disabled={deleting === wo.id}
+                        >
+                          {t('common.cancel')}
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className={deleteActionButtonClass}
+                          onClick={() => handleDelete(wo.id)}
+                          isLoading={deleting === wo.id}
+                        >
+                          {t('common.delete')}
+                        </Button>
+                      </div>
+                    </div>
+                  </Panel>
+                )}
                 <Panel
-                  className="mb-3 border border-priority-high bg-priority-high/10"
-                  data-testid="delete-confirmation"
+                  className={
+                    confirmDelete === wo.id
+                      ? 'border border-border-subtle opacity-50'
+                      : 'border border-border-subtle transition-colors hover:border-accent-brand/50'
+                  }
                 >
-                  <div className="space-y-3">
-                    <p className="text-sm font-medium text-fg-primary">
-                      {t('workOrders.confirmDelete', { name: wo.title })}
-                    </p>
-                    <div className="flex gap-2 justify-end">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex-1">
+                      <h3 className="font-medium text-fg-primary">
+                        <a
+                          href={workOrderDetailsHref(wo.id)}
+                          className="text-fg-primary underline-offset-4 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus rounded"
+                        >
+                          {wo.title}
+                        </a>
+                      </h3>
+                      <p className="text-sm text-fg-muted">{wo.clientName}</p>
+                      <div className="mt-2 flex flex-wrap gap-2 text-xs">
+                        <Badge variant="neutral">{statusLabel(wo.status, language)}</Badge>
+                        <Badge variant="neutral" className={getPriorityColor(wo.priority)}>
+                          {priorityLabel(wo.priority, language)}
+                        </Badge>
+                        {wo.dueDate && (
+                          <Badge variant="neutral">{formatDateOnly(wo.dueDate, language)}</Badge>
+                        )}
+                        {wo.totalPriceMinor !== undefined && wo.currency && (
+                          <Badge variant="neutral">
+                            {formatMoney(wo.totalPriceMinor, wo.currency)}
+                          </Badge>
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex gap-2">
                       <Button
                         variant="ghost"
                         size="sm"
-                        className="action-surface rounded-lg border transition-colors duration-200"
-                        onClick={() => setConfirmDelete(null)}
-                        disabled={deleting === wo.id}
+                        className={editActionButtonClass}
+                        onClick={() => onEdit?.(wo)}
+                        disabled={confirmDelete !== null}
+                        aria-label={t('workOrders.editNamed', { name: wo.title })}
                       >
-                        {t('common.cancel')}
+                        {t('common.edit')}
                       </Button>
                       <Button
                         variant="ghost"
                         size="sm"
                         className={deleteActionButtonClass}
-                        onClick={() => handleDelete(wo.id)}
-                        isLoading={deleting === wo.id}
+                        onClick={() => setConfirmDelete(wo.id)}
+                        disabled={confirmDelete !== null || deleting === wo.id}
+                        aria-label={t('workOrders.deleteNamed', { name: wo.title })}
                       >
                         {t('common.delete')}
                       </Button>
                     </div>
                   </div>
                 </Panel>
-              )}
-              <Panel
-                className={
-                  confirmDelete === wo.id
-                    ? 'border border-border-subtle opacity-50'
-                    : 'border border-border-subtle transition-colors hover:border-accent-brand/50'
-                }
-              >
-                <div className="flex items-start justify-between gap-2">
-                  <div className="flex-1">
-                    <h3 className="font-medium text-fg-primary">
-                      <a
-                        href={workOrderDetailsHref(wo.id)}
-                        className="text-fg-primary underline-offset-4 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus rounded"
-                      >
-                        {wo.title}
-                      </a>
-                    </h3>
-                    <p className="text-sm text-fg-muted">{wo.clientName}</p>
-                    <div className="mt-2 flex flex-wrap gap-2 text-xs">
-                      <Badge variant="neutral">{statusLabel(wo.status, language)}</Badge>
-                      <Badge variant="neutral" className={getPriorityColor(wo.priority)}>
-                        {priorityLabel(wo.priority, language)}
-                      </Badge>
-                      {wo.dueDate && (
-                        <Badge variant="neutral">{formatDateOnly(wo.dueDate, language)}</Badge>
-                      )}
-                      {wo.totalPriceMinor !== undefined && wo.currency && (
-                        <Badge variant="neutral">
-                          {formatMoney(wo.totalPriceMinor, wo.currency)}
-                        </Badge>
-                      )}
-                    </div>
-                  </div>
-                  <div className="flex gap-2">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className={editActionButtonClass}
-                      onClick={() => onEdit?.(wo)}
-                      disabled={confirmDelete !== null}
-                      aria-label={t('workOrders.editNamed', { name: wo.title })}
-                    >
-                      {t('common.edit')}
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className={deleteActionButtonClass}
-                      onClick={() => setConfirmDelete(wo.id)}
-                      disabled={confirmDelete !== null || deleting === wo.id}
-                      aria-label={t('workOrders.deleteNamed', { name: wo.title })}
-                    >
-                      {t('common.delete')}
-                    </Button>
-                  </div>
-                </div>
-              </Panel>
-            </div>
-          ))}
-        </div>
-      )}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
