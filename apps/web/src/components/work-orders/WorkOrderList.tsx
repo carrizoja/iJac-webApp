@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, Fragment } from 'react';
+import { useState, useEffect, useCallback, useMemo, Fragment } from 'react';
 import type { WorkOrderClientSummary, Client } from '@ijac/shared';
 import { ApiRequestError, listWorkOrders, deleteWorkOrder } from '../../lib/resources';
 import {
@@ -21,6 +21,111 @@ import {
 import { useLanguage } from '../../hooks/useLanguage';
 import { formatDateOnly, priorityLabel, statusLabel } from '../../i18n/format';
 import type { TranslationKey } from '../../i18n/translations';
+import {
+  DEFAULT_WORK_ORDER_SORT,
+  WORK_ORDER_SORT_KEYS,
+  nextWorkOrderSort,
+  parseWorkOrderSort,
+  sortWorkOrders,
+  toWorkOrderSort,
+  type WorkOrderSort,
+  type WorkOrderSortKey,
+} from './workOrderSort';
+
+const SORT_STORAGE_KEY = 'ijac.workOrders.sort';
+/** Stops paging if the API ever keeps returning a cursor. */
+const MAX_PAGES = 50;
+
+const SORT_LABEL_KEYS: Record<WorkOrderSortKey, TranslationKey> = {
+  createdAt: 'workOrders.createdAt',
+  title: 'workOrders.title',
+  client: 'workOrders.client',
+  status: 'workOrders.status',
+  priority: 'workOrders.priority',
+  dueDate: 'workOrders.deadline',
+  totalPrice: 'workOrders.totalPrice',
+};
+
+function readStoredSort(): WorkOrderSort {
+  try {
+    return parseWorkOrderSort(window.localStorage.getItem(SORT_STORAGE_KEY));
+  } catch {
+    return DEFAULT_WORK_ORDER_SORT;
+  }
+}
+
+function storeSort(sort: WorkOrderSort): void {
+  try {
+    window.localStorage.setItem(SORT_STORAGE_KEY, JSON.stringify(sort));
+  } catch {
+    // Storage can be unavailable (private mode); the sort still works for this visit.
+  }
+}
+
+function PencilIcon() {
+  return (
+    <svg
+      aria-hidden="true"
+      viewBox="0 0 24 24"
+      className="h-4 w-4"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M12 20h9" />
+      <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z" />
+    </svg>
+  );
+}
+
+function TrashIcon() {
+  return (
+    <svg
+      aria-hidden="true"
+      viewBox="0 0 24 24"
+      className="h-4 w-4"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M3 6h18" />
+      <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+      <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+      <path d="M10 11v6M14 11v6" />
+    </svg>
+  );
+}
+
+interface SortableHeaderProps {
+  sortKey: WorkOrderSortKey;
+  sort: WorkOrderSort;
+  onSort: (key: WorkOrderSortKey) => void;
+  children: string;
+}
+
+/** Column header that sorts the list; `aria-sort` tells screen readers the current order. */
+function SortableHeader({ sortKey, sort, onSort, children }: SortableHeaderProps) {
+  const active = sort.key === sortKey;
+  const ariaSort = active ? (sort.direction === 'asc' ? 'ascending' : 'descending') : 'none';
+  return (
+    <th scope="col" className="px-4 py-3" aria-sort={ariaSort}>
+      <button
+        type="button"
+        onClick={() => onSort(sortKey)}
+        className="inline-flex items-center gap-1 rounded uppercase tracking-wider hover:text-fg-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
+      >
+        {children}
+        <span aria-hidden="true" className={active ? 'text-fg-primary' : 'opacity-30'}>
+          {active && sort.direction === 'desc' ? '↓' : '↑'}
+        </span>
+      </button>
+    </th>
+  );
+}
 
 interface WorkOrderListProps {
   clients: Client[];
@@ -38,6 +143,10 @@ export function WorkOrderList({ clients, onCreate, onEdit }: WorkOrderListProps)
     'rounded-lg border-2 px-4 transition-all duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] active:translate-y-0';
   const editActionButtonClass = `${neonActionButtonBaseClass} action-edit`;
   const deleteActionButtonClass = `${neonActionButtonBaseClass} action-delete`;
+  const iconButtonBaseClass =
+    'h-9 w-9 rounded-lg border-2 px-0 transition-all duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] active:translate-y-0';
+  const editIconButtonClass = `${iconButtonBaseClass} action-edit`;
+  const deleteIconButtonClass = `${iconButtonBaseClass} action-delete`;
   const [workOrders, setWorkOrders] = useState<WorkOrderClientSummary[]>([]);
   const [viewMode, setViewMode] = useState<ViewMode>('table');
   const [loading, setLoading] = useState(true);
@@ -47,17 +156,33 @@ export function WorkOrderList({ clients, onCreate, onEdit }: WorkOrderListProps)
   const [clientFilter, setClientFilter] = useState('');
   const [deleting, setDeleting] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
+  const [sort, setSort] = useState<WorkOrderSort>(readStoredSort);
+
+  const changeSort = (next: WorkOrderSort) => {
+    setSort(next);
+    storeSort(next);
+  };
+  const sortedWorkOrders = useMemo(() => sortWorkOrders(workOrders, sort), [workOrders, sort]);
 
   const load = useCallback(async () => {
     setLoading(true);
     setErrorKey(null);
     try {
-      const result = await listWorkOrders({
-        status: statusFilter || undefined,
-        priority: priorityFilter || undefined,
-        clientId: clientFilter || undefined,
-      });
-      setWorkOrders(Array.isArray(result?.items) ? result.items : []);
+      // The list is sorted in the browser, so it needs every page, not only the first.
+      const items: WorkOrderClientSummary[] = [];
+      let cursor: string | undefined;
+      for (let page = 0; page < MAX_PAGES; page += 1) {
+        const result = await listWorkOrders({
+          status: statusFilter || undefined,
+          priority: priorityFilter || undefined,
+          clientId: clientFilter || undefined,
+          cursor,
+        });
+        if (Array.isArray(result?.items)) items.push(...result.items);
+        cursor = result?.nextCursor;
+        if (!cursor) break;
+      }
+      setWorkOrders(items);
     } catch {
       setErrorKey('workOrders.loadError');
     } finally {
@@ -146,6 +271,30 @@ export function WorkOrderList({ clients, onCreate, onEdit }: WorkOrderListProps)
           </Select>
         </div>
         <div className="flex flex-wrap items-center gap-3">
+          {viewMode === 'cards' && (
+            <>
+              <label htmlFor="workOrderSort" className="sr-only">
+                {t('workOrders.sortBy')}
+              </label>
+              <Select
+                id="workOrderSort"
+                value={`${sort.key}:${sort.direction}`}
+                onChange={(e) => {
+                  const [key, direction] = e.target.value.split(':');
+                  changeSort(toWorkOrderSort({ key, direction }));
+                }}
+                className="w-full rounded-xl sm:w-60"
+              >
+                {WORK_ORDER_SORT_KEYS.flatMap((key) =>
+                  (['asc', 'desc'] as const).map((direction) => (
+                    <option key={`${key}:${direction}`} value={`${key}:${direction}`}>
+                      {`${t(SORT_LABEL_KEYS[key])} ${direction === 'asc' ? '↑' : '↓'}`}
+                    </option>
+                  )),
+                )}
+              </Select>
+            </>
+          )}
           <ViewModeToggle
             value={viewMode}
             onChange={setViewMode}
@@ -184,31 +333,25 @@ export function WorkOrderList({ clients, onCreate, onEdit }: WorkOrderListProps)
             <caption className="sr-only">{t('workOrders.listCaption')}</caption>
             <thead className="table-head border-b border-border-subtle text-xs font-semibold uppercase tracking-wider text-fg-muted">
               <tr>
-                <th scope="col" className="px-4 py-3">
-                  {t('workOrders.title')}
-                </th>
-                <th scope="col" className="px-4 py-3">
-                  {t('workOrders.client')}
-                </th>
-                <th scope="col" className="px-4 py-3">
-                  {t('workOrders.status')}
-                </th>
-                <th scope="col" className="px-4 py-3">
-                  {t('workOrders.priority')}
-                </th>
-                <th scope="col" className="px-4 py-3">
-                  {t('workOrders.deadline')}
-                </th>
-                <th scope="col" className="px-4 py-3">
-                  {t('workOrders.totalPrice')}
-                </th>
+                {(['title', 'client', 'status', 'priority', 'dueDate', 'totalPrice'] as const).map(
+                  (key) => (
+                    <SortableHeader
+                      key={key}
+                      sortKey={key}
+                      sort={sort}
+                      onSort={(k) => changeSort(nextWorkOrderSort(sort, k))}
+                    >
+                      {t(SORT_LABEL_KEYS[key])}
+                    </SortableHeader>
+                  ),
+                )}
                 <th scope="col" className="px-4 py-3 text-right">
                   {t('common.actions')}
                 </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border-subtle/50 text-fg-primary">
-              {workOrders.map((wo) => (
+              {sortedWorkOrders.map((wo) => (
                 <Fragment key={wo.id}>
                   <tr className={confirmDelete === wo.id ? 'bg-priority-high/5' : 'table-row'}>
                     <td className="px-4 py-3.5 font-medium">
@@ -237,26 +380,31 @@ export function WorkOrderList({ clients, onCreate, onEdit }: WorkOrderListProps)
                         : '—'}
                     </td>
                     <td className="px-4 py-3.5 text-right">
-                      <div className="inline-flex gap-2 justify-end">
+                      <div
+                        className="row-actions inline-flex gap-2 justify-end"
+                        data-testid="work-order-row-actions"
+                      >
                         <Button
                           variant="ghost"
                           size="sm"
-                          className={editActionButtonClass}
+                          className={editIconButtonClass}
                           onClick={() => onEdit?.(wo)}
                           disabled={confirmDelete !== null}
                           aria-label={t('workOrders.editNamed', { name: wo.title })}
+                          title={t('common.edit')}
                         >
-                          {t('common.edit')}
+                          <PencilIcon />
                         </Button>
                         <Button
                           variant="ghost"
                           size="sm"
-                          className={deleteActionButtonClass}
+                          className={deleteIconButtonClass}
                           onClick={() => setConfirmDelete(wo.id)}
                           disabled={confirmDelete !== null || deleting === wo.id}
                           aria-label={t('workOrders.deleteNamed', { name: wo.title })}
+                          title={t('common.delete')}
                         >
-                          {t('common.delete')}
+                          <TrashIcon />
                         </Button>
                       </div>
                     </td>
@@ -303,7 +451,7 @@ export function WorkOrderList({ clients, onCreate, onEdit }: WorkOrderListProps)
         </div>
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3" data-testid="work-order-cards">
-          {workOrders.map((wo) => (
+          {sortedWorkOrders.map((wo) => (
             <div key={wo.id}>
               {confirmDelete === wo.id && (
                 <Panel
