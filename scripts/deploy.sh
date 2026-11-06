@@ -138,6 +138,8 @@ verify_api() {
 
   local problems
   problems="$(
+    # The script is JavaScript for node; its ${...} must not be expanded by bash.
+    # shellcheck disable=SC2016
     IMAGE="$image" MODE="$EXPECTED_REPOSITORY_MODE" node -e '
       const service = JSON.parse(require("fs").readFileSync(0, "utf8"));
       const container = service.spec.template.spec.containers[0];

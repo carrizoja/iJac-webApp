@@ -46,3 +46,16 @@ jobs:
 
       - name: Build
         run: pnpm build
+
+  deploy-script:
+    name: Deploy script
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Shellcheck
+        run: shellcheck scripts/deploy.sh scripts/deploy.test.sh
+
+      - name: Test
+        run: bash scripts/deploy.test.sh
