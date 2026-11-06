@@ -53,6 +53,8 @@ setup() {
   export STUB_BIN="$WORK/bin"
   mkdir -p "$STUB_BIN"
   for cmd in docker pnpm firebase; do
+    # Writes the stub's source: $* and $CALLS are expanded when the stub runs.
+    # shellcheck disable=SC2016
     printf '#!/usr/bin/env bash\necho "%s $*" >> "$CALLS"\n' "$cmd" > "$STUB_BIN/$cmd"
   done
   cat > "$STUB_BIN/gcloud" <<'EOF'
