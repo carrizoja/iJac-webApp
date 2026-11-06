@@ -63,7 +63,7 @@ function renderPanel(status: WorkOrderStatus = WorkOrderStatus.OPEN) {
 
 async function openRecordDialog() {
   fireEvent.click(await screen.findByRole('button', { name: 'Registrar pago' }));
-  return screen.findByRole('alertdialog');
+  return screen.findByRole('dialog');
 }
 
 describe('PaymentsPanel', () => {
@@ -132,7 +132,7 @@ describe('PaymentsPanel', () => {
     );
     expect(await screen.findByText('$ 75.000,00')).toBeInTheDocument();
     expect(screen.getByRole('row', { name: /0001-00000007/ })).toBeInTheDocument();
-    expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
 
   it('defaults the payment date to today', async () => {
@@ -192,7 +192,7 @@ describe('PaymentsPanel', () => {
     expect(
       await screen.findByText('El importe supera el saldo pendiente ($ 100.000,00)'),
     ).toBeInTheDocument();
-    expect(screen.getByRole('alertdialog')).toBeInTheDocument();
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
     expect(listPayments).toHaveBeenCalledTimes(2);
   });
 
@@ -240,7 +240,7 @@ describe('PaymentsPanel', () => {
     renderPanel();
 
     fireEvent.click(await screen.findByRole('button', { name: 'Record payment' }));
-    await screen.findByRole('alertdialog');
+    await screen.findByRole('dialog');
     fireEvent.change(screen.getByLabelText(/Amount/), { target: { value: '1.000,00' } });
     fireEvent.click(screen.getByRole('button', { name: 'Record' }));
 
@@ -313,7 +313,7 @@ describe('PaymentsPanel', () => {
       fireEvent.change(screen.getByLabelText(/Importe/), { target: { value: '1.000,00' } });
       fireEvent.click(screen.getByRole('button', { name: 'Registrar' }));
       await waitFor(() => expect(recordPayment).toHaveBeenCalledTimes(attempt + 1));
-      await waitFor(() => expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument());
+      await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
     }
 
     const [first, second] = recordPayment.mock.calls.map(([, body]) => body.idempotencyKey);
