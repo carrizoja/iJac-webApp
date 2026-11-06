@@ -112,10 +112,6 @@ export default {
           high: 'var(--color-priority-high)',
           urgent: 'var(--color-priority-urgent)',
         },
-        accent: {
-          DEFAULT: '#1f2937',
-          light: '#334155',
-        },
         surface: {
           DEFAULT: '#0f172a',
           raised: '#1e293b',
