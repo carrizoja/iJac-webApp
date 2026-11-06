@@ -160,6 +160,7 @@ describe('FirestoreWorkOrderRepository pricing', () => {
         createdAt: stamp,
         updatedAt: stamp,
       }),
+      ref: { collection: () => ({ get: async () => ({ docs: [] }) }) },
     };
     const query = {
       orderBy: jest.fn().mockReturnThis(),
@@ -175,6 +176,52 @@ describe('FirestoreWorkOrderRepository pricing', () => {
     expect(result.items[0]).toEqual(
       expect.objectContaining({ totalPriceMinor: 700, currency: 'ARS' }),
     );
+  });
+
+  it('adds paid and remaining amounts from active payments to priced summaries only', async () => {
+    const { repository } = createRepository();
+    const listDoc = (id: string, data: Record<string, unknown>, payments: unknown[] | null) => ({
+      id,
+      get: (f: string) => (f === 'clientId' ? 'c1' : undefined),
+      data: () => ({
+        status: 'open',
+        priority: 'low',
+        clientId: 'c1',
+        createdAt: stamp,
+        updatedAt: stamp,
+        ...data,
+      }),
+      ref: {
+        collection: (name: string) => {
+          if (name !== 'payments' || payments === null)
+            throw new Error(`unexpected read of ${name}`);
+          return { get: async () => ({ docs: payments.map((p) => ({ data: () => p })) }) };
+        },
+      },
+    });
+    const priced = listDoc('wo-1', { title: 'Priced', totalPriceMinor: 700, currency: 'ARS' }, [
+      { amountMinor: 200, status: 'active' },
+      { amountMinor: 100, status: 'voided' },
+    ]);
+    const unpriced = listDoc('wo-2', { title: 'Unpriced' }, null);
+    const query = {
+      orderBy: jest.fn().mockReturnThis(),
+      limit: jest.fn().mockReturnThis(),
+      get: jest.fn().mockResolvedValue({ docs: [priced, unpriced] }),
+    };
+    (repository as unknown as { collection: () => unknown }).collection = () => query;
+    (repository as unknown as { firestore: unknown }).firestore = {
+      collection: jest.fn().mockReturnValue({ doc: jest.fn() }),
+      getAll: jest.fn().mockResolvedValue([{ id: 'c1', exists: true, get: () => 'Acme' }]),
+    };
+
+    const { items } = await repository.findMany('org', {});
+
+    expect(items[0]).toEqual(
+      expect.objectContaining({ totalPriceMinor: 700, paidMinor: 200, remainingMinor: 500 }),
+    );
+    expect(items[1]).not.toHaveProperty('paidMinor');
+    expect(items[1]).not.toHaveProperty('remainingMinor');
   });
 });
 
