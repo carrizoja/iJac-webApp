@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import type { WorkOrderClientSummary, Client } from '@ijac/shared';
 import { WorkOrderStatus, WorkOrderPriority } from '@ijac/shared';
 
@@ -44,6 +44,7 @@ const sampleWorkOrder: WorkOrderClientSummary = {
 describe('WorkOrderList', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    window.localStorage.clear();
     listWorkOrders.mockResolvedValue({ items: [] });
     deleteWorkOrder.mockResolvedValue(undefined);
   });
@@ -150,7 +151,9 @@ describe('WorkOrderList', () => {
         'No se puede eliminar una orden con pagos registrados. Cancelala en su lugar.',
       ),
     ).toBeInTheDocument();
-    expect(screen.queryByText('No se pudo eliminar la orden. Intentá nuevamente.')).not.toBeInTheDocument();
+    expect(
+      screen.queryByText('No se pudo eliminar la orden. Intentá nuevamente.'),
+    ).not.toBeInTheDocument();
   });
 
   it('shows the generic delete error for other failures', async () => {
@@ -192,5 +195,105 @@ describe('WorkOrderList', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Tarjetas' }));
     expect(screen.getByText('$ 150.000,00')).toBeInTheDocument();
+  });
+
+  describe('sorting and row actions', () => {
+    const orders: WorkOrderClientSummary[] = [
+      {
+        ...sampleWorkOrder,
+        id: 'old',
+        title: 'Bravo',
+        createdAt: '2026-01-10T00:00:00.000Z',
+        updatedAt: '2026-11-06T00:00:00.000Z',
+      },
+      { ...sampleWorkOrder, id: 'new', title: 'Charlie', createdAt: '2026-11-01T00:00:00.000Z' },
+      { ...sampleWorkOrder, id: 'mid', title: 'Alfa', createdAt: '2026-06-01T00:00:00.000Z' },
+    ];
+
+    const rowTitles = () =>
+      within(screen.getByTestId('work-order-table'))
+        .getAllByRole('link')
+        .map((link) => link.textContent);
+
+    it('shows the newest created order first by default', async () => {
+      listWorkOrders.mockResolvedValue({ items: orders });
+      render(<WorkOrderList clients={[sampleClient]} />);
+
+      await waitFor(() => expect(rowTitles()).toEqual(['Charlie', 'Alfa', 'Bravo']));
+    });
+
+    it('sorts by a column header: ascending, descending, then back to newest first', async () => {
+      listWorkOrders.mockResolvedValue({ items: orders });
+      render(<WorkOrderList clients={[sampleClient]} />);
+      await screen.findByText('Charlie');
+
+      const titleHeader = screen.getByRole('columnheader', { name: /Título/ });
+      expect(titleHeader).toHaveAttribute('aria-sort', 'none');
+
+      fireEvent.click(within(titleHeader).getByRole('button'));
+      expect(rowTitles()).toEqual(['Alfa', 'Bravo', 'Charlie']);
+      expect(titleHeader).toHaveAttribute('aria-sort', 'ascending');
+
+      fireEvent.click(within(titleHeader).getByRole('button'));
+      expect(rowTitles()).toEqual(['Charlie', 'Bravo', 'Alfa']);
+      expect(titleHeader).toHaveAttribute('aria-sort', 'descending');
+
+      fireEvent.click(within(titleHeader).getByRole('button'));
+      expect(rowTitles()).toEqual(['Charlie', 'Alfa', 'Bravo']);
+      expect(titleHeader).toHaveAttribute('aria-sort', 'none');
+    });
+
+    it('remembers the chosen sort for the next visit', async () => {
+      listWorkOrders.mockResolvedValue({ items: orders });
+      const { unmount } = render(<WorkOrderList clients={[sampleClient]} />);
+      await screen.findByText('Charlie');
+      fireEvent.click(
+        within(screen.getByRole('columnheader', { name: /Título/ })).getByRole('button'),
+      );
+      unmount();
+
+      render(<WorkOrderList clients={[sampleClient]} />);
+      await waitFor(() => expect(rowTitles()).toEqual(['Alfa', 'Bravo', 'Charlie']));
+    });
+
+    it('sorts the card view with the sort selector', async () => {
+      listWorkOrders.mockResolvedValue({ items: orders });
+      render(<WorkOrderList clients={[sampleClient]} />);
+      await screen.findByText('Charlie');
+      fireEvent.click(screen.getByRole('button', { name: 'Tarjetas' }));
+
+      fireEvent.change(screen.getByLabelText('Ordenar por'), { target: { value: 'title:asc' } });
+
+      const cardTitles = within(screen.getByTestId('work-order-cards'))
+        .getAllByRole('link')
+        .map((link) => link.textContent);
+      expect(cardTitles).toEqual(['Alfa', 'Bravo', 'Charlie']);
+    });
+
+    it('loads every page of orders, not only the first one', async () => {
+      listWorkOrders
+        .mockResolvedValueOnce({ items: [orders[0]], nextCursor: 'old' })
+        .mockResolvedValueOnce({ items: [orders[1], orders[2]] });
+      render(<WorkOrderList clients={[sampleClient]} />);
+
+      await waitFor(() => expect(rowTitles()).toEqual(['Charlie', 'Alfa', 'Bravo']));
+      expect(listWorkOrders).toHaveBeenLastCalledWith(expect.objectContaining({ cursor: 'old' }));
+    });
+
+    it('shows edit and delete as icon buttons that keep their accessible names', async () => {
+      listWorkOrders.mockResolvedValue({ items: [sampleWorkOrder] });
+      render(<WorkOrderList clients={[sampleClient]} />);
+      await screen.findByText('Reparación de Servidor');
+
+      const edit = screen.getByRole('button', { name: 'Editar Reparación de Servidor' });
+      const remove = screen.getByRole('button', { name: 'Eliminar Reparación de Servidor' });
+      for (const button of [edit, remove]) {
+        expect(button).toHaveTextContent('');
+        expect(button.querySelector('svg')).not.toBeNull();
+      }
+      expect(edit).toHaveAttribute('title', 'Editar');
+      expect(remove).toHaveAttribute('title', 'Eliminar');
+      expect(screen.getByTestId('work-order-row-actions')).toHaveClass('row-actions');
+    });
   });
 });

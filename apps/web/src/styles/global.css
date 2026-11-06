@@ -351,6 +351,19 @@
     background: var(--color-row-hover);
   }
 
+  /* Row actions show on hover or keyboard focus. Screens without hover (touch) always show them. */
+  @media (hover: hover) {
+    .row-actions {
+      opacity: 0;
+      transition: opacity 150ms ease;
+    }
+
+    .table-row:hover .row-actions,
+    .table-row:focus-within .row-actions {
+      opacity: 1;
+    }
+  }
+
   .view-mode-surface {
     background: var(--color-action-surface);
   }
