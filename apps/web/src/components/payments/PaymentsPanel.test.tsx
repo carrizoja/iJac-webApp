@@ -135,6 +135,75 @@ describe('PaymentsPanel', () => {
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
 
+  it('confirms a recorded payment and opens its receipt from the confirmation', async () => {
+    const recorded = makePayment({ id: 'new', receiptNumber: 7, amountMinor: 2500000 });
+    listPayments
+      .mockResolvedValueOnce(response())
+      .mockResolvedValue(response({ items: [recorded] }));
+    recordPayment.mockResolvedValue(recorded);
+    renderPanel();
+
+    await openRecordDialog();
+    fireEvent.change(screen.getByLabelText(/Importe/), { target: { value: '25.000,00' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Registrar' }));
+
+    const confirmation = await screen.findByTestId('payment-recorded');
+    expect(confirmation).toHaveAttribute('role', 'status');
+    expect(confirmation).toHaveTextContent('Pago registrado · Recibo 0001-00000007');
+    fireEvent.click(within(confirmation).getByRole('button', { name: 'Ver recibo' }));
+    expect(await screen.findByRole('dialog', { name: 'Recibo' })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Cerrar' }));
+    fireEvent.click(within(confirmation).getByRole('button', { name: 'Cerrar alerta' }));
+    expect(screen.queryByTestId('payment-recorded')).not.toBeInTheDocument();
+  });
+
+  it('shows the remaining balance as the main figure', async () => {
+    listPayments.mockResolvedValue(
+      response({
+        balance: {
+          currency: Currency.ARS,
+          totalMinor: 10000000,
+          paidMinor: 3000000,
+          remainingMinor: 7000000,
+        },
+      }),
+    );
+    renderPanel();
+
+    const remaining = await screen.findByTestId('payments-remaining');
+    expect(remaining).toHaveTextContent('Saldo$ 70.000,00');
+    expect(remaining.querySelector('dd')).toHaveClass('text-3xl');
+    expect(screen.queryByText('Saldada')).not.toBeInTheDocument();
+  });
+
+  it('marks a settled work order as settled', async () => {
+    listPayments.mockResolvedValue(
+      response({
+        balance: {
+          currency: Currency.ARS,
+          totalMinor: 10000000,
+          paidMinor: 10000000,
+          remainingMinor: 0,
+        },
+      }),
+    );
+    renderPanel();
+
+    const remaining = await screen.findByTestId('payments-remaining');
+    expect(within(remaining).getByText('Saldada')).toBeInTheDocument();
+  });
+
+  it('styles void as a destructive action, apart from viewing the receipt', async () => {
+    listPayments.mockResolvedValue(response({ items: [makePayment()] }));
+    renderPanel();
+
+    const voidButton = await screen.findByRole('button', { name: 'Anular recibo 0001-00000042' });
+    const viewButton = screen.getByRole('button', { name: 'Ver recibo 0001-00000042' });
+    expect(voidButton).toHaveClass('text-destructive');
+    expect(viewButton).not.toHaveClass('text-destructive');
+  });
+
   it('defaults the payment date to today', async () => {
     listPayments.mockResolvedValue(response());
     renderPanel();

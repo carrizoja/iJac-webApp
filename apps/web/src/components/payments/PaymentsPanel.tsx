@@ -75,6 +75,8 @@ export function PaymentsPanel({ workOrderId, workOrderStatus }: PaymentsPanelPro
   const [voidError, setVoidError] = useState<string | null>(null);
   const [voiding, setVoiding] = useState(false);
   const [receipt, setReceipt] = useState<Payment | null>(null);
+  /** The payment just recorded, confirmed until dismissed or another action starts. */
+  const [recorded, setRecorded] = useState<Payment | null>(null);
 
   const reload = useCallback(async () => {
     try {
@@ -118,6 +120,7 @@ export function PaymentsPanel({ workOrderId, workOrderStatus }: PaymentsPanelPro
     idempotencyKey.current = crypto.randomUUID();
     setForm(emptyForm());
     setErrors({});
+    setRecorded(null);
     setRecordOpen(true);
   };
 
@@ -136,7 +139,7 @@ export function PaymentsPanel({ workOrderId, workOrderStatus }: PaymentsPanelPro
     setSubmitting(true);
     setErrors({});
     try {
-      await recordPayment(workOrderId, {
+      const payment = await recordPayment(workOrderId, {
         amountMinor,
         paymentDate: form.paymentDate,
         method: form.method,
@@ -144,6 +147,7 @@ export function PaymentsPanel({ workOrderId, workOrderStatus }: PaymentsPanelPro
         idempotencyKey: idempotencyKey.current,
       });
       setRecordOpen(false);
+      setRecorded(payment);
       await reload();
     } catch (error) {
       setErrors(mapRecordError(error));
@@ -184,6 +188,7 @@ export function PaymentsPanel({ workOrderId, workOrderStatus }: PaymentsPanelPro
   };
 
   const openVoid = (payment: Payment) => {
+    setRecorded(null);
     setVoidReason('');
     setVoidError(null);
     setVoidTarget(payment);
@@ -247,20 +252,43 @@ export function PaymentsPanel({ workOrderId, workOrderStatus }: PaymentsPanelPro
         )}
       </div>
 
+      {recorded && (
+        <Alert
+          type="success"
+          role="status"
+          data-testid="payment-recorded"
+          className="work-order-print-hidden mt-4"
+          action={{ label: t('payments.viewReceipt'), onClick: () => setReceipt(recorded) }}
+          onClose={() => setRecorded(null)}
+        >
+          {t('payments.recorded', { number: formatReceiptNumber(recorded.receiptNumber) })}
+        </Alert>
+      )}
+
       {balance ? (
-        <dl className="mt-4 grid gap-4 sm:grid-cols-3">
+        <dl className="mt-4 flex flex-wrap items-end gap-x-10 gap-y-4">
+          <div data-testid="payments-remaining">
+            <dt className="text-xs font-semibold uppercase tracking-wider text-fg-muted">
+              {t('payments.remaining')}
+            </dt>
+            <dd className="mt-1 flex flex-wrap items-center gap-3 text-3xl font-semibold tabular-nums text-fg-primary">
+              {money(balance.remainingMinor)}
+              {settled && <Badge variant="success">{t('payments.settled')}</Badge>}
+            </dd>
+          </div>
           {(
             [
               ['payments.total', balance.totalMinor],
               ['payments.paid', balance.paidMinor],
-              ['payments.remaining', balance.remainingMinor],
             ] as const
           ).map(([key, value]) => (
             <div key={key}>
               <dt className="text-xs font-semibold uppercase tracking-wider text-fg-muted">
                 {t(key)}
               </dt>
-              <dd className="mt-1 text-lg font-semibold text-fg-primary">{money(value)}</dd>
+              <dd className="mt-1 text-base font-medium tabular-nums text-fg-secondary">
+                {money(value)}
+              </dd>
             </div>
           ))}
         </dl>
@@ -329,10 +357,10 @@ export function PaymentsPanel({ workOrderId, workOrderStatus }: PaymentsPanelPro
                       )}
                     </td>
                     <td className="work-order-print-hidden py-3">
-                      <div className="flex flex-wrap gap-2">
+                      <div className="flex flex-wrap items-center gap-2">
                         <Button
                           type="button"
-                          variant="ghost"
+                          variant="secondary"
                           size="sm"
                           aria-label={t('payments.viewReceiptNamed', { number })}
                           onClick={() => setReceipt(payment)}
@@ -344,6 +372,7 @@ export function PaymentsPanel({ workOrderId, workOrderStatus }: PaymentsPanelPro
                             type="button"
                             variant="ghost"
                             size="sm"
+                            className="ml-2 text-destructive hover:text-destructive-hover"
                             aria-label={t('payments.voidNamed', { number })}
                             onClick={() => openVoid(payment)}
                           >
