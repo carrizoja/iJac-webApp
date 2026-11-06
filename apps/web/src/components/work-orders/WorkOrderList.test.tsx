@@ -91,6 +91,33 @@ describe('WorkOrderList', () => {
     );
   });
 
+  it('names each filter for assistive technology', async () => {
+    render(<WorkOrderList clients={[sampleClient]} onCreate={vi.fn()} onEdit={vi.fn()} />);
+
+    await waitFor(() => expect(screen.getByText('No hay órdenes de trabajo')).toBeInTheDocument());
+    expect(screen.getByRole('combobox', { name: 'Filtrar por estado' })).toBeInTheDocument();
+    expect(screen.getByRole('combobox', { name: 'Filtrar por prioridad' })).toBeInTheDocument();
+    expect(screen.getByRole('combobox', { name: 'Filtrar por cliente' })).toBeInTheDocument();
+  });
+
+  it('keeps the filters and the current list on screen while a filter reloads', async () => {
+    listWorkOrders.mockResolvedValueOnce({ items: [sampleWorkOrder] });
+    render(<WorkOrderList clients={[sampleClient]} onCreate={vi.fn()} onEdit={vi.fn()} />);
+    await waitFor(() => expect(screen.getByText('Reparación de Servidor')).toBeInTheDocument());
+
+    listWorkOrders.mockReturnValue(new Promise(() => {}));
+    const statusFilter = screen.getByRole('combobox', { name: 'Filtrar por estado' });
+    statusFilter.focus();
+    fireEvent.change(statusFilter, { target: { value: 'open' } });
+
+    await waitFor(() => expect(screen.getByText('Actualizando órdenes...')).toBeInTheDocument());
+    expect(screen.getByRole('combobox', { name: 'Filtrar por estado' })).toBe(statusFilter);
+    expect(statusFilter).toHaveFocus();
+    expect(screen.getByText('Reparación de Servidor')).toBeInTheDocument();
+    expect(screen.queryByTestId('work-orders-loading-state')).not.toBeInTheDocument();
+    expect(screen.getByTestId('work-order-results')).toHaveAttribute('aria-busy', 'true');
+  });
+
   it('renders table mode by default and supports card switching, details, and actions', async () => {
     const onEdit = vi.fn();
     listWorkOrders.mockResolvedValue({ items: [sampleWorkOrder] });
