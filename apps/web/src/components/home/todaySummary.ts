@@ -40,6 +40,12 @@ const isPending = (order: WorkOrderClientSummary) =>
 /** Due dates are calendar dates; only their `YYYY-MM-DD` part is compared. */
 const dueKey = (order: WorkOrderClientSummary) => order.dueDate?.slice(0, 10);
 
+/** A pending order whose due date is before `todayKey` (`YYYY-MM-DD`). */
+export function isOverdue(order: WorkOrderClientSummary, todayKey: string): boolean {
+  const due = dueKey(order);
+  return isPending(order) && due !== undefined && due < todayKey;
+}
+
 const byDueDate = (a: WorkOrderClientSummary, b: WorkOrderClientSummary) =>
   (dueKey(a) ?? '').localeCompare(dueKey(b) ?? '');
 
@@ -66,7 +72,7 @@ export function summarizeToday(
   }
 
   return {
-    overdue: dated.filter((order) => dueKey(order)! < todayKey).sort(byDueDate),
+    overdue: dated.filter((order) => isOverdue(order, todayKey)).sort(byDueDate),
     upcoming: dated
       .filter((order) => dueKey(order)! > todayKey && dueKey(order)! <= lastUpcoming)
       .sort(byDueDate),

@@ -385,7 +385,12 @@
   .status-purple,
   .priority-low-badge,
   .priority-normal-badge,
-  .priority-high-badge {
+  .priority-high-badge,
+  .priority-urgent-badge,
+  .status-open-badge,
+  .status-in-progress-badge,
+  .status-completed-badge,
+  .status-cancelled-badge {
     border: 1px solid color-mix(in srgb, currentcolor 35%, transparent);
     background: color-mix(in srgb, currentcolor 12%, transparent);
   }
@@ -417,6 +422,26 @@
 
   .priority-normal-badge {
     color: var(--color-priority-normal);
+  }
+
+  .priority-urgent-badge {
+    color: var(--color-priority-urgent);
+  }
+
+  .status-open-badge {
+    color: var(--color-status-open);
+  }
+
+  .status-in-progress-badge {
+    color: var(--color-status-in-progress);
+  }
+
+  .status-completed-badge {
+    color: var(--color-status-completed);
+  }
+
+  .status-cancelled-badge {
+    color: var(--color-status-cancelled);
   }
 
   .login-panel {

@@ -187,6 +187,102 @@ describe('WorkOrderList', () => {
     );
   });
 
+  it('colors each status and gives urgent its own color, in table and card views', async () => {
+    listWorkOrders.mockResolvedValue({
+      items: [
+        { ...sampleWorkOrder, id: 'a', title: 'Abierta', priority: WorkOrderPriority.URGENT },
+        {
+          ...sampleWorkOrder,
+          id: 'b',
+          title: 'Hecha',
+          status: WorkOrderStatus.COMPLETED,
+          priority: WorkOrderPriority.HIGH,
+        },
+      ],
+    });
+    render(<WorkOrderList clients={[sampleClient]} onCreate={vi.fn()} onEdit={vi.fn()} />);
+
+    const openRow = (await screen.findByRole('link', { name: 'Abierta' })).closest('tr')!;
+    expect(within(openRow).getByText('Abierta', { selector: 'span' })).toHaveClass(
+      'status-open-badge',
+    );
+    expect(within(openRow).getByText('Urgente')).toHaveClass('priority-urgent-badge');
+    const doneRow = screen.getByRole('link', { name: 'Hecha' }).closest('tr')!;
+    expect(within(doneRow).getByText('Completada')).toHaveClass('status-completed-badge');
+    expect(within(doneRow).getByText('Alta')).toHaveClass('priority-high-badge');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Tarjetas' }));
+    const cards = screen.getByTestId('work-order-cards');
+    expect(within(cards).getByText('Urgente')).toHaveClass('priority-urgent-badge');
+    expect(within(cards).getByText('Completada')).toHaveClass('status-completed-badge');
+  });
+
+  describe('overdue due dates', () => {
+    beforeEach(() => {
+      vi.useFakeTimers({ toFake: ['Date'] });
+      vi.setSystemTime(new Date(2026, 10, 6, 9, 0));
+    });
+    afterEach(() => vi.useRealTimers());
+
+    it('marks pending orders past their due date as overdue, in table and card views', async () => {
+      listWorkOrders.mockResolvedValue({
+        items: [
+          {
+            ...sampleWorkOrder,
+            id: 'late',
+            title: 'Atrasada',
+            dueDate: '2026-11-02T00:00:00.000Z',
+          },
+          { ...sampleWorkOrder, id: 'today', title: 'Hoy', dueDate: '2026-11-06T00:00:00.000Z' },
+          {
+            ...sampleWorkOrder,
+            id: 'done',
+            title: 'Terminada',
+            status: WorkOrderStatus.COMPLETED,
+            dueDate: '2026-11-01T00:00:00.000Z',
+          },
+        ],
+      });
+      render(<WorkOrderList clients={[sampleClient]} onCreate={vi.fn()} onEdit={vi.fn()} />);
+
+      const lateRow = (await screen.findByRole('link', { name: 'Atrasada' })).closest('tr')!;
+      expect(within(lateRow).getByText('Vencida')).toBeInTheDocument();
+      const todayRow = screen.getByRole('link', { name: 'Hoy' }).closest('tr')!;
+      expect(within(todayRow).queryByText('Vencida')).not.toBeInTheDocument();
+      const doneRow = screen.getByRole('link', { name: 'Terminada' }).closest('tr')!;
+      expect(within(doneRow).queryByText('Vencida')).not.toBeInTheDocument();
+
+      fireEvent.click(screen.getByRole('button', { name: 'Tarjetas' }));
+      expect(screen.getAllByText('Vencida')).toHaveLength(1);
+    });
+  });
+
+  it('says no orders match the filters and offers to clear them', async () => {
+    listWorkOrders.mockResolvedValue({ items: [] });
+    render(<WorkOrderList clients={[sampleClient]} onCreate={vi.fn()} onEdit={vi.fn()} />);
+    await screen.findByText('No hay órdenes de trabajo');
+
+    fireEvent.change(screen.getByRole('combobox', { name: 'Filtrar por estado' }), {
+      target: { value: 'open' },
+    });
+
+    expect(await screen.findByText('Sin resultados')).toBeInTheDocument();
+    expect(screen.getByText('Ninguna orden coincide con los filtros elegidos')).toBeInTheDocument();
+    expect(screen.queryByText('Creá tu primera orden para comenzar')).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Limpiar filtros' }));
+
+    await waitFor(() =>
+      expect(listWorkOrders).toHaveBeenLastCalledWith({
+        status: undefined,
+        priority: undefined,
+        clientId: undefined,
+      }),
+    );
+    expect(screen.getByRole('combobox', { name: 'Filtrar por estado' })).toHaveValue('');
+    expect(await screen.findByText('No hay órdenes de trabajo')).toBeInTheDocument();
+  });
+
   it('links the work-order title to its details page in table and card views', async () => {
     listWorkOrders.mockResolvedValue({ items: [{ ...sampleWorkOrder, id: 'wo/1 a' }] });
     render(<WorkOrderList clients={[sampleClient]} onCreate={vi.fn()} onEdit={vi.fn()} />);
