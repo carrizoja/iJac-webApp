@@ -3,6 +3,7 @@ import type { WorkOrderClientSummary, Client } from '@ijac/shared';
 import { WorkOrderList } from './WorkOrderList';
 import { WorkOrderForm } from './WorkOrderForm';
 import { listClients } from '../../lib/resources';
+import { collectAllPages } from '../../lib/collectAllPages';
 import { useLanguage } from '../../hooks/useLanguage';
 import { Alert } from '../ui';
 
@@ -16,8 +17,9 @@ export function WorkOrderManager() {
 
   useEffect(() => {
     setClientsError(false);
-    listClients({})
-      .then((result) => setClients(Array.isArray(result?.items) ? result.items : []))
+    // Every client, not only the first page, so the filter and form can offer all of them.
+    collectAllPages((cursor) => listClients({ cursor }))
+      .then(setClients)
       .catch(() => setClientsError(true));
   }, [refreshKey]);
 

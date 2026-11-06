@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef, Fragment } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef, Fragment } from 'react';
 import type { Client } from '@ijac/shared';
 import { listClients, deleteClient } from '../../lib/resources';
 import {
@@ -9,10 +9,33 @@ import {
   LoadingState,
   Panel,
   ViewModeToggle,
+  SortableHeader,
+  SortSelect,
+  RowActionButton,
   type ViewMode,
 } from '../ui';
 import { useLanguage } from '../../hooks/useLanguage';
 import type { TranslationKey } from '../../i18n/translations';
+import { collectAllPages } from '../../lib/collectAllPages';
+import { nextTableSort, readStoredTableSort, storeTableSort } from '../../lib/tableSort';
+import {
+  CLIENT_SORT_KEYS,
+  DEFAULT_CLIENT_SORT,
+  sortClients,
+  type ClientSort,
+  type ClientSortKey,
+} from './clientSort';
+
+const SORT_STORAGE_KEY = 'ijac.clients.sort';
+const COLUMN_SORT_KEYS = ['name', 'email', 'phone', 'organization'] as const;
+
+const SORT_LABEL_KEYS: Record<ClientSortKey, TranslationKey> = {
+  createdAt: 'clients.createdAt',
+  name: 'clients.name',
+  email: 'clients.email',
+  phone: 'clients.phone',
+  organization: 'clients.organization',
+};
 
 interface ClientListProps {
   onCreate?: () => void;
@@ -34,6 +57,14 @@ export function ClientList({ onCreate, onEdit }: ClientListProps) {
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [deleting, setDeleting] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
+  const [sort, setSort] = useState<ClientSort>(() =>
+    readStoredTableSort(SORT_STORAGE_KEY, CLIENT_SORT_KEYS, DEFAULT_CLIENT_SORT),
+  );
+  const changeSort = (next: ClientSort) => {
+    setSort(next);
+    storeTableSort(SORT_STORAGE_KEY, next);
+  };
+  const sortedClients = useMemo(() => sortClients(clients, sort), [clients, sort]);
   const latestRequestId = useRef(0);
   const hasRequested = useRef(false);
 
@@ -42,9 +73,10 @@ export function ClientList({ onCreate, onEdit }: ClientListProps) {
     if (background) setSearching(true);
     setErrorKey(null);
     try {
-      const result = await listClients({ search: searchTerm });
+      // The list is sorted in the browser, so it needs every page, not only the first.
+      const items = await collectAllPages((cursor) => listClients({ search: searchTerm, cursor }));
       if (requestId !== latestRequestId.current) return;
-      setClients(Array.isArray(result?.items) ? result.items : []);
+      setClients(items);
     } catch {
       if (requestId !== latestRequestId.current) return;
       setErrorKey('clients.loadError');
@@ -96,6 +128,17 @@ export function ClientList({ onCreate, onEdit }: ClientListProps) {
           className="w-full rounded-xl sm:w-80"
         />
         <div className="flex flex-wrap items-center gap-3">
+          {viewMode === 'cards' && (
+            <SortSelect
+              id="clientSort"
+              label={t('clients.sortBy')}
+              keys={CLIENT_SORT_KEYS}
+              keyLabel={(key) => t(SORT_LABEL_KEYS[key])}
+              sort={sort}
+              defaultSort={DEFAULT_CLIENT_SORT}
+              onChange={changeSort}
+            />
+          )}
           <ViewModeToggle value={viewMode} onChange={setViewMode} ariaLabel={t('clients.view')} />
           <Button
             onClick={onCreate}
@@ -145,25 +188,23 @@ export function ClientList({ onCreate, onEdit }: ClientListProps) {
               <caption className="sr-only">{t('clients.listCaption')}</caption>
               <thead className="table-head border-b border-border-subtle text-xs font-semibold uppercase tracking-wider text-fg-muted">
                 <tr>
-                  <th scope="col" className="px-4 py-3">
-                    {t('clients.name')}
-                  </th>
-                  <th scope="col" className="px-4 py-3">
-                    {t('clients.email')}
-                  </th>
-                  <th scope="col" className="px-4 py-3">
-                    {t('clients.phone')}
-                  </th>
-                  <th scope="col" className="px-4 py-3">
-                    {t('clients.organization')}
-                  </th>
+                  {COLUMN_SORT_KEYS.map((key) => (
+                    <SortableHeader
+                      key={key}
+                      sortKey={key}
+                      sort={sort}
+                      onSort={(k) => changeSort(nextTableSort(sort, k, DEFAULT_CLIENT_SORT))}
+                    >
+                      {t(SORT_LABEL_KEYS[key])}
+                    </SortableHeader>
+                  ))}
                   <th scope="col" className="px-4 py-3 text-right">
                     {t('common.actions')}
                   </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border-subtle/50 text-fg-primary">
-                {clients.map((client) => (
+                {sortedClients.map((client) => (
                   <Fragment key={client.id}>
                     <tr
                       className={confirmDelete === client.id ? 'bg-priority-high/5' : 'table-row'}
@@ -180,27 +221,24 @@ export function ClientList({ onCreate, onEdit }: ClientListProps) {
                       <td className="px-4 py-3.5 text-fg-muted">{client.phone}</td>
                       <td className="px-4 py-3.5 text-fg-muted">{client.organization || '—'}</td>
                       <td className="px-4 py-3.5 text-right">
-                        <div className="inline-flex gap-2 justify-end">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className={editActionButtonClass}
+                        <div
+                          className="row-actions inline-flex gap-2 justify-end"
+                          data-testid="client-row-actions"
+                        >
+                          <RowActionButton
+                            action="edit"
+                            label={t('clients.editNamed', { name: client.name })}
+                            title={t('common.edit')}
                             onClick={() => onEdit?.(client)}
                             disabled={confirmDelete !== null}
-                            aria-label={t('clients.editNamed', { name: client.name })}
-                          >
-                            {t('common.edit')}
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className={deleteActionButtonClass}
+                          />
+                          <RowActionButton
+                            action="delete"
+                            label={t('clients.deleteNamed', { name: client.name })}
+                            title={t('common.delete')}
                             onClick={() => setConfirmDelete(client.id)}
                             disabled={confirmDelete !== null || deleting === client.id}
-                            aria-label={t('clients.deleteNamed', { name: client.name })}
-                          >
-                            {t('common.delete')}
-                          </Button>
+                          />
                         </div>
                       </td>
                     </tr>
@@ -246,7 +284,7 @@ export function ClientList({ onCreate, onEdit }: ClientListProps) {
           </div>
         ) : (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3" data-testid="client-cards">
-            {clients.map((client) => (
+            {sortedClients.map((client) => (
               <div key={client.id}>
                 {confirmDelete === client.id && (
                   <Panel

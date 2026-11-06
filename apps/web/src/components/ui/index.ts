@@ -14,6 +14,8 @@ export { Button } from './Button';
 export type { ButtonProps, ButtonVariants } from './Button';
 export { ViewModeToggle } from './ViewModeToggle';
 export type { ViewModeToggleProps, ViewMode } from './ViewModeToggle';
+export { SortableHeader, SortSelect, RowActionButton } from './TableControls';
+export type { SortableHeaderProps, SortSelectProps, RowActionButtonProps } from './TableControls';
 
 // Form Components
 export {
