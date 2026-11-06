@@ -65,6 +65,13 @@ function workOrderDetailsHref(id: string): string {
   return `/work-orders/details?id=${encodeURIComponent(id)}`;
 }
 
+/** A filter value from the page URL (e.g. `?status=open` from the home page), if it is a known one. */
+function readUrlFilter(name: string, allowed: readonly string[]): string {
+  if (typeof window === 'undefined') return '';
+  const value = new URLSearchParams(window.location.search).get(name) ?? '';
+  return allowed.includes(value) ? value : '';
+}
+
 export function WorkOrderList({ clients, onCreate, onEdit }: WorkOrderListProps) {
   const { language, t } = useLanguage();
   const neonActionButtonBaseClass =
@@ -77,8 +84,12 @@ export function WorkOrderList({ clients, onCreate, onEdit }: WorkOrderListProps)
   // Only the first load replaces the list; later reloads keep the filters and rows on screen.
   const [loaded, setLoaded] = useState(false);
   const [errorKey, setErrorKey] = useState<TranslationKey | null>(null);
-  const [statusFilter, setStatusFilter] = useState('');
-  const [priorityFilter, setPriorityFilter] = useState('');
+  const [statusFilter, setStatusFilter] = useState(() =>
+    readUrlFilter('status', WORK_ORDER_STATUSES),
+  );
+  const [priorityFilter, setPriorityFilter] = useState(() =>
+    readUrlFilter('priority', WORK_ORDER_PRIORITIES),
+  );
   const [clientFilter, setClientFilter] = useState('');
   const [deleting, setDeleting] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);

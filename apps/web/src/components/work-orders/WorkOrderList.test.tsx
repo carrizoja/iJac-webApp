@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import type { WorkOrderClientSummary, Client } from '@ijac/shared';
 import { WorkOrderStatus, WorkOrderPriority } from '@ijac/shared';
@@ -89,6 +89,42 @@ describe('WorkOrderList', () => {
         clientId: undefined,
       }),
     );
+  });
+
+  describe('filters from the link', () => {
+    afterEach(() => window.history.replaceState(null, '', '/'));
+
+    it('starts with the status and priority given in the URL', async () => {
+      window.history.replaceState(null, '', '/work-orders?status=in-progress&priority=urgent');
+      render(<WorkOrderList clients={[sampleClient]} onCreate={vi.fn()} onEdit={vi.fn()} />);
+
+      await waitFor(() =>
+        expect(listWorkOrders).toHaveBeenCalledWith({
+          status: 'in-progress',
+          priority: 'urgent',
+          clientId: undefined,
+        }),
+      );
+      expect(listWorkOrders).toHaveBeenCalledTimes(1);
+      expect(screen.getByRole('combobox', { name: 'Filtrar por estado' })).toHaveValue(
+        'in-progress',
+      );
+      expect(screen.getByRole('combobox', { name: 'Filtrar por prioridad' })).toHaveValue('urgent');
+    });
+
+    it('ignores unknown filter values in the URL', async () => {
+      window.history.replaceState(null, '', '/work-orders?status=secret&priority=');
+      render(<WorkOrderList clients={[sampleClient]} onCreate={vi.fn()} onEdit={vi.fn()} />);
+
+      await waitFor(() =>
+        expect(listWorkOrders).toHaveBeenCalledWith({
+          status: undefined,
+          priority: undefined,
+          clientId: undefined,
+        }),
+      );
+      expect(screen.getByRole('combobox', { name: 'Filtrar por estado' })).toHaveValue('');
+    });
   });
 
   it('names each filter for assistive technology', async () => {

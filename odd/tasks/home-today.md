@@ -15,7 +15,7 @@ Objective: replace the empty home page with a "Hoy" view of what needs attention
 ## Tasks
 
 - [x] T1 — S3 — inline — API list summaries carry `paidMinor`/`remainingMinor` for priced orders. RED: new repository test failed (no paidMinor); GREEN: 349 API tests pass.
-- [ ] T2 — S5 — inline — Órdenes list reads `status`/`priority` filters from the URL.
+- [x] T2 — S5 — inline — Órdenes list reads `status`/`priority` filters from the URL. RED: URL test failed; GREEN: 56 work-order tests pass. T1 commit 12e2608 (review approved).
 - [ ] T3 — S1, S2, S4, S5, S6, S7 — inline — Hoy view on `/`.
 
 Route evidence: no Writer trigger (units depend on each other and are under the parallel threshold); work runs inline.
