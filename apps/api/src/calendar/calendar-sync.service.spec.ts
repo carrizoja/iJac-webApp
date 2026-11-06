@@ -238,4 +238,69 @@ describe('CalendarSyncService', () => {
     const mapping = await mappingRepo.findByWorkOrderId('org-1', 'wo-1');
     expect(mapping).toBeNull();
   });
+
+  describe('deleteWorkOrder', () => {
+    const mapped = {
+      id: 'wo-1',
+      uid: '',
+      workOrderId: 'wo-1',
+      googleCalendarId: 'primary',
+      googleEventId: 'google-event-1',
+      status: 'synced' as const,
+    };
+
+    it('treats an event already gone from Google as removed', async () => {
+      await mappingRepo.upsert('org-1', mapped);
+      const events = mockClient.events as unknown as MockedEvents;
+      events.delete.mockRejectedValue(
+        Object.assign(new Error('Resource has been deleted'), { response: { status: 410 } }),
+      );
+
+      const result = await service.deleteWorkOrder('uid-1', 'org-1', 'wo-1');
+
+      expect(result.success).toBe(true);
+      expect(await mappingRepo.findByWorkOrderId('org-1', 'wo-1')).toBeNull();
+    });
+
+    it('keeps the event ids so the removal can be retried when Google fails', async () => {
+      await mappingRepo.upsert('org-1', mapped);
+      const events = mockClient.events as unknown as MockedEvents;
+      events.delete.mockRejectedValue(
+        Object.assign(new Error('Backend Error'), { response: { status: 503 } }),
+      );
+
+      const result = await service.deleteWorkOrder('uid-1', 'org-1', 'wo-1');
+
+      expect(result.success).toBe(false);
+      const mapping = await mappingRepo.findByWorkOrderId('org-1', 'wo-1');
+      expect(mapping).toMatchObject({
+        status: 'failed',
+        googleCalendarId: 'primary',
+        googleEventId: 'google-event-1',
+        errorMessage: 'Backend Error',
+      });
+    });
+
+    it('keeps the event ids when there is no active Google connection', async () => {
+      jest.spyOn(service as any, 'getClient').mockResolvedValue(null);
+      await mappingRepo.upsert('org-1', mapped);
+
+      const result = await service.deleteWorkOrder('uid-1', 'org-1', 'wo-1');
+
+      expect(result.success).toBe(false);
+      const mapping = await mappingRepo.findByWorkOrderId('org-1', 'wo-1');
+      expect(mapping).toMatchObject({
+        status: 'reconnect_required',
+        googleEventId: 'google-event-1',
+      });
+      expect((mockClient.events as unknown as MockedEvents).delete).not.toHaveBeenCalled();
+    });
+
+    it('writes no mapping for a work order that was never synced', async () => {
+      const result = await service.deleteWorkOrder('uid-1', 'org-1', 'wo-1');
+
+      expect(result.success).toBe(true);
+      expect(await mappingRepo.findByWorkOrderId('org-1', 'wo-1')).toBeNull();
+    });
+  });
 });

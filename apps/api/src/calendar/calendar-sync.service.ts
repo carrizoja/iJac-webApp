@@ -127,42 +127,53 @@ export class CalendarSyncService {
     }
   }
 
+  /**
+   * Removes the Google event mapped to a deleted work order. When the removal
+   * cannot happen now, the mapping keeps the event ids with the failure status
+   * so it can be retried.
+   */
   async deleteWorkOrder(
     uid: string,
     organizationId: string,
     workOrderId: string,
   ): Promise<SyncResult> {
-    const google = await this.getClient(uid);
     const existing = await this.mappingRepository.findByWorkOrderId(organizationId, workOrderId);
-    if (!existing) {
-      return this.saveMapping(organizationId, workOrderId, undefined, undefined, 'synced');
+    if (!existing?.googleEventId || !existing.googleCalendarId) {
+      if (existing) {
+        await this.mappingRepository.deleteByWorkOrderId(organizationId, workOrderId);
+      }
+      return { success: true, mapping: { id: workOrderId, uid, workOrderId, status: 'synced' } };
+    }
+    const { googleCalendarId, googleEventId } = existing;
+
+    const google = await this.getClient(uid);
+    if (!google) {
+      return this.failMapping(
+        organizationId,
+        workOrderId,
+        'reconnect_required',
+        'No active Google Calendar connection',
+        { googleCalendarId, googleEventId },
+      );
     }
 
-    if (google && existing.googleEventId && existing.googleCalendarId) {
-      try {
-        await google.client.events.delete({
-          calendarId: existing.googleCalendarId,
-          eventId: existing.googleEventId,
-        });
-      } catch (err) {
+    try {
+      await google.client.events.delete({ calendarId: googleCalendarId, eventId: googleEventId });
+    } catch (err) {
+      if (!this.isAlreadyGone(err)) {
         const code = this.classifyError(err);
         if (code === 'reconnect_required') {
           await this.connectionRepository.updateStatus(uid, 'reconnect_required');
         }
-        return this.failMapping(organizationId, workOrderId, code, this.errorMessage(err));
+        return this.failMapping(organizationId, workOrderId, code, this.errorMessage(err), {
+          googleCalendarId,
+          googleEventId,
+        });
       }
     }
 
     await this.mappingRepository.deleteByWorkOrderId(organizationId, workOrderId);
-    return {
-      success: true,
-      mapping: {
-        id: workOrderId,
-        uid,
-        workOrderId,
-        status: 'synced',
-      },
-    };
+    return { success: true, mapping: { id: workOrderId, uid, workOrderId, status: 'synced' } };
   }
 
   async getSyncStatus(uid: string): Promise<{ connected: boolean; status: string }> {
@@ -213,6 +224,12 @@ export class CalendarSyncService {
     return 'failed';
   }
 
+  /** Google answers 404 or 410 for an event that no longer exists. */
+  private isAlreadyGone(err: unknown): boolean {
+    const status = (err as { response?: { status?: unknown } } | null)?.response?.status;
+    return status === 404 || status === 410;
+  }
+
   private errorMessage(err: unknown): string {
     if (err instanceof Error) return err.message;
     return String(err);
@@ -243,11 +260,13 @@ export class CalendarSyncService {
     workOrderId: string,
     status: CalendarEventMapping['status'],
     message: string,
+    event?: { googleCalendarId: string; googleEventId: string },
   ): Promise<SyncResult> {
     const mapping: CalendarEventMapping = {
       id: workOrderId,
       uid: '',
       workOrderId,
+      ...event,
       status,
       errorMessage: message,
       lastSyncedAt: new Date().toISOString(),

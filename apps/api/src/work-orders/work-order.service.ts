@@ -1,4 +1,4 @@
-import { Injectable, Inject } from '@nestjs/common';
+import { Injectable, Inject, Logger } from '@nestjs/common';
 import {
   WorkOrderRepository,
   CreateWorkOrderInput,
@@ -8,10 +8,16 @@ import {
 import { CURRENCIES, Currency, WorkOrder, WorkOrderClientSummary } from '@ijac/shared';
 import { WORK_ORDER_REPOSITORY } from './work-order.constants';
 import { ValidationError } from '../common/errors';
+import { CalendarSyncService } from '../calendar/calendar-sync.service';
 
 @Injectable()
 export class WorkOrderService {
-  constructor(@Inject(WORK_ORDER_REPOSITORY) private readonly repository: WorkOrderRepository) {}
+  private readonly logger = new Logger(WorkOrderService.name);
+
+  constructor(
+    @Inject(WORK_ORDER_REPOSITORY) private readonly repository: WorkOrderRepository,
+    private readonly calendarSync: CalendarSyncService,
+  ) {}
 
   async create(organizationId: string, input: CreateWorkOrderInput): Promise<WorkOrder> {
     this.validateWorkOrderInput(input);
@@ -83,8 +89,24 @@ export class WorkOrderService {
     }
   }
 
-  async delete(organizationId: string, id: string): Promise<void> {
+  /**
+   * Deletes the work order, then removes its Google Calendar event using the
+   * caller's connection. A calendar failure never undoes or fails the deletion.
+   */
+  async delete(organizationId: string, id: string, uid: string): Promise<void> {
     await this.repository.delete(organizationId, id);
+    try {
+      const result = await this.calendarSync.deleteWorkOrder(uid, organizationId, id);
+      if (!result.success) {
+        this.logger.warn(
+          `Google Calendar event of deleted work order ${id} was not removed: ${result.mapping.status}`,
+        );
+      }
+    } catch (err) {
+      this.logger.warn(
+        `Google Calendar cleanup for deleted work order ${id} failed: ${err instanceof Error ? err.message : String(err)}`,
+      );
+    }
   }
 
   async findById(organizationId: string, id: string): Promise<WorkOrder | null> {
