@@ -222,8 +222,9 @@ export function PaymentsPanel({ workOrderId, workOrderStatus }: PaymentsPanelPro
 
   return (
     <Panel
+      id="payments"
       size="lg"
-      className="border border-border-default"
+      className="scroll-mt-24 border border-border-default"
       data-print-panel
       aria-labelledby="payments-title"
     >

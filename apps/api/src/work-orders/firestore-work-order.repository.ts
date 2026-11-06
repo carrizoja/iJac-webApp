@@ -324,6 +324,21 @@ export class FirestoreWorkOrderRepository implements WorkOrderRepository {
       }
     }
 
+    // Balances come from each priced order's active payments, read in parallel.
+    const balances = new Map(
+      await Promise.all(
+        snapshot.docs
+          .filter((doc) => doc.data().totalPriceMinor !== undefined)
+          .map(async (doc) => {
+            const payments = await doc.ref.collection('payments').get();
+            const stored = payments.docs.map(
+              (payment) => payment.data() as Pick<Payment, 'amountMinor' | 'status'>,
+            );
+            return [doc.id, computeBalance(doc.data().totalPriceMinor as number, stored)] as const;
+          }),
+      ),
+    );
+
     const items = snapshot.docs.map((doc) => {
       const order = this.toWorkOrder(doc);
       const client = clients.get(order.clientId);
@@ -339,6 +354,7 @@ export class FirestoreWorkOrderRepository implements WorkOrderRepository {
           totalPriceMinor: order.totalPriceMinor,
           currency: order.currency,
         }),
+        ...balances.get(order.id),
         createdAt: order.createdAt,
         updatedAt: order.updatedAt,
       };

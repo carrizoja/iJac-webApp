@@ -82,6 +82,10 @@ export interface WorkOrderClientSummary {
   dueDate?: string;
   totalPriceMinor?: number;
   currency?: Currency;
+  /** Sum of active payments, in minor units; present only on priced work orders. */
+  paidMinor?: number;
+  /** `totalPriceMinor - paidMinor`; present only on priced work orders. */
+  remainingMinor?: number;
   createdAt: string;
   updatedAt: string;
 }

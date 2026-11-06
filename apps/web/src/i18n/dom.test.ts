@@ -16,7 +16,7 @@ describe('Astro DOM translations', () => {
 
     updateTranslatedDom();
 
-    expect(document.querySelector('h1')).toHaveTextContent('Operations dashboard');
+    expect(document.querySelector('h1')).toHaveTextContent('Today');
     expect(document.querySelector('button')).toHaveAttribute('aria-label', 'Go to home');
     expect(document.querySelector('button')).toHaveAttribute('title', 'Go to home');
     expect(document.querySelector('[onclick]')).not.toBeInTheDocument();

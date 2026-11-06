@@ -2,13 +2,16 @@
 import Layout from '../layouts/Layout.astro';
 import { Protected } from '../components/layout/Protected';
 import { AppShell } from '../components/layout/AppShell';
+import { TodayDashboard } from '../components/home/TodayDashboard';
 ---
 
 <Layout titleKey="title.home">
   <Protected client:load>
     <AppShell client:load>
-      <h1 class="text-2xl font-semibold text-fg-primary" data-i18n="home.heading">Panel de operaciones</h1>
-      <p class="mt-2 text-fg-secondary" data-i18n="home.description">Bienvenido al sistema interno de iJac.</p>
+      <h1 class="text-2xl font-semibold text-fg-primary" data-i18n="home.heading">Hoy</h1>
+      <div class="mt-2">
+        <TodayDashboard client:load />
+      </div>
     </AppShell>
   </Protected>
 </Layout>
