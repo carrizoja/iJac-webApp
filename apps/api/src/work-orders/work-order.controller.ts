@@ -68,6 +68,6 @@ export class WorkOrderController {
     @CurrentUser() user: UserRequest,
     @Param('id') id: string,
   ) {
-    await this.service.delete(user.organizationId!, id);
+    await this.service.delete(user.organizationId!, id, user.uid);
   }
 }

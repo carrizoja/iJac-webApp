@@ -3,8 +3,10 @@ import { WorkOrderService } from './work-order.service';
 import { WorkOrderController } from './work-order.controller';
 import { FirestoreWorkOrderRepository } from './firestore-work-order.repository';
 import { WORK_ORDER_REPOSITORY } from './work-order.constants';
+import { CalendarConnectionModule } from '../calendar/calendar-connection.module';
 
 @Module({
+  imports: [CalendarConnectionModule],
   controllers: [WorkOrderController],
   providers: [
     WorkOrderService,

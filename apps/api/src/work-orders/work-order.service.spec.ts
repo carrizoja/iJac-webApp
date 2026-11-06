@@ -9,6 +9,7 @@ import {
 import { WorkOrder, WorkOrderClientSummary, WorkOrderStatus, WorkOrderPriority, Currency } from '@ijac/shared';
 import { NotFoundError, ValidationError } from '../common/errors';
 import { WORK_ORDER_REPOSITORY } from './work-order.constants';
+import { CalendarSyncService } from '../calendar/calendar-sync.service';
 
 class InMemoryWorkOrderRepository implements WorkOrderRepository {
   private workOrders: Map<string, WorkOrder> = new Map();
@@ -108,8 +109,10 @@ class InMemoryWorkOrderRepository implements WorkOrderRepository {
 describe('WorkOrderService', () => {
   let service: WorkOrderService;
   let repository: InMemoryWorkOrderRepository;
+  let calendarSync: { deleteWorkOrder: jest.Mock };
 
   beforeEach(async () => {
+    calendarSync = { deleteWorkOrder: jest.fn().mockResolvedValue({ success: true }) };
     repository = new InMemoryWorkOrderRepository();
     repository.addClient('client-a');
     repository.addClient('client-b');
@@ -120,6 +123,7 @@ describe('WorkOrderService', () => {
           provide: WORK_ORDER_REPOSITORY,
           useValue: repository,
         },
+        { provide: CalendarSyncService, useValue: calendarSync },
       ],
     }).compile();
     service = module.get(WorkOrderService);
@@ -180,9 +184,27 @@ describe('WorkOrderService', () => {
 
   it('deletes a work order', async () => {
     const wo = await service.create('uid', { title: 'A', status: 'open', priority: 'normal', clientId: 'client-a' });
-    await service.delete('uid', wo.id);
+    await service.delete('uid', wo.id, 'user-1');
     const found = await service.findById('uid', wo.id);
     expect(found).toBeNull();
+  });
+
+  it('removes the Google Calendar event of a deleted work order', async () => {
+    const wo = await service.create('org-1', { title: 'A', status: 'open', priority: 'normal', clientId: 'client-a' });
+    await service.delete('org-1', wo.id, 'user-1');
+    expect(calendarSync.deleteWorkOrder).toHaveBeenCalledWith('user-1', 'org-1', wo.id);
+  });
+
+  it('still deletes the work order when the calendar cleanup fails', async () => {
+    calendarSync.deleteWorkOrder.mockRejectedValue(new Error('Firestore unavailable'));
+    const wo = await service.create('org-1', { title: 'A', status: 'open', priority: 'normal', clientId: 'client-a' });
+    await expect(service.delete('org-1', wo.id, 'user-1')).resolves.toBeUndefined();
+    expect(await service.findById('org-1', wo.id)).toBeNull();
+  });
+
+  it('leaves the calendar event alone when the work order cannot be deleted', async () => {
+    await expect(service.delete('org-1', 'missing', 'user-1')).rejects.toBeInstanceOf(NotFoundError);
+    expect(calendarSync.deleteWorkOrder).not.toHaveBeenCalled();
   });
 
   describe('pricing', () => {
