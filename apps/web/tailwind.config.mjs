@@ -62,6 +62,8 @@ export default {
         'fg-primary': 'var(--color-fg-primary)',
         'fg-secondary': 'var(--color-fg-secondary)',
         'fg-tertiary': 'var(--color-fg-tertiary)',
+        /* Labels and secondary details; same tone as tertiary text. */
+        'fg-muted': 'var(--color-fg-tertiary)',
 
         /* Muted */
         'muted-bg': 'var(--color-muted-bg)',

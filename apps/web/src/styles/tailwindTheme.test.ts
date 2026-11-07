@@ -21,4 +21,8 @@ describe('tailwind theme colors', () => {
     expect(await cssFor('text-accent-brand')).toContain('var(--color-accent-brand)');
     expect(await cssFor('bg-accent-primary')).toContain('var(--color-accent-primary)');
   });
+
+  it('gives text-fg-muted the themed muted text color', async () => {
+    expect(await cssFor('text-fg-muted')).toContain('var(--color-fg-tertiary)');
+  });
 });
