@@ -221,6 +221,11 @@ export interface WorkOrderPaymentsResponse {
   canManage: boolean;
 }
 
+/** Body of `GET /me`: what the signed-in member may do in their organization. */
+export interface CurrentMemberResponse {
+  role: OrganizationMemberRole;
+}
+
 /** Body of `POST /work-orders/:id/payments`. */
 export interface RecordPaymentInput {
   amountMinor: number;

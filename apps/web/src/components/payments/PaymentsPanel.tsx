@@ -1,8 +1,5 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import {
-  PAYMENT_ERROR_CODES,
-  PAYMENT_METHODS,
-  PaymentMethod,
   PaymentStatus,
   WorkOrderStatus,
   formatMoney,
@@ -10,51 +7,17 @@ import {
   type Payment,
   type WorkOrderPaymentsResponse,
 } from '@ijac/shared';
-import { ApiRequestError, listPayments, recordPayment, voidPayment } from '../../lib/resources';
-import { parseMoneyInput } from '../../lib/money';
+import { ApiRequestError, listPayments, voidPayment } from '../../lib/resources';
 import { useLanguage } from '../../hooks/useLanguage';
 import { formatDateOnly } from '../../i18n/format';
-import type { TranslationKey } from '../../i18n/translations';
-import { Alert, Badge, Button, Dialog, Input, LoadingState, Panel, Select, Textarea } from '../ui';
+import { Alert, Badge, Button, Dialog, LoadingState, Panel, Textarea } from '../ui';
 import { ReceiptPrintView } from './ReceiptPrintView';
+import { RecordPaymentDialog, paymentMethodKey as methodKey } from './RecordPaymentDialog';
 
 type LoadState =
   | { status: 'loading' }
   | { status: 'error' }
   | { status: 'ready'; data: WorkOrderPaymentsResponse };
-
-type AmountError = 'invalid' | 'exceeds';
-
-interface RecordForm {
-  amount: string;
-  paymentDate: string;
-  method: PaymentMethod;
-  notes: string;
-}
-
-interface RecordErrors {
-  amount?: AmountError;
-  paymentDate?: boolean;
-  method?: boolean;
-  /** Pre-translated form-level message. */
-  general?: string;
-  profileMissing?: boolean;
-}
-
-function today(): string {
-  const now = new Date();
-  return [
-    now.getFullYear(),
-    String(now.getMonth() + 1).padStart(2, '0'),
-    String(now.getDate()).padStart(2, '0'),
-  ].join('-');
-}
-
-function emptyForm(): RecordForm {
-  return { amount: '', paymentDate: today(), method: PaymentMethod.CASH, notes: '' };
-}
-
-const methodKey = (method: PaymentMethod) => `payments.method.${method}` as TranslationKey;
 
 interface PaymentsPanelProps {
   workOrderId: string;
@@ -65,11 +28,6 @@ export function PaymentsPanel({ workOrderId, workOrderStatus }: PaymentsPanelPro
   const { language, t } = useLanguage();
   const [state, setState] = useState<LoadState>({ status: 'loading' });
   const [recordOpen, setRecordOpen] = useState(false);
-  /** One key per record form; reused for retries so a lost response cannot double-record. */
-  const idempotencyKey = useRef<string>('');
-  const [form, setForm] = useState<RecordForm>(emptyForm);
-  const [errors, setErrors] = useState<RecordErrors>({});
-  const [submitting, setSubmitting] = useState(false);
   const [voidTarget, setVoidTarget] = useState<Payment | null>(null);
   const [voidReason, setVoidReason] = useState('');
   const [voidError, setVoidError] = useState<string | null>(null);
@@ -124,78 +82,11 @@ export function PaymentsPanel({ workOrderId, workOrderStatus }: PaymentsPanelPro
   const settled = balance !== null && balance.remainingMinor <= 0;
   const canRecord = canManage && balance !== null && !cancelled && !settled;
   const money = (minor: number) => (balance ? formatMoney(minor, balance.currency) : '');
-  const remainingText = balance ? money(balance.remainingMinor) : '';
   const anyVoided = items.some((payment) => payment.status === PaymentStatus.VOIDED);
 
   const openRecord = () => {
-    idempotencyKey.current = crypto.randomUUID();
-    setForm(emptyForm());
-    setErrors({});
     setRecorded(null);
     setRecordOpen(true);
-  };
-
-  const submitRecord = async () => {
-    if (!balance || submitting) return;
-    const amountMinor = parseMoneyInput(form.amount);
-    const next: RecordErrors = {};
-    if (amountMinor === null || amountMinor <= 0) next.amount = 'invalid';
-    else if (amountMinor > balance.remainingMinor) next.amount = 'exceeds';
-    if (!form.paymentDate) next.paymentDate = true;
-    if (next.amount || next.paymentDate || amountMinor === null) {
-      setErrors(next);
-      return;
-    }
-
-    setSubmitting(true);
-    setErrors({});
-    try {
-      const payment = await recordPayment(workOrderId, {
-        amountMinor,
-        paymentDate: form.paymentDate,
-        method: form.method,
-        ...(form.notes.trim() && { notes: form.notes.trim() }),
-        idempotencyKey: idempotencyKey.current,
-      });
-      setRecordOpen(false);
-      setRecorded(payment);
-      await reload();
-    } catch (error) {
-      setErrors(mapRecordError(error));
-      await reload();
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  const mapRecordError = (error: unknown): RecordErrors => {
-    if (!(error instanceof ApiRequestError)) return { general: t('payments.recordError') };
-    switch (error.code) {
-      case PAYMENT_ERROR_CODES.ORGANIZATION_PROFILE_NOT_CONFIGURED:
-        return { profileMissing: true };
-      case PAYMENT_ERROR_CODES.WORK_ORDER_NOT_PRICED:
-        return { general: t('payments.unpricedHint') };
-      case PAYMENT_ERROR_CODES.WORK_ORDER_CANCELLED:
-        return { general: t('payments.cancelledHint') };
-      case PAYMENT_ERROR_CODES.IDEMPOTENCY_KEY_CONFLICT:
-        // The key is bound to another work order; a retry needs a fresh one.
-        idempotencyKey.current = crypto.randomUUID();
-        return { general: t('payments.recordError') };
-    }
-    const next: RecordErrors = {};
-    const unmapped: string[] = [];
-    for (const [key, message] of Object.entries(error.fieldErrors ?? {})) {
-      if (key === 'amountMinor') {
-        next.amount =
-          error.code === PAYMENT_ERROR_CODES.PAYMENT_EXCEEDS_BALANCE ? 'exceeds' : 'invalid';
-      } else if (key === 'paymentDate') next.paymentDate = true;
-      else if (key === 'method') next.method = true;
-      else unmapped.push(message);
-    }
-    if (unmapped.length > 0 || Object.keys(next).length === 0) {
-      next.general = [t('payments.recordError'), ...unmapped].join(' ');
-    }
-    return next;
   };
 
   const openVoid = (payment: Payment) => {
@@ -228,13 +119,6 @@ export function PaymentsPanel({ workOrderId, workOrderStatus }: PaymentsPanelPro
       setVoiding(false);
     }
   };
-
-  const amountError =
-    errors.amount === 'invalid'
-      ? t('payments.validation.amount')
-      : errors.amount === 'exceeds'
-        ? t('payments.validation.amountExceeds', { remaining: remainingText })
-        : undefined;
 
   return (
     <Panel
@@ -409,78 +293,20 @@ export function PaymentsPanel({ workOrderId, workOrderStatus }: PaymentsPanelPro
         </div>
       )}
 
-      <Dialog
-        isOpen={recordOpen}
-        onClose={() => setRecordOpen(false)}
-        title={t('payments.recordTitle')}
-        primaryAction={{
-          label: submitting ? t('payments.submitting') : t('payments.submit'),
-          onClick: submitRecord,
-          isLoading: submitting,
-        }}
-      >
-        <form
-          className="space-y-4"
-          noValidate
-          onSubmit={(event) => {
-            event.preventDefault();
-            void submitRecord();
+      {balance && (
+        <RecordPaymentDialog
+          isOpen={recordOpen}
+          onClose={() => setRecordOpen(false)}
+          workOrderId={workOrderId}
+          remainingMinor={balance.remainingMinor}
+          currency={balance.currency}
+          onRecorded={(payment) => {
+            setRecorded(payment);
+            void reload();
           }}
-        >
-          {errors.profileMissing && (
-            <Alert type="warning" role="alert">
-              <p>{t('payments.profileMissing')}</p>
-              <a href="/settings" className="font-medium underline">
-                {t('payments.profileLink')}
-              </a>
-            </Alert>
-          )}
-          {errors.general && (
-            <Alert type="error" role="alert">
-              {errors.general}
-            </Alert>
-          )}
-          <Input
-            id="payment-amount"
-            label={t('payments.amountLabel')}
-            inputMode="decimal"
-            value={form.amount}
-            onChange={(event) => setForm({ ...form, amount: event.target.value })}
-            helpText={t('payments.amountHelp', { remaining: remainingText })}
-            error={amountError}
-            required
-          />
-          <Input
-            id="payment-date"
-            type="date"
-            label={t('payments.dateLabel')}
-            value={form.paymentDate}
-            onChange={(event) => setForm({ ...form, paymentDate: event.target.value })}
-            error={errors.paymentDate ? t('payments.validation.date') : undefined}
-            required
-          />
-          <Select
-            id="payment-method"
-            label={t('payments.methodLabel')}
-            value={form.method}
-            onChange={(event) => setForm({ ...form, method: event.target.value as PaymentMethod })}
-            options={PAYMENT_METHODS.map((method) => ({
-              value: method,
-              label: t(methodKey(method)),
-            }))}
-            error={errors.method ? t('payments.validation.method') : undefined}
-            required
-          />
-          <Textarea
-            id="payment-notes"
-            label={t('payments.notesLabel')}
-            helpText={t('payments.notesHelp')}
-            value={form.notes}
-            onChange={(event) => setForm({ ...form, notes: event.target.value })}
-            rows={2}
-          />
-        </form>
-      </Dialog>
+          onFailed={() => void reload()}
+        />
+      )}
 
       <Dialog
         isOpen={voidTarget !== null}
