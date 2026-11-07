@@ -1,13 +1,14 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import type { Client, WorkOrder } from '@ijac/shared';
 import { Currency, WorkOrderPriority, WorkOrderStatus } from '@ijac/shared';
 import { setLanguage } from '../../i18n/language';
 
-const { getClient, getWorkOrder, listPayments } = vi.hoisted(() => ({
+const { getClient, getWorkOrder, listPayments, updateWorkOrder } = vi.hoisted(() => ({
   getClient: vi.fn(),
   getWorkOrder: vi.fn(),
   listPayments: vi.fn(),
+  updateWorkOrder: vi.fn(),
 }));
 
 vi.mock('../../lib/resources', () => ({
@@ -15,6 +16,7 @@ vi.mock('../../lib/resources', () => ({
   getClient,
   getWorkOrder,
   listPayments,
+  updateWorkOrder,
   recordPayment: vi.fn(),
   voidPayment: vi.fn(),
 }));
@@ -117,6 +119,92 @@ describe('WorkOrderDetails', () => {
     expect(screen.getByText('Estado: En progreso')).not.toHaveClass('text-fg-primary');
     expect(screen.getByText('Creada')).toBeInTheDocument();
     expect(screen.getByText('Actualizada')).toBeInTheDocument();
+  });
+
+  describe('as a workspace', () => {
+    beforeEach(() => {
+      window.history.replaceState({}, '', '/work-orders/details?id=work-order-1');
+      getWorkOrder.mockResolvedValue(workOrder);
+      getClient.mockResolvedValue(client);
+    });
+
+    it('leads with the client and the payments, before the description', async () => {
+      render(<WorkOrderDetails />);
+
+      const header = (
+        await screen.findByRole('heading', { level: 1, name: 'Revisión remota' })
+      ).closest('header') as HTMLElement;
+      expect(within(header).getByText('Acme Corp (Acme Argentina)')).toBeInTheDocument();
+      const payments = await screen.findByRole('heading', { level: 2, name: 'Pagos' });
+      const description = screen.getByRole('heading', { level: 2, name: 'Descripción' });
+      expect(
+        payments.compareDocumentPosition(description) & Node.DOCUMENT_POSITION_FOLLOWING,
+      ).toBeTruthy();
+    });
+
+    it('changes the status in place and tells the payments panel', async () => {
+      listPayments.mockResolvedValue({
+        items: [],
+        balance: { currency: Currency.ARS, totalMinor: 1000, paidMinor: 0, remainingMinor: 1000 },
+        canManage: true,
+      });
+      updateWorkOrder.mockResolvedValue({ ...workOrder, status: WorkOrderStatus.CANCELLED });
+      render(<WorkOrderDetails />);
+
+      const select = await screen.findByRole('combobox', { name: 'Cambiar estado' });
+      expect(select).toHaveValue(WorkOrderStatus.IN_PROGRESS);
+      fireEvent.change(select, { target: { value: WorkOrderStatus.CANCELLED } });
+
+      await waitFor(() =>
+        expect(updateWorkOrder).toHaveBeenCalledWith('work-order-1', {
+          status: WorkOrderStatus.CANCELLED,
+        }),
+      );
+      expect(await screen.findByText('Estado: Cancelada')).toHaveClass('status-cancelled-badge');
+      expect(screen.getByTestId('work-order-status-announcement')).toHaveTextContent(
+        'Estado actualizado: Cancelada',
+      );
+      expect(
+        await screen.findByText('La orden está cancelada: no se pueden registrar nuevos pagos.'),
+      ).toBeInTheDocument();
+    });
+
+    it('keeps the previous status and says so when the change fails', async () => {
+      updateWorkOrder.mockRejectedValue(new Error('NETWORK_ERROR'));
+      render(<WorkOrderDetails />);
+
+      const select = await screen.findByRole('combobox', { name: 'Cambiar estado' });
+      fireEvent.change(select, { target: { value: WorkOrderStatus.COMPLETED } });
+
+      expect(
+        await screen.findByText('No se pudo cambiar el estado. Probá de nuevo.'),
+      ).toBeInTheDocument();
+      expect(select).toHaveValue(WorkOrderStatus.IN_PROGRESS);
+      expect(screen.getByText('Estado: En progreso')).toBeInTheDocument();
+    });
+
+    describe('overdue', () => {
+      beforeEach(() => {
+        vi.useFakeTimers({ toFake: ['Date'] });
+        vi.setSystemTime(new Date(2026, 7, 20, 9, 0));
+      });
+      afterEach(() => vi.useRealTimers());
+
+      it('flags a pending order past its due date', async () => {
+        render(<WorkOrderDetails />);
+        const header = (await screen.findByRole('heading', { level: 1 })).closest(
+          'header',
+        ) as HTMLElement;
+        expect(within(header).getByText('Vencida')).toBeInTheDocument();
+      });
+
+      it('does not flag a completed order', async () => {
+        getWorkOrder.mockResolvedValue({ ...workOrder, status: WorkOrderStatus.COMPLETED });
+        render(<WorkOrderDetails />);
+        await screen.findByRole('heading', { level: 1 });
+        expect(screen.queryByText('Vencida')).not.toBeInTheDocument();
+      });
+    });
   });
 
   it('offers exactly the PDF and WhatsApp actions for a loaded order', async () => {

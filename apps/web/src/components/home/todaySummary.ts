@@ -34,14 +34,16 @@ function addDays(dateKey: string, days: number): string {
   return localDateKey(new Date(year, month - 1, day + days));
 }
 
-const isPending = (order: WorkOrderClientSummary) =>
+type Dated = Pick<WorkOrderClientSummary, 'status' | 'dueDate'>;
+
+const isPending = (order: Dated) =>
   order.status === WorkOrderStatus.OPEN || order.status === WorkOrderStatus.IN_PROGRESS;
 
 /** Due dates are calendar dates; only their `YYYY-MM-DD` part is compared. */
-const dueKey = (order: WorkOrderClientSummary) => order.dueDate?.slice(0, 10);
+const dueKey = (order: Dated) => order.dueDate?.slice(0, 10);
 
 /** A pending order whose due date is before `todayKey` (`YYYY-MM-DD`). */
-export function isOverdue(order: WorkOrderClientSummary, todayKey: string): boolean {
+export function isOverdue(order: Dated, todayKey: string): boolean {
   const due = dueKey(order);
   return isPending(order) && due !== undefined && due < todayKey;
 }
