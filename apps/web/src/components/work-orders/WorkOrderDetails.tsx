@@ -1,10 +1,17 @@
 import { useEffect, useState } from 'react';
-import { formatMoney, type Client, type WorkOrder } from '@ijac/shared';
+import {
+  WORK_ORDER_STATUSES,
+  formatMoney,
+  type Client,
+  type WorkOrder,
+  type WorkOrderStatus,
+} from '@ijac/shared';
 import { FileDown, MessageCircle } from 'lucide-react';
-import { getClient, getWorkOrder } from '../../lib/resources';
-import { Alert, Badge, Button, LoadingState, Panel } from '../ui';
+import { getClient, getWorkOrder, updateWorkOrder } from '../../lib/resources';
+import { Alert, Badge, Button, LoadingState, Panel, Select } from '../ui';
 import { PaymentsPanel } from '../payments/PaymentsPanel';
 import { priorityBadgeClass, statusBadgeClass } from './workOrderBadges';
+import { isOverdue, localDateKey } from '../home/todaySummary';
 import { useLanguage } from '../../hooks/useLanguage';
 import { formatDateOnly, formatDateTime, priorityLabel, statusLabel } from '../../i18n/format';
 
@@ -29,6 +36,9 @@ function BackToOrders() {
 export function WorkOrderDetails() {
   const { language, t } = useLanguage();
   const [state, setState] = useState<DetailsState>({ status: 'loading' });
+  const [savingStatus, setSavingStatus] = useState(false);
+  const [statusError, setStatusError] = useState(false);
+  const [statusAnnouncement, setStatusAnnouncement] = useState('');
 
   useEffect(() => {
     const id = new URLSearchParams(window.location.search).get('id')?.trim();
@@ -96,6 +106,26 @@ export function WorkOrderDetails() {
   }
 
   const { workOrder, client } = state;
+
+  const changeStatus = async (next: WorkOrderStatus) => {
+    if (next === workOrder.status || savingStatus) return;
+    setSavingStatus(true);
+    setStatusError(false);
+    setStatusAnnouncement('');
+    try {
+      const updated = await updateWorkOrder(workOrder.id, { status: next });
+      setState({ status: 'ready', workOrder: updated, client });
+      setStatusAnnouncement(
+        t('workOrders.statusUpdated', { value: statusLabel(updated.status, language) }),
+      );
+    } catch {
+      setStatusError(true);
+    } finally {
+      setSavingStatus(false);
+    }
+  };
+
+  const overdue = isOverdue(workOrder, localDateKey(new Date()));
   const organization = client.organization?.trim();
   const clientDisplayName = organization ? `${client.name} (${organization})` : client.name;
   const dueDate = formatDateOnly(workOrder.dueDate, language);
@@ -114,53 +144,89 @@ export function WorkOrderDetails() {
     <article className="work-order-print-document space-y-6" aria-labelledby="work-order-title">
       <BackToOrders />
 
-      <div
-        className="work-order-print-hidden rounded-xl border border-border-default bg-bg-secondary/60 p-4 sm:p-5"
-        role="group"
-        aria-label={t('workOrders.documentActions')}
-      >
-        <div className="flex flex-wrap gap-3">
-          <Button
-            type="button"
-            variant="secondary"
-            size="lg"
-            onClick={() => window.print()}
-            startIcon={<FileDown aria-hidden="true" focusable="false" className="h-5 w-5" />}
+      <header className="rounded-2xl border border-border-default bg-bg-secondary/80 p-5 sm:p-6">
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div className="min-w-0 space-y-1">
+            <h1
+              id="work-order-title"
+              className="font-heading text-2xl font-semibold leading-tight text-fg-primary sm:text-3xl"
+            >
+              {workOrder.title}
+            </h1>
+            <p className="text-fg-secondary">{clientDisplayName}</p>
+          </div>
+          <div
+            className="work-order-print-hidden flex flex-wrap gap-2"
+            role="group"
+            aria-label={t('workOrders.documentActions')}
           >
-            {t('workOrders.savePdf')}
-          </Button>
-          <a
-            href={whatsAppHref}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="action-brand inline-flex min-h-11 items-center justify-center rounded-md border px-6 text-base font-medium transition-fast active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2"
-          >
-            <MessageCircle aria-hidden="true" focusable="false" className="mr-2 h-5 w-5" />
-            {t('workOrders.shareWhatsApp')}
-          </a>
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              onClick={() => window.print()}
+              startIcon={<FileDown aria-hidden="true" focusable="false" className="h-4 w-4" />}
+            >
+              {t('workOrders.savePdf')}
+            </Button>
+            <a
+              href={whatsAppHref}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex h-9 items-center justify-center rounded-md border border-border-default bg-panel-default px-3 text-sm font-medium text-fg-primary transition-fast hover:bg-panel-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2"
+            >
+              <MessageCircle aria-hidden="true" focusable="false" className="mr-2 h-4 w-4" />
+              {t('workOrders.shareWhatsApp')}
+            </a>
+          </div>
         </div>
-        <p className="mt-3 text-sm leading-6 text-fg-muted">{t('workOrders.pdfHelper')}</p>
-      </div>
 
-      <header className="rounded-2xl border border-border-default bg-bg-secondary/80 px-6 py-8 sm:px-8 sm:py-10">
-        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-accent-brand">
-          {t('workOrders.eyebrow')}
-        </p>
-        <h1
-          id="work-order-title"
-          className="mt-4 max-w-4xl font-heading text-3xl font-semibold leading-tight text-fg-primary sm:text-5xl"
-        >
-          {workOrder.title}
-        </h1>
-        <div className="mt-6 flex flex-wrap gap-2">
-          <Badge variant="tone" className={statusBadgeClass(workOrder.status)}>
-            {t('workOrders.statusValue', { value: statusLabel(workOrder.status, language) })}
-          </Badge>
-          <Badge variant="tone" className={priorityBadgeClass(workOrder.priority)}>
-            {t('workOrders.priorityValue', { value: priorityLabel(workOrder.priority, language) })}
-          </Badge>
+        <div className="mt-4 flex flex-wrap items-end justify-between gap-4">
+          <div className="flex flex-wrap items-center gap-2">
+            <Badge variant="tone" className={statusBadgeClass(workOrder.status)}>
+              {t('workOrders.statusValue', { value: statusLabel(workOrder.status, language) })}
+            </Badge>
+            <Badge variant="tone" className={priorityBadgeClass(workOrder.priority)}>
+              {t('workOrders.priorityValue', {
+                value: priorityLabel(workOrder.priority, language),
+              })}
+            </Badge>
+            {overdue && <Badge variant="error">{t('workOrders.overdue')}</Badge>}
+            <span
+              className={overdue ? 'text-sm font-medium text-destructive' : 'text-sm text-fg-muted'}
+            >
+              {t('workOrders.shareMessageDue', { value: dueDate })}
+            </span>
+          </div>
+          <div className="work-order-print-hidden w-full sm:w-56">
+            <Select
+              id="work-order-status"
+              label={t('workOrders.changeStatus')}
+              value={workOrder.status}
+              disabled={savingStatus}
+              onChange={(event) => void changeStatus(event.target.value as WorkOrderStatus)}
+              options={WORK_ORDER_STATUSES.map((status) => ({
+                value: status,
+                label: statusLabel(status, language),
+              }))}
+              error={statusError ? t('workOrders.statusError') : undefined}
+            />
+          </div>
         </div>
+        <p
+          className="sr-only"
+          role="status"
+          aria-live="polite"
+          data-testid="work-order-status-announcement"
+        >
+          {statusAnnouncement}
+        </p>
+        <p className="work-order-print-hidden mt-4 text-xs leading-5 text-fg-muted">
+          {t('workOrders.pdfHelper')}
+        </p>
       </header>
+
+      <PaymentsPanel workOrderId={workOrder.id} workOrderStatus={workOrder.status} />
 
       <div className="grid gap-5 lg:grid-cols-[minmax(0,1.5fr)_minmax(18rem,0.7fr)]">
         <Panel size="lg" className="border border-border-default" data-print-panel>
@@ -219,8 +285,6 @@ export function WorkOrderDetails() {
           </div>
         </dl>
       </Panel>
-
-      <PaymentsPanel workOrderId={workOrder.id} workOrderStatus={workOrder.status} />
     </article>
   );
 }
