@@ -161,7 +161,10 @@ describe('WorkOrderList', () => {
 
     await waitFor(() => expect(screen.getByText('Reparación de Servidor')).toBeInTheDocument());
     expect(screen.getByTestId('work-order-table')).toBeInTheDocument();
-    expect(screen.getByTestId('work-order-table-container')).toBeInTheDocument();
+    // A wide table scrolls inside its box, so the box takes keyboard focus and has a name.
+    const scroller = screen.getByRole('region', { name: 'Lista de órdenes de trabajo' });
+    expect(scroller).toBe(screen.getByTestId('work-order-table-container'));
+    expect(scroller).toHaveAttribute('tabindex', '0');
 
     expect(screen.getByRole('columnheader', { name: 'Título' })).toBeInTheDocument();
     expect(screen.getByRole('columnheader', { name: 'Cliente' })).toBeInTheDocument();

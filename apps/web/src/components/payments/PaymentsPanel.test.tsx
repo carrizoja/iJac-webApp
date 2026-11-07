@@ -95,6 +95,10 @@ describe('PaymentsPanel', () => {
     // Only the exception (a voided payment) gets a status badge.
     expect(within(row).queryByText('Vigente')).not.toBeInTheDocument();
     expect(listPayments).toHaveBeenCalledWith('wo-1');
+    expect(screen.getByRole('region', { name: 'Lista de pagos' })).toHaveAttribute(
+      'tabindex',
+      '0',
+    );
   });
 
   it('records a payment as admin and refreshes the balance', async () => {

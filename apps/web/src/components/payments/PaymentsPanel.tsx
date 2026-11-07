@@ -309,7 +309,12 @@ export function PaymentsPanel({ workOrderId, workOrderStatus }: PaymentsPanelPro
       {items.length === 0 ? (
         <p className="mt-6 text-sm text-fg-muted">{t('payments.empty')}</p>
       ) : (
-        <div className="mt-6 overflow-x-auto">
+        <div
+          className="mt-6 overflow-x-auto rounded focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
+          role="region"
+          aria-label={t('payments.list')}
+          tabIndex={0}
+        >
           <table className="w-full text-left text-sm" aria-label={t('payments.list')}>
             <thead>
               <tr className="text-xs uppercase tracking-wider text-fg-muted">
