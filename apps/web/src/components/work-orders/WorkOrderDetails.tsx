@@ -4,14 +4,14 @@ import {
   formatMoney,
   type Client,
   type WorkOrder,
-  type WorkOrderStatus,
+  WorkOrderStatus,
 } from '@ijac/shared';
 import { FileDown, MessageCircle, Pencil } from 'lucide-react';
 import { getClient, getWorkOrder, listClients, updateWorkOrder } from '../../lib/resources';
 import { collectAllPages } from '../../lib/collectAllPages';
 import { useRevealOnOpen } from '../../hooks/useRevealOnOpen';
 import { WorkOrderForm } from './WorkOrderForm';
-import { Alert, Badge, Button, LoadingState, Panel, Select } from '../ui';
+import { Alert, Badge, Button, Dialog, LoadingState, Panel, Select } from '../ui';
 import { PaymentsPanel } from '../payments/PaymentsPanel';
 import { priorityBadgeClass, statusBadgeClass } from './workOrderBadges';
 import { isOverdue, localDateKey } from '../home/todaySummary';
@@ -42,6 +42,9 @@ export function WorkOrderDetails() {
   const [savingStatus, setSavingStatus] = useState(false);
   const [statusError, setStatusError] = useState(false);
   const [statusAnnouncement, setStatusAnnouncement] = useState('');
+  /** The status picked in the select; it is saved only when the save button is pressed. */
+  const [draftStatus, setDraftStatus] = useState<WorkOrderStatus | null>(null);
+  const [confirmingCancel, setConfirmingCancel] = useState(false);
   const [editing, setEditing] = useState(false);
   const [clients, setClients] = useState<Client[]>([]);
   const [clientsError, setClientsError] = useState(false);
@@ -131,8 +134,12 @@ export function WorkOrderDetails() {
 
   const { workOrder, client } = state;
 
+  const selectedStatus = draftStatus ?? workOrder.status;
+  const statusChanged = selectedStatus !== workOrder.status;
+
   const changeStatus = async (next: WorkOrderStatus) => {
     if (next === workOrder.status || savingStatus) return;
+    setConfirmingCancel(false);
     setSavingStatus(true);
     setStatusError(false);
     setStatusAnnouncement('');
@@ -145,8 +152,19 @@ export function WorkOrderDetails() {
     } catch {
       setStatusError(true);
     } finally {
+      setDraftStatus(null);
       setSavingStatus(false);
     }
+  };
+
+  // Cancelling blocks new payments, so it is confirmed first; other changes save directly.
+  const saveStatus = () => {
+    if (!statusChanged) return;
+    if (selectedStatus === WorkOrderStatus.CANCELLED) {
+      setConfirmingCancel(true);
+      return;
+    }
+    void changeStatus(selectedStatus);
   };
 
   const overdue = isOverdue(workOrder, localDateKey(new Date()));
@@ -238,20 +256,31 @@ export function WorkOrderDetails() {
               {t('workOrders.shareMessageDue', { value: dueDate })}
             </span>
           </div>
-          <div className="work-order-print-hidden w-full sm:w-56">
-            <Select
-              id="work-order-status"
-              label={t('workOrders.changeStatus')}
-              value={workOrder.status}
-              // While the form is open it saves the status too, so changing it here would be undone.
-              disabled={savingStatus || editing}
-              onChange={(event) => void changeStatus(event.target.value as WorkOrderStatus)}
-              options={WORK_ORDER_STATUSES.map((status) => ({
-                value: status,
-                label: statusLabel(status, language),
-              }))}
-              error={statusError ? t('workOrders.statusError') : undefined}
-            />
+          <div className="work-order-print-hidden flex w-full items-end gap-2 sm:w-auto">
+            <div className="min-w-0 flex-1 sm:w-56 sm:flex-none">
+              <Select
+                id="work-order-status"
+                label={t('workOrders.changeStatus')}
+                value={selectedStatus}
+                // While the form is open it saves the status too, so changing it here would be undone.
+                disabled={savingStatus || editing}
+                onChange={(event) => setDraftStatus(event.target.value as WorkOrderStatus)}
+                options={WORK_ORDER_STATUSES.map((status) => ({
+                  value: status,
+                  label: statusLabel(status, language),
+                }))}
+                error={statusError ? t('workOrders.statusError') : undefined}
+              />
+            </div>
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={saveStatus}
+              disabled={!statusChanged || savingStatus || editing}
+              isLoading={savingStatus}
+            >
+              {t('workOrders.saveStatus')}
+            </Button>
           </div>
         </div>
         <p
@@ -262,6 +291,23 @@ export function WorkOrderDetails() {
         >
           {statusAnnouncement}
         </p>
+        <Dialog
+          isOpen={confirmingCancel}
+          onClose={() => {
+            setConfirmingCancel(false);
+            setDraftStatus(null);
+          }}
+          title={t('workOrders.cancelConfirmTitle')}
+          primaryAction={{
+            label: t('workOrders.cancelConfirmSubmit'),
+            onClick: () => changeStatus(WorkOrderStatus.CANCELLED),
+            destructive: true,
+            isLoading: savingStatus,
+          }}
+          secondaryAction={{ label: t('workOrders.cancelConfirmBack') }}
+        >
+          <p>{t('workOrders.cancelConfirmBody')}</p>
+        </Dialog>
         <p className="work-order-print-hidden mt-4 text-xs leading-5 text-fg-muted">
           {t('workOrders.pdfHelper')}
         </p>

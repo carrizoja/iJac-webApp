@@ -220,7 +220,35 @@ describe('WorkOrderDetails', () => {
       ).toBeTruthy();
     });
 
-    it('changes the status in place and tells the payments panel', async () => {
+    it('does not save a status until the save button is pressed', async () => {
+      updateWorkOrder.mockResolvedValue({ ...workOrder, status: WorkOrderStatus.COMPLETED });
+      render(<WorkOrderDetails />);
+
+      const select = await screen.findByRole('combobox', { name: 'Cambiar estado' });
+      const save = screen.getByRole('button', { name: 'Guardar estado' });
+      expect(save).toBeDisabled();
+
+      fireEvent.change(select, { target: { value: WorkOrderStatus.OPEN } });
+      fireEvent.change(select, { target: { value: WorkOrderStatus.COMPLETED } });
+      expect(updateWorkOrder).not.toHaveBeenCalled();
+      expect(save).toBeEnabled();
+
+      fireEvent.click(save);
+
+      await waitFor(() =>
+        expect(updateWorkOrder).toHaveBeenCalledWith('work-order-1', {
+          status: WorkOrderStatus.COMPLETED,
+        }),
+      );
+      expect(updateWorkOrder).toHaveBeenCalledTimes(1);
+      expect(await screen.findByText('Estado: Completada')).toBeInTheDocument();
+      expect(screen.getByTestId('work-order-status-announcement')).toHaveTextContent(
+        'Estado actualizado: Completada',
+      );
+      expect(save).toBeDisabled();
+    });
+
+    it('asks before cancelling and tells the payments panel once confirmed', async () => {
       listPayments.mockResolvedValue({
         items: [],
         balance: { currency: Currency.ARS, totalMinor: 1000, paidMinor: 0, remainingMinor: 1000 },
@@ -232,6 +260,17 @@ describe('WorkOrderDetails', () => {
       const select = await screen.findByRole('combobox', { name: 'Cambiar estado' });
       expect(select).toHaveValue(WorkOrderStatus.IN_PROGRESS);
       fireEvent.change(select, { target: { value: WorkOrderStatus.CANCELLED } });
+      fireEvent.click(screen.getByRole('button', { name: 'Guardar estado' }));
+
+      const dialog = await screen.findByRole('alertdialog', { name: '¿Cancelar esta orden?' });
+      expect(
+        within(dialog).getByText(
+          'Mientras esté cancelada no vas a poder registrar pagos. Podés volver a cambiar el estado después.',
+        ),
+      ).toBeInTheDocument();
+      expect(updateWorkOrder).not.toHaveBeenCalled();
+
+      fireEvent.click(within(dialog).getByRole('button', { name: 'Cancelar orden' }));
 
       await waitFor(() =>
         expect(updateWorkOrder).toHaveBeenCalledWith('work-order-1', {
@@ -245,6 +284,23 @@ describe('WorkOrderDetails', () => {
       expect(
         await screen.findByText('La orden está cancelada: no se pueden registrar nuevos pagos.'),
       ).toBeInTheDocument();
+      expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
+    });
+
+    it('keeps the order as it was when the cancellation is not confirmed', async () => {
+      render(<WorkOrderDetails />);
+
+      const select = await screen.findByRole('combobox', { name: 'Cambiar estado' });
+      fireEvent.change(select, { target: { value: WorkOrderStatus.CANCELLED } });
+      fireEvent.click(screen.getByRole('button', { name: 'Guardar estado' }));
+      const dialog = await screen.findByRole('alertdialog', { name: '¿Cancelar esta orden?' });
+
+      fireEvent.click(within(dialog).getByRole('button', { name: 'Volver' }));
+
+      await waitFor(() => expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument());
+      expect(updateWorkOrder).not.toHaveBeenCalled();
+      expect(select).toHaveValue(WorkOrderStatus.IN_PROGRESS);
+      expect(screen.getByText('Estado: En progreso')).toBeInTheDocument();
     });
 
     it('keeps the previous status and says so when the change fails', async () => {
@@ -253,6 +309,7 @@ describe('WorkOrderDetails', () => {
 
       const select = await screen.findByRole('combobox', { name: 'Cambiar estado' });
       fireEvent.change(select, { target: { value: WorkOrderStatus.COMPLETED } });
+      fireEvent.click(screen.getByRole('button', { name: 'Guardar estado' }));
 
       expect(
         await screen.findByText('No se pudo cambiar el estado. Probá de nuevo.'),
