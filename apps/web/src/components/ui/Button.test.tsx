@@ -26,7 +26,19 @@ describe('Button', () => {
   it('renders with secondary variant', () => {
     render(<Button variant="secondary">Secondary</Button>);
     const button = screen.getByRole('button', { name: /secondary/i });
-    expect(button).toHaveClass('bg-panel-default', 'border');
+    // The neutral outline every screen uses next to a primary action.
+    expect(button).toHaveClass('action-surface', 'border');
+  });
+
+  it('renders the edit and delete outline variants used for row actions', () => {
+    render(
+      <>
+        <Button variant="edit">Edit</Button>
+        <Button variant="delete">Delete</Button>
+      </>,
+    );
+    expect(screen.getByRole('button', { name: 'Edit' })).toHaveClass('action-edit', 'border-2');
+    expect(screen.getByRole('button', { name: 'Delete' })).toHaveClass('action-delete', 'border-2');
   });
 
   it('renders with ghost variant', () => {
@@ -72,22 +84,14 @@ describe('Button', () => {
   });
 
   it('renders start icon', () => {
-    render(
-      <Button startIcon={<span data-testid="start-icon">⭐</span>}>
-        With icon
-      </Button>
-    );
+    render(<Button startIcon={<span data-testid="start-icon">⭐</span>}>With icon</Button>);
     const icon = screen.getByTestId('start-icon');
     expect(icon).toBeInTheDocument();
     expect(icon.parentElement).toHaveClass('mr-2');
   });
 
   it('renders end icon', () => {
-    render(
-      <Button endIcon={<span data-testid="end-icon">→</span>}>
-        With icon
-      </Button>
-    );
+    render(<Button endIcon={<span data-testid="end-icon">→</span>}>With icon</Button>);
     const icon = screen.getByTestId('end-icon');
     expect(icon).toBeInTheDocument();
     expect(icon.parentElement).toHaveClass('ml-2');
@@ -106,7 +110,7 @@ describe('Button', () => {
     render(
       <Button disabled onClick={handleClick}>
         Click
-      </Button>
+      </Button>,
     );
     const button = screen.getByRole('button', { name: /click/i });
     fireEvent.click(button);
@@ -118,7 +122,7 @@ describe('Button', () => {
     render(
       <Button isLoading onClick={handleClick}>
         Loading
-      </Button>
+      </Button>,
     );
     const button = screen.getByRole('button', { name: /loading/i });
     fireEvent.click(button);
@@ -137,7 +141,7 @@ describe('Button', () => {
     render(
       <Button className="bg-destructive text-slate-100" variant="primary">
         Merged
-      </Button>
+      </Button>,
     );
     const button = screen.getByRole('button', { name: /merged/i });
     expect(button).toHaveClass('bg-destructive', 'text-slate-100');
@@ -148,7 +152,7 @@ describe('Button', () => {
     render(
       <Button type="submit" title="Submit button">
         Submit
-      </Button>
+      </Button>,
     );
     const button = screen.getByRole('button', { name: /submit/i });
     expect(button).toHaveAttribute('type', 'submit');

@@ -643,12 +643,6 @@
     background: linear-gradient(135deg, var(--color-gradient-start), var(--color-gradient-end));
   }
 
-  .text-gradient-primary {
-    background: linear-gradient(135deg, var(--color-gradient-start), var(--color-gradient-end));
-    background-clip: text;
-    color: transparent;
-  }
-
   /* Transition utilities */
   .transition-fast {
     transition-duration: var(--transition-fast);

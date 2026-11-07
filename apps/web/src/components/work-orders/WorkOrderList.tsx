@@ -77,10 +77,7 @@ function readUrlFilter(name: string, allowed: readonly string[]): string {
 
 export function WorkOrderList({ clients, onCreate, onEdit }: WorkOrderListProps) {
   const { language, t } = useLanguage();
-  const neonActionButtonBaseClass =
-    'rounded-lg border-2 px-4 transition-all duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] active:translate-y-0';
-  const editActionButtonClass = `${neonActionButtonBaseClass} action-edit`;
-  const deleteActionButtonClass = `${neonActionButtonBaseClass} action-delete`;
+  const rowActionButtonClass = 'rounded-lg px-4';
   const [workOrders, setWorkOrders] = useState<WorkOrderClientSummary[]>([]);
   const [viewMode, setViewMode] = useState<ViewMode>('table');
   const [loading, setLoading] = useState(true);
@@ -227,11 +224,7 @@ export function WorkOrderList({ clients, onCreate, onEdit }: WorkOrderListProps)
             onChange={setViewMode}
             ariaLabel={t('workOrders.view')}
           />
-          <Button
-            onClick={onCreate}
-            className="action-brand min-h-11 rounded-xl border-2 px-6 transition-all duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] active:translate-y-0"
-            variant="ghost"
-          >
+          <Button onClick={onCreate} className="min-h-11 rounded-xl px-6" variant="primary">
             {t('workOrders.new')}
           </Button>
         </div>
@@ -402,18 +395,18 @@ export function WorkOrderList({ clients, onCreate, onEdit }: WorkOrderListProps)
                             </p>
                             <div className="flex gap-2 justify-end">
                               <Button
-                                variant="ghost"
+                                variant="secondary"
                                 size="sm"
-                                className="action-surface rounded-lg border transition-colors duration-200"
+                                className="rounded-lg"
                                 onClick={() => setConfirmDelete(null)}
                                 disabled={deleting === wo.id}
                               >
                                 {t('common.cancel')}
                               </Button>
                               <Button
-                                variant="ghost"
+                                variant="delete"
                                 size="sm"
-                                className={deleteActionButtonClass}
+                                className={rowActionButtonClass}
                                 onClick={() => handleDelete(wo.id)}
                                 isLoading={deleting === wo.id}
                               >
@@ -444,18 +437,18 @@ export function WorkOrderList({ clients, onCreate, onEdit }: WorkOrderListProps)
                       </p>
                       <div className="flex gap-2 justify-end">
                         <Button
-                          variant="ghost"
+                          variant="secondary"
                           size="sm"
-                          className="action-surface rounded-lg border transition-colors duration-200"
+                          className="rounded-lg"
                           onClick={() => setConfirmDelete(null)}
                           disabled={deleting === wo.id}
                         >
                           {t('common.cancel')}
                         </Button>
                         <Button
-                          variant="ghost"
+                          variant="delete"
                           size="sm"
-                          className={deleteActionButtonClass}
+                          className={rowActionButtonClass}
                           onClick={() => handleDelete(wo.id)}
                           isLoading={deleting === wo.id}
                         >
@@ -490,14 +483,15 @@ export function WorkOrderList({ clients, onCreate, onEdit }: WorkOrderListProps)
                         <Badge variant="tone" className={priorityBadgeClass(wo.priority)}>
                           {priorityLabel(wo.priority, language)}
                         </Badge>
-                        {wo.dueDate && (
-                          <Badge variant={isOverdue(wo, todayKey) ? 'error' : 'neutral'}>
-                            {formatDateOnly(wo.dueDate, language)}
-                          </Badge>
-                        )}
-                        {isOverdue(wo, todayKey) && (
-                          <Badge variant="error">{t('workOrders.overdue')}</Badge>
-                        )}
+                        {wo.dueDate &&
+                          (isOverdue(wo, todayKey) ? (
+                            // One badge says it is overdue and when it was due.
+                            <Badge variant="error">
+                              {`${t('workOrders.overdue')} · ${formatDateOnly(wo.dueDate, language)}`}
+                            </Badge>
+                          ) : (
+                            <Badge variant="neutral">{formatDateOnly(wo.dueDate, language)}</Badge>
+                          ))}
                         {wo.totalPriceMinor !== undefined && wo.currency && (
                           <Badge variant="neutral">
                             {formatMoney(wo.totalPriceMinor, wo.currency)}
@@ -507,9 +501,9 @@ export function WorkOrderList({ clients, onCreate, onEdit }: WorkOrderListProps)
                     </div>
                     <div className="flex gap-2">
                       <Button
-                        variant="ghost"
+                        variant="edit"
                         size="sm"
-                        className={editActionButtonClass}
+                        className={rowActionButtonClass}
                         onClick={() => onEdit?.(wo)}
                         disabled={confirmDelete !== null}
                         aria-label={t('workOrders.editNamed', { name: wo.title })}
@@ -517,9 +511,9 @@ export function WorkOrderList({ clients, onCreate, onEdit }: WorkOrderListProps)
                         {t('common.edit')}
                       </Button>
                       <Button
-                        variant="ghost"
+                        variant="delete"
                         size="sm"
-                        className={deleteActionButtonClass}
+                        className={rowActionButtonClass}
                         onClick={wo.hasPayments ? undefined : () => setConfirmDelete(wo.id)}
                         disabled={confirmDelete !== null || deleting === wo.id}
                         // A blocked delete stays focusable, so its reason can be reached.

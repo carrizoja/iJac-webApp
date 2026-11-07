@@ -254,7 +254,7 @@ export function PaymentsPanel({ workOrderId, workOrderStatus }: PaymentsPanelPro
         {canRecord && (
           <Button
             type="button"
-            variant="secondary"
+            variant="primary"
             className="work-order-print-hidden"
             onClick={openRecord}
           >

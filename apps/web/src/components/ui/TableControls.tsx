@@ -143,11 +143,9 @@ export function RowActionButton({
 }: RowActionButtonProps) {
   return (
     <Button
-      variant="ghost"
+      variant={action}
       size="sm"
-      className={`h-9 w-9 rounded-lg border-2 px-0 transition-all duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] active:translate-y-0 ${
-        action === 'edit' ? 'action-edit' : 'action-delete'
-      }`}
+      className="h-9 w-9 rounded-lg px-0"
       onClick={disabledReason === undefined ? onClick : undefined}
       disabled={disabled}
       // A blocked action stays focusable, so keyboard and screen-reader users reach its reason.

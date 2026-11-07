@@ -268,8 +268,8 @@ export function WorkOrderForm({ clients, workOrder, onSaved, onCancel }: WorkOrd
       <div className="flex flex-col-reverse gap-3 border-t border-border-subtle pt-5 sm:flex-row sm:justify-end">
         <Button
           type="button"
-          variant="ghost"
-          className="action-surface min-h-11 rounded-xl border px-5 transition-colors duration-200"
+          variant="secondary"
+          className="min-h-11 rounded-xl px-5"
           onClick={onCancel}
         >
           {t('common.cancel')}

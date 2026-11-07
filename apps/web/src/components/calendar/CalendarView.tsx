@@ -57,10 +57,6 @@ const weekdayKeys = [
 
 export function CalendarView() {
   const { language, t } = useLanguage();
-  const neutralControlButtonClass =
-    'action-surface rounded-lg border transition-colors duration-200';
-  const primaryActionButtonClass =
-    'action-brand rounded-lg border-2 transition-all duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] active:translate-y-0';
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [loading, setLoading] = useState(true);
@@ -182,27 +178,20 @@ export function CalendarView() {
         <h2 className="text-lg font-medium capitalize text-fg-primary">{monthLabel}</h2>
         <div className="flex flex-wrap items-center gap-2">
           <Button
-            variant="ghost"
+            variant="secondary"
             size="sm"
-            className={neutralControlButtonClass}
             onClick={() =>
               setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1))
             }
           >
             {t('calendar.previous')}
           </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            className={neutralControlButtonClass}
-            onClick={() => setCurrentMonth(new Date())}
-          >
+          <Button variant="secondary" size="sm" onClick={() => setCurrentMonth(new Date())}>
             {t('calendar.today')}
           </Button>
           <Button
-            variant="ghost"
+            variant="secondary"
             size="sm"
-            className={neutralControlButtonClass}
             onClick={() =>
               setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1))
             }
@@ -210,9 +199,8 @@ export function CalendarView() {
             {t('calendar.next')}
           </Button>
           <Button
-            variant="ghost"
+            variant="primary"
             size="sm"
-            className={primaryActionButtonClass}
             onClick={handleSync}
             isLoading={syncing}
             aria-busy={syncing}
