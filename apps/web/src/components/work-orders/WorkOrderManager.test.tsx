@@ -81,6 +81,13 @@ describe('WorkOrderManager', () => {
     expect(listClients).toHaveBeenLastCalledWith(expect.objectContaining({ cursor: 'c1' }));
   });
 
+  it('leaves the page heading to the page, without repeating it', async () => {
+    listClients.mockResolvedValue({ items: [] });
+    render(<WorkOrderManager />);
+    await screen.findByRole('button', { name: 'Nueva orden' });
+    expect(screen.queryByRole('heading', { name: 'Órdenes de trabajo' })).not.toBeInTheDocument();
+  });
+
   describe('bringing the form into view', () => {
     const originalScroll = Element.prototype.scrollIntoView;
     afterEach(() => {

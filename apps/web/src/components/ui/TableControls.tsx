@@ -27,8 +27,9 @@ export function SortableHeader<K extends string>({
         className="inline-flex items-center gap-1 rounded uppercase tracking-wider hover:text-fg-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
       >
         {children}
-        <span aria-hidden="true" className={active ? 'text-fg-primary' : 'opacity-30'}>
-          {active && sort.direction === 'desc' ? '↓' : '↑'}
+        {/* Unsorted columns show a neutral double arrow, so they don't read as already sorted. */}
+        <span aria-hidden="true" className={active ? 'text-fg-primary' : 'opacity-40'}>
+          {active ? (sort.direction === 'desc' ? '↓' : '↑') : '↕'}
         </span>
       </button>
     </th>
