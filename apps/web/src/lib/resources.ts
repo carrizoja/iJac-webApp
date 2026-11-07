@@ -7,6 +7,7 @@ import type {
   PaginatedResponse,
   OrganizationProfile,
   OrganizationProfileInput,
+  CurrentMemberResponse,
   OrganizationProfileResponse,
   Payment,
   RecordPaymentInput,
@@ -119,6 +120,11 @@ export async function updateWorkOrder(
 
 export async function deleteWorkOrder(id: string): Promise<void> {
   return withToken((token) => apiDelete(`/work-orders/${id}`, token));
+}
+
+/** The signed-in member's role, used to show only the actions they may take. */
+export async function getCurrentMember(): Promise<CurrentMemberResponse> {
+  return withToken((token) => apiGet('/me', token));
 }
 
 export async function getOrganizationProfile(): Promise<OrganizationProfileResponse> {
