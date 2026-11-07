@@ -172,6 +172,24 @@ export function TodayDashboard() {
     };
   }, []);
 
+  /**
+   * Reloads the orders in the background after a refused payment: the balance may have changed
+   * elsewhere, so the row, the totals and the open form show what is really owed now.
+   */
+  const refreshAfterFailure = (workOrderId: string) => {
+    collectAllPages((cursor) => listWorkOrders({ cursor }))
+      .then((items) => {
+        setOrders({ kind: 'ready', items });
+        setPaying((current) =>
+          current?.id === workOrderId
+            ? (items.find((item) => item.id === workOrderId) ?? current)
+            : current,
+        );
+      })
+      // The form already shows why it was refused; a failed refresh keeps what is on screen.
+      .catch(() => undefined);
+  };
+
   /** Applies a recorded payment to its order, so the row and totals update without a reload. */
   const applyPayment = (payment: Payment) => {
     setOrders((current) =>
@@ -399,6 +417,7 @@ export function TodayDashboard() {
             applyPayment(payment);
             setRecorded(payment);
           }}
+          onFailed={() => refreshAfterFailure(paying.id)}
         />
       )}
       {receipt && <ReceiptPrintView payment={receipt} onClose={() => setReceipt(null)} />}

@@ -7,22 +7,37 @@ import {
   type WorkOrderClientSummary,
 } from '@ijac/shared';
 
-const { listWorkOrders, getCurrentMember, recordPayment, getCalendarConnectionStatus } = vi.hoisted(
-  () => ({
-    listWorkOrders: vi.fn(),
-    getCurrentMember: vi.fn(),
-    recordPayment: vi.fn(),
-    getCalendarConnectionStatus: vi.fn(),
-  }),
-);
-
-vi.mock('../../lib/resources', () => ({
+const mocks = vi.hoisted(() => ({
+  listWorkOrders: vi.fn(),
+  getCurrentMember: vi.fn(),
+  recordPayment: vi.fn(),
+  getCalendarConnectionStatus: vi.fn(),
+  ApiRequestError: class ApiRequestError extends Error {
+    constructor(
+      readonly code: string,
+      readonly fieldErrors?: Record<string, string>,
+    ) {
+      super(code);
+    }
+  },
+}));
+const {
   listWorkOrders,
   getCurrentMember,
   recordPayment,
-  ApiRequestError: class ApiRequestError extends Error {},
+  getCalendarConnectionStatus,
+  ApiRequestError,
+} = mocks;
+
+vi.mock('../../lib/resources', () => ({
+  listWorkOrders: mocks.listWorkOrders,
+  getCurrentMember: mocks.getCurrentMember,
+  recordPayment: mocks.recordPayment,
+  ApiRequestError: mocks.ApiRequestError,
 }));
-vi.mock('../../lib/calendar', () => ({ getCalendarConnectionStatus }));
+vi.mock('../../lib/calendar', () => ({
+  getCalendarConnectionStatus: mocks.getCalendarConnectionStatus,
+}));
 
 import { TodayDashboard } from './TodayDashboard';
 import { makePayment } from '../payments/fixtures';
@@ -336,6 +351,33 @@ describe('TodayDashboard', () => {
       await screen.findByText(/Pago registrado/);
       const row = within(owed).getByRole('link', { name: 'Grande' }).closest('li') as HTMLElement;
       expect(within(row).getByText('$ 8.000,00')).toBeInTheDocument();
+    });
+
+    it('keeps the form and refreshes the balance when the payment is refused', async () => {
+      // Someone else recorded part of it meanwhile, so 500,00 is now more than is owed.
+      listWorkOrders.mockResolvedValueOnce(owedOrders()).mockResolvedValueOnce({
+        items: owedOrders().items.map((item) =>
+          item.id === 'a' ? { ...item, paidMinor: 80000, remainingMinor: 20000 } : item,
+        ),
+      });
+      recordPayment.mockRejectedValue(
+        new ApiRequestError('PAYMENT_EXCEEDS_BALANCE', { amountMinor: 'too much' }),
+      );
+      render(<TodayDashboard />);
+      const owed = section('Cobros pendientes');
+
+      fireEvent.click(await within(owed).findByRole('button', { name: 'Registrar pago de Chico' }));
+      const dialog = await screen.findByRole('dialog');
+      fireEvent.click(within(dialog).getByRole('button', { name: 'Registrar' }));
+
+      expect(
+        await within(dialog).findByText('El importe supera el saldo pendiente ($ 200,00)'),
+      ).toBeInTheDocument();
+      expect(within(dialog).getByLabelText(/Importe/)).toHaveValue('500,00');
+      const row = within(owed).getByRole('link', { name: 'Chico' }).closest('li') as HTMLElement;
+      expect(within(row).getByText('$ 200,00')).toBeInTheDocument();
+      expect(screen.queryByText(/Pago registrado/)).not.toBeInTheDocument();
+      expect(listWorkOrders).toHaveBeenCalledTimes(2);
     });
 
     it('offers it only to admins', async () => {
