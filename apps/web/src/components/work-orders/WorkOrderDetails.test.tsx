@@ -114,8 +114,10 @@ describe('WorkOrderDetails', () => {
     ).toBeInTheDocument();
     expect(getWorkOrder).toHaveBeenCalledWith('work/order 1');
     expect(getClient).toHaveBeenCalledWith('client-1');
-    expect(screen.getByText('Acme Corp')).toBeInTheDocument();
-    expect(screen.getByText('Acme Argentina')).toBeInTheDocument();
+    // The header names the client and the due date; they are not repeated below it.
+    expect(screen.getAllByText(/Acme Corp/)).toHaveLength(1);
+    expect(screen.queryByRole('heading', { level: 2, name: 'Cliente' })).not.toBeInTheDocument();
+    expect(screen.getAllByText(/15 de agosto de 2026/)).toHaveLength(1);
     expect(screen.getByText('Validar la instalación y documentar resultados.')).toBeInTheDocument();
     expect(screen.getByText('Estado: En progreso')).toHaveClass('status-in-progress-badge');
     expect(screen.getByText('Prioridad: Alta')).toHaveClass('priority-high-badge');

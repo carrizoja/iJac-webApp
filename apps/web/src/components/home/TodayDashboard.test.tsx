@@ -69,14 +69,16 @@ describe('TodayDashboard', () => {
     const late = await within(attention).findByRole('link', { name: 'Reparar servidor' });
     expect(late).toHaveAttribute('href', '/work-orders/details?id=late');
     const lateRow = late.closest('li') as HTMLElement;
-    expect(within(lateRow).getByText('Vencida')).toBeInTheDocument();
+    // The 'Vencidas' group heading already says so; the date itself turns red.
+    expect(within(lateRow).queryByText('Vencida')).not.toBeInTheDocument();
+    expect(within(lateRow).getByText(/2 de noviembre/)).toHaveClass('text-destructive');
     expect(within(lateRow).getByText('Urgente')).toBeInTheDocument();
     expect(within(lateRow).getByText('Acme')).toBeInTheDocument();
 
     const soonRow = within(attention)
       .getByRole('link', { name: 'Instalar red' })
       .closest('li') as HTMLElement;
-    expect(within(soonRow).queryByText('Vencida')).not.toBeInTheDocument();
+    expect(within(soonRow).getByText(/9 de noviembre/)).not.toHaveClass('text-destructive');
     const links = within(attention).getAllByRole('link');
     expect(links.map((link) => link.textContent)).toEqual(['Reparar servidor', 'Instalar red']);
   });

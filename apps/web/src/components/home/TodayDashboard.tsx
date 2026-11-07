@@ -81,12 +81,12 @@ function OrderRow({ order, overdue }: { order: WorkOrderClientSummary; overdue?:
         <p className="text-sm text-fg-muted">{order.clientName}</p>
       </div>
       <div className="flex flex-wrap items-center gap-2 text-sm">
-        {overdue && (
-          <Badge variant="error" size="xs">
-            {t('home.overdueBadge')}
-          </Badge>
-        )}
-        <span className="tabular-nums text-fg-secondary">
+        {/* Overdue rows sit under the 'Vencidas' heading, so the date alone turns red. */}
+        <span
+          className={
+            overdue ? 'font-medium tabular-nums text-destructive' : 'tabular-nums text-fg-secondary'
+          }
+        >
           {t('home.dueOn', { date: formatDateOnly(order.dueDate, language) })}
         </span>
         <Badge variant="tone" size="xs" className={statusBadgeClass(order.status)}>

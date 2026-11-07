@@ -295,29 +295,17 @@ export function WorkOrderDetails() {
 
       <PaymentsPanel workOrderId={workOrder.id} workOrderStatus={workOrder.status} />
 
-      <div className="grid gap-5 lg:grid-cols-[minmax(0,1.5fr)_minmax(18rem,0.7fr)]">
-        <Panel size="lg" className="border border-border-default" data-print-panel>
-          <h2 className="text-sm font-semibold uppercase tracking-wider text-fg-muted">
-            {t('workOrders.description')}
-          </h2>
-          <p className="mt-4 whitespace-pre-wrap text-base leading-7 text-fg-secondary">
-            {workOrder.description?.trim() || t('workOrders.noDescription')}
-          </p>
-        </Panel>
-
-        <Panel size="lg" className="border border-border-default" data-print-panel>
-          <h2 className="text-sm font-semibold uppercase tracking-wider text-fg-muted">
-            {t('workOrders.client')}
-          </h2>
-          <p className="mt-4 text-xl font-semibold text-fg-primary">{client.name}</p>
-          {client.organization?.trim() ? (
-            <p className="mt-1 text-sm text-fg-secondary">{client.organization}</p>
-          ) : null}
-        </Panel>
-      </div>
+      <Panel size="lg" className="border border-border-default" data-print-panel>
+        <h2 className="text-sm font-semibold uppercase tracking-wider text-fg-muted">
+          {t('workOrders.description')}
+        </h2>
+        <p className="mt-4 whitespace-pre-wrap text-base leading-7 text-fg-secondary">
+          {workOrder.description?.trim() || t('workOrders.noDescription')}
+        </p>
+      </Panel>
 
       <Panel size="lg" className="border border-border-default" data-print-panel>
-        <dl className="grid gap-6 sm:grid-cols-4">
+        <dl className="grid gap-6 sm:grid-cols-3">
           <div>
             <dt className="text-xs font-semibold uppercase tracking-wider text-fg-muted">
               {t('workOrders.totalPrice')}
@@ -327,12 +315,6 @@ export function WorkOrderDetails() {
                 ? formatMoney(workOrder.totalPriceMinor, workOrder.currency)
                 : t('workOrders.noPrice')}
             </dd>
-          </div>
-          <div>
-            <dt className="text-xs font-semibold uppercase tracking-wider text-fg-muted">
-              {t('workOrders.due')}
-            </dt>
-            <dd className="mt-2 text-sm text-fg-primary">{dueDate}</dd>
           </div>
           <div>
             <dt className="text-xs font-semibold uppercase tracking-wider text-fg-muted">
