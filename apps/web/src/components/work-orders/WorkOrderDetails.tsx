@@ -265,7 +265,9 @@ export function WorkOrderDetails() {
             </Badge>
             {overdue && <Badge variant="error">{t('workOrders.overdue')}</Badge>}
             <span
-              className={overdue ? 'text-sm font-medium text-destructive' : 'text-sm text-fg-muted'}
+              className={
+                overdue ? 'text-sm font-medium text-destructive-text' : 'text-sm text-fg-muted'
+              }
             >
               {t('workOrders.shareMessageDue', { value: dueDate })}
             </span>

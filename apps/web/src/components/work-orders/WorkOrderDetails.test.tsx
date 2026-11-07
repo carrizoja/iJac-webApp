@@ -331,6 +331,7 @@ describe('WorkOrderDetails', () => {
           'header',
         ) as HTMLElement;
         expect(within(header).getByText('Vencida')).toBeInTheDocument();
+        expect(within(header).getByText(/^Vencimiento/)).toHaveClass('text-destructive-text');
       });
 
       it('does not flag a completed order', async () => {
