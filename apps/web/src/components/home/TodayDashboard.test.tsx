@@ -7,15 +7,25 @@ import {
   type WorkOrderClientSummary,
 } from '@ijac/shared';
 
-const { listWorkOrders, getCalendarConnectionStatus } = vi.hoisted(() => ({
-  listWorkOrders: vi.fn(),
-  getCalendarConnectionStatus: vi.fn(),
-}));
+const { listWorkOrders, getCurrentMember, recordPayment, getCalendarConnectionStatus } = vi.hoisted(
+  () => ({
+    listWorkOrders: vi.fn(),
+    getCurrentMember: vi.fn(),
+    recordPayment: vi.fn(),
+    getCalendarConnectionStatus: vi.fn(),
+  }),
+);
 
-vi.mock('../../lib/resources', () => ({ listWorkOrders }));
+vi.mock('../../lib/resources', () => ({
+  listWorkOrders,
+  getCurrentMember,
+  recordPayment,
+  ApiRequestError: class ApiRequestError extends Error {},
+}));
 vi.mock('../../lib/calendar', () => ({ getCalendarConnectionStatus }));
 
 import { TodayDashboard } from './TodayDashboard';
+import { makePayment } from '../payments/fixtures';
 
 function order(overrides: Partial<WorkOrderClientSummary>): WorkOrderClientSummary {
   return {
@@ -39,6 +49,7 @@ describe('TodayDashboard', () => {
     vi.useFakeTimers({ toFake: ['Date'] });
     vi.setSystemTime(new Date(2026, 10, 6, 9, 0));
     listWorkOrders.mockResolvedValue({ items: [] });
+    getCurrentMember.mockResolvedValue({ role: 'admin' });
     getCalendarConnectionStatus.mockResolvedValue({ connected: true, status: 'connected' });
   });
 
@@ -258,5 +269,91 @@ describe('TodayDashboard', () => {
     ).toBeInTheDocument();
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
     expect(listWorkOrders).toHaveBeenCalledTimes(2);
+  });
+
+  describe('recording a payment from Cobros pendientes', () => {
+    const owedOrders = () => ({
+      items: [
+        order({
+          id: 'b',
+          title: 'Grande',
+          totalPriceMinor: 900000,
+          paidMinor: 0,
+          remainingMinor: 900000,
+          currency: Currency.ARS,
+        }),
+        order({
+          id: 'a',
+          title: 'Chico',
+          totalPriceMinor: 100000,
+          paidMinor: 50000,
+          remainingMinor: 50000,
+          currency: Currency.ARS,
+        }),
+      ],
+    });
+
+    it('records a payment from the row, prefilled with what is owed, without leaving Hoy', async () => {
+      listWorkOrders.mockResolvedValue(owedOrders());
+      recordPayment.mockResolvedValue(
+        makePayment({ workOrderId: 'a', amountMinor: 50000, receiptNumber: 42 }),
+      );
+      render(<TodayDashboard />);
+      const owed = section('Cobros pendientes');
+
+      fireEvent.click(await within(owed).findByRole('button', { name: 'Registrar pago de Chico' }));
+      const dialog = await screen.findByRole('dialog');
+      expect(within(dialog).getByLabelText(/Importe/)).toHaveValue('500,00');
+      fireEvent.click(within(dialog).getByRole('button', { name: 'Registrar' }));
+
+      expect(await screen.findByText('Pago registrado · Recibo 0001-00000042')).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Ver recibo' })).toBeInTheDocument();
+      expect(recordPayment).toHaveBeenCalledWith(
+        'a',
+        expect.objectContaining({ amountMinor: 50000 }),
+      );
+      // Paid in full: the row leaves the list and the total drops by the amount paid.
+      expect(within(owed).queryByRole('link', { name: 'Chico' })).not.toBeInTheDocument();
+      expect(
+        within(within(owed).getByTestId('owed-totals')).getByText('$ 9.000,00'),
+      ).toBeInTheDocument();
+      expect(listWorkOrders).toHaveBeenCalledTimes(1);
+    });
+
+    it('keeps a partly paid order in the list with what is still owed', async () => {
+      listWorkOrders.mockResolvedValue(owedOrders());
+      recordPayment.mockResolvedValue(makePayment({ workOrderId: 'b', amountMinor: 100000 }));
+      render(<TodayDashboard />);
+      const owed = section('Cobros pendientes');
+
+      fireEvent.click(
+        await within(owed).findByRole('button', { name: 'Registrar pago de Grande' }),
+      );
+      const dialog = await screen.findByRole('dialog');
+      fireEvent.change(within(dialog).getByLabelText(/Importe/), { target: { value: '1.000,00' } });
+      fireEvent.click(within(dialog).getByRole('button', { name: 'Registrar' }));
+
+      await screen.findByText(/Pago registrado/);
+      const row = within(owed).getByRole('link', { name: 'Grande' }).closest('li') as HTMLElement;
+      expect(within(row).getByText('$ 8.000,00')).toBeInTheDocument();
+    });
+
+    it('offers it only to admins', async () => {
+      listWorkOrders.mockResolvedValue(owedOrders());
+      getCurrentMember.mockResolvedValue({ role: 'member' });
+      render(<TodayDashboard />);
+
+      await within(section('Cobros pendientes')).findByRole('link', { name: 'Grande' });
+      expect(screen.queryByRole('button', { name: /Registrar pago/ })).not.toBeInTheDocument();
+    });
+
+    it('does not offer it when the role cannot be read', async () => {
+      listWorkOrders.mockResolvedValue(owedOrders());
+      getCurrentMember.mockRejectedValue(new Error('network'));
+      render(<TodayDashboard />);
+
+      await within(section('Cobros pendientes')).findByRole('link', { name: 'Grande' });
+      expect(screen.queryByRole('button', { name: /Registrar pago/ })).not.toBeInTheDocument();
+    });
   });
 });

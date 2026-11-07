@@ -1,12 +1,22 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
-import { formatMoney, type Currency, type WorkOrderClientSummary } from '@ijac/shared';
-import { listWorkOrders } from '../../lib/resources';
+import {
+  OrganizationMemberRole,
+  formatMoney,
+  formatReceiptNumber,
+  type Currency,
+  type Payment,
+  type WorkOrderClientSummary,
+} from '@ijac/shared';
+import { getCurrentMember, listWorkOrders } from '../../lib/resources';
+import { formatMoneyInput } from '../../lib/money';
 import { getCalendarConnectionStatus } from '../../lib/calendar';
 import { collectAllPages } from '../../lib/collectAllPages';
 import { useLanguage } from '../../hooks/useLanguage';
 import { formatDateOnly, localeFor, priorityLabel, statusLabel } from '../../i18n/format';
 import type { TranslationKey } from '../../i18n/translations';
-import { Alert, Badge, LoadingState, Panel } from '../ui';
+import { Alert, Badge, Button, LoadingState, Panel } from '../ui';
+import { RecordPaymentDialog } from '../payments/RecordPaymentDialog';
+import { ReceiptPrintView } from '../payments/ReceiptPrintView';
 import { priorityBadgeClass, statusBadgeClass } from '../work-orders/workOrderBadges';
 import { localDateKey, summarizeToday } from './todaySummary';
 
@@ -145,6 +155,44 @@ export function TodayDashboard() {
     };
   }, [ordersAttempt]);
 
+  /** Only admins may record payments; until the role is known, nobody is offered it. */
+  const [canRecord, setCanRecord] = useState(false);
+  /** The owed order whose payment is being recorded. */
+  const [paying, setPaying] = useState<WorkOrderClientSummary | null>(null);
+  const [recorded, setRecorded] = useState<Payment | null>(null);
+  const [receipt, setReceipt] = useState<Payment | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    getCurrentMember()
+      .then((member) => active && setCanRecord(member.role === OrganizationMemberRole.ADMIN))
+      .catch(() => active && setCanRecord(false));
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  /** Applies a recorded payment to its order, so the row and totals update without a reload. */
+  const applyPayment = (payment: Payment) => {
+    setOrders((current) =>
+      current.kind !== 'ready'
+        ? current
+        : {
+            kind: 'ready',
+            items: current.items.map((item) =>
+              item.id !== payment.workOrderId
+                ? item
+                : {
+                    ...item,
+                    paidMinor: (item.paidMinor ?? 0) + payment.amountMinor,
+                    remainingMinor: (item.remainingMinor ?? 0) - payment.amountMinor,
+                    hasPayments: true,
+                  },
+            ),
+          },
+    );
+  };
+
   useEffect(() => {
     let active = true;
     getCalendarConnectionStatus()
@@ -179,6 +227,17 @@ export function TodayDashboard() {
           action={{ label: t('common.retry'), onClick: () => setOrdersAttempt((n) => n + 1) }}
         >
           {t('home.loadError')}
+        </Alert>
+      )}
+
+      {recorded && (
+        <Alert
+          type="success"
+          role="status"
+          action={{ label: t('payments.viewReceipt'), onClick: () => setReceipt(recorded) }}
+          onClose={() => setRecorded(null)}
+        >
+          {t('payments.recorded', { number: formatReceiptNumber(recorded.receiptNumber) })}
         </Alert>
       )}
 
@@ -272,9 +331,25 @@ export function TodayDashboard() {
                               {order.clientName} · {statusLabel(order.status, language)}
                             </p>
                           </div>
-                          <span className="font-semibold tabular-nums text-fg-primary">
-                            {money(order.remainingMinor ?? 0, order.currency as Currency)}
-                          </span>
+                          <div className="flex items-center gap-3">
+                            <span className="font-semibold tabular-nums text-fg-primary">
+                              {money(order.remainingMinor ?? 0, order.currency as Currency)}
+                            </span>
+                            {canRecord && (
+                              <Button
+                                type="button"
+                                variant="secondary"
+                                size="sm"
+                                aria-label={t('home.owed.recordNamed', { name: order.title })}
+                                onClick={() => {
+                                  setRecorded(null);
+                                  setPaying(order);
+                                }}
+                              >
+                                {t('payments.record')}
+                              </Button>
+                            )}
+                          </div>
                         </li>
                       ))}
                     </ul>
@@ -312,6 +387,21 @@ export function TodayDashboard() {
           </Block>
         </div>
       </div>
+      {paying && (
+        <RecordPaymentDialog
+          isOpen
+          onClose={() => setPaying(null)}
+          workOrderId={paying.id}
+          remainingMinor={paying.remainingMinor ?? 0}
+          currency={paying.currency as Currency}
+          initialAmount={formatMoneyInput(paying.remainingMinor ?? 0)}
+          onRecorded={(payment) => {
+            applyPayment(payment);
+            setRecorded(payment);
+          }}
+        />
+      )}
+      {receipt && <ReceiptPrintView payment={receipt} onClose={() => setReceipt(null)} />}
     </div>
   );
 }
