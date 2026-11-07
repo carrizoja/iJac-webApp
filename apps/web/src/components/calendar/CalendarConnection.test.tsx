@@ -1,5 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
+import postcss from 'postcss';
+import tailwindcss from 'tailwindcss';
+import config from '../../../tailwind.config.mjs';
 
 const { getCalendarConnectionStatus, startCalendarConnection } = vi.hoisted(() => ({
   getCalendarConnectionStatus: vi.fn(),
@@ -12,6 +15,21 @@ vi.mock('../../lib/calendar', () => ({
 }));
 
 import { CalendarConnection } from './CalendarConnection';
+
+/** CSS Tailwind generates for one class; empty when the theme has no such color. */
+async function cssFor(className: string): Promise<string> {
+  const result = await postcss([
+    tailwindcss({ ...config, content: [{ raw: `<span class="${className}"></span>` }] }),
+  ]).process('@tailwind utilities;', { from: undefined });
+  return result.css;
+}
+
+async function statusDotColor(): Promise<string> {
+  const dot = (await screen.findByTestId('calendar-connection-dot')) as HTMLElement;
+  const background = [...dot.classList].find((name) => name.startsWith('bg-'));
+  expect(background).toBeDefined();
+  return cssFor(background!);
+}
 
 describe('CalendarConnection', () => {
   beforeEach(() => {
@@ -32,6 +50,19 @@ describe('CalendarConnection', () => {
     expect(screen.getByText('Conectado')).toBeInTheDocument();
     expect(getCalendarConnectionStatus).toHaveBeenCalledTimes(1);
     await waitFor(() => expect(window.location.search).toBe('?tab=month'));
+  });
+
+  it('colors the status dot green when connected and grey when not', async () => {
+    getCalendarConnectionStatus.mockResolvedValue({ connected: true, status: 'active' });
+    const { unmount } = render(<CalendarConnection />);
+    await screen.findByText('Conectado');
+    expect(await statusDotColor()).toContain('var(--color-status-completed)');
+    unmount();
+
+    getCalendarConnectionStatus.mockResolvedValue({ connected: false, status: 'disconnected' });
+    render(<CalendarConnection />);
+    await screen.findByText('Desconectado');
+    expect(await statusDotColor()).toContain('var(--color-fg-tertiary)');
   });
 
   it('announces a failed callback with retry guidance and consumes the query parameter', async () => {
