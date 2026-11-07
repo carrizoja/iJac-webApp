@@ -39,6 +39,15 @@ export function formatDateTime(value: string | undefined, language: Language): s
   }).format(date);
 }
 
+/** Weekday and date without the year, e.g. "miércoles, 18 de noviembre". */
+export function formatWeekdayDate(value: Date, language: Language): string {
+  return new Intl.DateTimeFormat(localeFor(language), {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+  }).format(value);
+}
+
 export function formatMonthYear(value: Date, language: Language): string {
   return new Intl.DateTimeFormat(localeFor(language), { month: 'long', year: 'numeric' }).format(
     value,

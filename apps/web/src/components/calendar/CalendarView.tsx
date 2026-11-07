@@ -1,9 +1,10 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import type { CalendarEvent } from '@ijac/shared';
+import { WorkOrderStatus, type CalendarEvent } from '@ijac/shared';
 import { listCalendarEvents, syncCalendar } from '../../lib/calendar';
 import { Button, Alert, EmptyState, LoadingState, Panel } from '../ui';
 import { useLanguage } from '../../hooks/useLanguage';
-import { formatDateOnly, formatMonthYear } from '../../i18n/format';
+import { formatDateOnly, formatMonthYear, formatWeekdayDate, statusLabel } from '../../i18n/format';
+import { isOverdue, localDateKey } from '../home/todaySummary';
 import type { TranslationKey } from '../../i18n/translations';
 import { CalendarDays, Check, TriangleAlert } from 'lucide-react';
 
@@ -34,6 +35,25 @@ const statusColorClass: Record<string, string> = {
   completed: 'bg-status-completed',
   cancelled: 'bg-status-cancelled',
 };
+
+/** Statuses in the order they appear in the legend. */
+const legendStatuses = [
+  WorkOrderStatus.OPEN,
+  WorkOrderStatus.IN_PROGRESS,
+  WorkOrderStatus.COMPLETED,
+  WorkOrderStatus.CANCELLED,
+] as const;
+
+/** Weeks start on Monday, as in Argentina. */
+const weekdayKeys = [
+  'weekday.mon',
+  'weekday.tue',
+  'weekday.wed',
+  'weekday.thu',
+  'weekday.fri',
+  'weekday.sat',
+  'weekday.sun',
+] as const;
 
 export function CalendarView() {
   const { language, t } = useLanguage();
@@ -73,8 +93,9 @@ export function CalendarView() {
 
   const days = useMemo(() => {
     const start = startOfMonth(currentMonth);
-    const startDayOfWeek = start.getDay();
-    const gridStart = addDays(start, -startDayOfWeek);
+    // Days since the last Monday: getDay() counts from Sunday (0).
+    const daysSinceMonday = (start.getDay() + 6) % 7;
+    const gridStart = addDays(start, -daysSinceMonday);
     const daysArray: Date[] = [];
     for (let i = 0; i < 42; i++) {
       daysArray.push(addDays(gridStart, i));
@@ -93,6 +114,7 @@ export function CalendarView() {
   }, [events]);
 
   const monthLabel = formatMonthYear(currentMonth, language);
+  const todayKey = localDateKey(new Date());
 
   const handleSync = async () => {
     setSyncing(true);
@@ -200,62 +222,112 @@ export function CalendarView() {
         </div>
       </div>
 
-      <div className="grid grid-cols-7 gap-1 text-center text-xs text-fg-muted">
-        {(
-          [
-            'weekday.sun',
-            'weekday.mon',
-            'weekday.tue',
-            'weekday.wed',
-            'weekday.thu',
-            'weekday.fri',
-            'weekday.sat',
-          ] as const
-        ).map((key) => (
+      <div
+        className="hidden grid-cols-7 gap-1 text-center text-xs text-fg-muted sm:grid"
+        data-testid="calendar-weekdays"
+      >
+        {weekdayKeys.map((key) => (
           <div key={key}>{t(key)}</div>
         ))}
       </div>
 
-      <div className="grid grid-cols-7 gap-1">
+      {/* A 7-column grid from `sm` up; on phones, a list of the days that have orders. */}
+      <div className="grid grid-cols-1 gap-2 sm:grid-cols-7 sm:gap-1">
         {days.map((day) => {
-          const dayEvents = eventsByDay.get(toIsoDate(day)) ?? [];
+          const dayKey = toIsoDate(day);
+          const dayEvents = eventsByDay.get(dayKey) ?? [];
           const isCurrentMonth = day.getMonth() === currentMonth.getMonth();
+          const isToday = dayKey === todayKey;
           return (
             <div
-              key={day.toISOString()}
-              className={`min-h-[6rem] rounded-md border p-2 ${
-                isCurrentMonth
-                  ? 'border-border-primary bg-bg-secondary'
-                  : 'border-border-muted bg-bg-tertiary'
+              key={dayKey}
+              data-testid="calendar-day"
+              data-date={dayKey}
+              aria-current={isToday ? 'date' : undefined}
+              className={`rounded-md border p-2 sm:min-h-[6rem] ${
+                dayEvents.length === 0 ? 'hidden sm:block' : ''
+              } ${
+                isToday
+                  ? 'border-focus bg-bg-secondary ring-1 ring-focus'
+                  : isCurrentMonth
+                    ? 'border-border-primary bg-bg-secondary'
+                    : 'border-border-muted bg-bg-tertiary'
               }`}
             >
               <div
-                className={`text-right text-sm ${isCurrentMonth ? 'text-fg-primary' : 'text-fg-muted'}`}
+                className={`hidden text-right text-sm sm:block ${
+                  isToday
+                    ? 'font-semibold text-focus'
+                    : isCurrentMonth
+                      ? 'text-fg-primary'
+                      : 'text-fg-muted'
+                }`}
               >
                 {day.getDate()}
               </div>
+              <div
+                className={`text-sm font-medium first-letter:uppercase sm:hidden ${
+                  isToday ? 'text-focus' : 'text-fg-primary'
+                }`}
+              >
+                {formatWeekdayDate(day, language)}
+              </div>
               <div className="mt-1 space-y-1">
-                {dayEvents.map((event) => (
-                  <a
-                    key={event.id}
-                    href={`/work-orders/details?id=${encodeURIComponent(event.workOrderId)}`}
-                    className="flex items-center gap-1 truncate rounded bg-bg-accent/40 px-1.5 py-0.5 text-xs text-fg-primary transition-colors hover:bg-bg-accent/60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
-                    // The grid cell is not announced, so the link names its day.
-                    aria-label={`${t('calendar.viewDetails', { name: event.title })}, ${formatDateOnly(toIsoDate(day), language)}`}
-                    title={t('calendar.viewDetails', { name: event.title })}
-                  >
-                    <span
-                      className={`h-1.5 w-1.5 flex-shrink-0 rounded-full ${statusColorClass[event.status] ?? 'bg-fg-muted'}`}
-                      aria-hidden="true"
-                    />
-                    {event.title}
-                  </a>
-                ))}
+                {dayEvents.map((event) => {
+                  const overdue = isOverdue(event, todayKey);
+                  const details = [
+                    t('calendar.viewDetails', { name: event.title }),
+                    formatDateOnly(dayKey, language),
+                    statusLabel(event.status, language),
+                    ...(overdue ? [t('workOrders.overdue')] : []),
+                  ];
+                  return (
+                    <a
+                      key={event.id}
+                      href={`/work-orders/details?id=${encodeURIComponent(event.workOrderId)}`}
+                      data-overdue={overdue ? 'true' : undefined}
+                      className={`flex items-center gap-1 truncate rounded bg-bg-accent/40 px-1.5 py-1 text-sm text-fg-primary transition-colors hover:bg-bg-accent/60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus sm:py-0.5 sm:text-xs ${
+                        overdue ? 'ring-1 ring-inset ring-destructive-text' : ''
+                      }`}
+                      // The grid cell is not announced, so the link names its day and status.
+                      aria-label={details.join(', ')}
+                      title={t('calendar.viewDetails', { name: event.title })}
+                    >
+                      <span
+                        className={`h-1.5 w-1.5 flex-shrink-0 rounded-full ${statusColorClass[event.status] ?? 'bg-fg-muted'}`}
+                        aria-hidden="true"
+                      />
+                      {event.title}
+                    </a>
+                  );
+                })}
               </div>
             </div>
           );
         })}
       </div>
+
+      <ul
+        aria-label={t('calendar.legend')}
+        className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-fg-secondary"
+      >
+        {legendStatuses.map((status) => (
+          <li key={status} className="flex items-center gap-1.5">
+            <span
+              className={`h-1.5 w-1.5 rounded-full ${statusColorClass[status]}`}
+              aria-hidden="true"
+            />
+            {statusLabel(status, language)}
+          </li>
+        ))}
+        <li className="flex items-center gap-1.5">
+          <span
+            className="h-3 w-5 rounded ring-1 ring-inset ring-destructive-text"
+            aria-hidden="true"
+          />
+          {t('workOrders.overdue')}
+        </li>
+      </ul>
 
       {syncResult && syncAlert && (
         <Alert

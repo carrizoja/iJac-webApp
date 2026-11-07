@@ -321,6 +321,7 @@ export const es = {
   'calendar.syncing': 'Sincronizando...',
   'calendar.sync': 'Sincronizar con Google',
   'calendar.viewDetails': 'Ver detalles de {name}',
+  'calendar.legend': 'Referencias',
   'calendar.syncSummary':
     'Sincronización: {succeeded} {succeededLabel}, {failed} {failedLabel} de {attempted} {attemptedLabel}.',
   'calendar.succeededOne': 'exitosa',
@@ -663,6 +664,7 @@ export const en = {
   'calendar.syncing': 'Syncing...',
   'calendar.sync': 'Sync with Google',
   'calendar.viewDetails': 'View details for {name}',
+  'calendar.legend': 'Legend',
   'calendar.syncSummary':
     'Sync: {succeeded} {succeededLabel}, {failed} {failedLabel} out of {attempted} {attemptedLabel}.',
   'calendar.succeededOne': 'succeeded',
