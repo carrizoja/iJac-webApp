@@ -160,7 +160,12 @@ describe('FirestoreWorkOrderRepository pricing', () => {
         createdAt: stamp,
         updatedAt: stamp,
       }),
-      ref: { collection: () => ({ get: async () => ({ docs: [] }) }) },
+      ref: {
+        collection: () => ({
+          get: async () => ({ docs: [] }),
+          limit: () => ({ get: async () => ({ docs: [] }) }),
+        }),
+      },
     };
     const query = {
       orderBy: jest.fn().mockReturnThis(),
@@ -193,9 +198,9 @@ describe('FirestoreWorkOrderRepository pricing', () => {
       }),
       ref: {
         collection: (name: string) => {
-          if (name !== 'payments' || payments === null)
-            throw new Error(`unexpected read of ${name}`);
-          return { get: async () => ({ docs: payments.map((p) => ({ data: () => p })) }) };
+          if (name !== 'payments') throw new Error(`unexpected read of ${name}`);
+          const docs = (payments ?? []).map((p) => ({ data: () => p }));
+          return { get: async () => ({ docs }), limit: () => ({ get: async () => ({ docs }) }) };
         },
       },
     });
@@ -222,6 +227,80 @@ describe('FirestoreWorkOrderRepository pricing', () => {
     );
     expect(items[1]).not.toHaveProperty('paidMinor');
     expect(items[1]).not.toHaveProperty('remainingMinor');
+  });
+
+  it('flags every summary with whether it has any payment, voided ones included', async () => {
+    const { repository } = createRepository();
+    const reads: string[] = [];
+    const listDoc = (id: string, data: Record<string, unknown>, payments: unknown[]) => {
+      const result = async () => ({ docs: payments.map((p) => ({ data: () => p })) });
+      return {
+        id,
+        get: (f: string) => (f === 'clientId' ? 'c1' : undefined),
+        data: () => ({
+          title: id,
+          status: 'open',
+          priority: 'low',
+          clientId: 'c1',
+          createdAt: stamp,
+          updatedAt: stamp,
+          ...data,
+        }),
+        ref: {
+          collection: (name: string) => {
+            if (name !== 'payments') throw new Error(`unexpected read of ${name}`);
+            return {
+              get: async () => {
+                reads.push(`${id}:all`);
+                return result();
+              },
+              limit: (count: number) => ({
+                get: async () => {
+                  reads.push(`${id}:limit${count}`);
+                  return result();
+                },
+              }),
+            };
+          },
+        },
+      };
+    };
+    const docs = [
+      listDoc('priced-paid', { totalPriceMinor: 700, currency: 'ARS' }, [
+        { amountMinor: 200, status: 'active' },
+      ]),
+      listDoc('priced-none', { totalPriceMinor: 700, currency: 'ARS' }, []),
+      listDoc('unpriced-voided', {}, [{ amountMinor: 100, status: 'voided' }]),
+      listDoc('unpriced-none', {}, []),
+    ];
+    const query = {
+      orderBy: jest.fn().mockReturnThis(),
+      limit: jest.fn().mockReturnThis(),
+      get: jest.fn().mockResolvedValue({ docs }),
+    };
+    (repository as unknown as { collection: () => unknown }).collection = () => query;
+    (repository as unknown as { firestore: unknown }).firestore = {
+      collection: jest.fn().mockReturnValue({ doc: jest.fn() }),
+      getAll: jest.fn().mockResolvedValue([{ id: 'c1', exists: true, get: () => 'Acme' }]),
+    };
+
+    const { items } = await repository.findMany('org', {});
+
+    expect(items.map((item) => [item.id, item.hasPayments])).toEqual([
+      ['priced-paid', true],
+      ['priced-none', false],
+      ['unpriced-voided', true],
+      ['unpriced-none', false],
+    ]);
+    expect(items[2]).not.toHaveProperty('paidMinor');
+    // Unpriced orders only need to know whether a payment exists.
+    expect(reads).toEqual(
+      expect.arrayContaining(['unpriced-voided:limit1', 'unpriced-none:limit1']),
+    );
+    expect(reads.filter((read) => read.startsWith('priced'))).toEqual([
+      'priced-paid:all',
+      'priced-none:all',
+    ]);
   });
 });
 
