@@ -495,21 +495,6 @@
     animation: login-reveal 500ms ease-out both;
   }
 
-  .clients-hero {
-    background:
-      radial-gradient(
-        circle at 78% 15%,
-        color-mix(in srgb, var(--color-accent-brand) 8%, transparent),
-        transparent 34%
-      ),
-      linear-gradient(
-        135deg,
-        color-mix(in srgb, var(--color-bg-secondary) 72%, transparent),
-        color-mix(in srgb, var(--color-bg-primary) 92%, transparent)
-      );
-    box-shadow: 0 24px 70px rgb(0 0 0 / 20%);
-  }
-
   .clients-workspace {
     box-shadow: 0 16px 48px rgb(0 0 0 / 18%);
   }
