@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react';
-import type { Client, WorkOrderClientSummary } from '@ijac/shared';
+import type { Client, WorkOrder } from '@ijac/shared';
 import {
   WORK_ORDER_STATUSES,
   WORK_ORDER_PRIORITIES,
@@ -16,7 +16,8 @@ import { priorityLabel, statusLabel } from '../../i18n/format';
 
 interface WorkOrderFormProps {
   clients: Client[];
-  workOrder?: WorkOrderClientSummary;
+  /** The full order being edited; list summaries lack the description, which saving would erase. */
+  workOrder?: WorkOrder;
   onSaved: () => void;
   onCancel: () => void;
 }
@@ -35,7 +36,7 @@ export function WorkOrderForm({ clients, workOrder, onSaved, onCancel }: WorkOrd
   const { language, t } = useLanguage();
   const [form, setForm] = useState({
     title: workOrder?.title ?? '',
-    description: '',
+    description: workOrder?.description ?? '',
     status: workOrder?.status ?? '',
     priority: workOrder?.priority ?? '',
     clientId: workOrder?.clientId ?? '',

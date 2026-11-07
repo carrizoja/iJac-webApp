@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { WorkOrderForm } from './WorkOrderForm';
-import type { Client, WorkOrderClientSummary } from '@ijac/shared';
+import type { Client, WorkOrder } from '@ijac/shared';
 import { Currency, WorkOrderStatus, WorkOrderPriority } from '@ijac/shared';
 
 vi.mock('../../lib/resources', () => {
@@ -157,10 +157,9 @@ describe('WorkOrderForm', () => {
 
   it('preserves form data for editing and updates existing work order', async () => {
     const onSaved = vi.fn();
-    const existingWO: WorkOrderClientSummary = {
+    const existingWO: WorkOrder = {
       id: 'wo1',
       clientId: 'c1',
-      clientName: 'Acme',
       title: 'Fix network',
       status: WorkOrderStatus.OPEN,
       priority: WorkOrderPriority.HIGH,
@@ -197,6 +196,42 @@ describe('WorkOrderForm', () => {
       );
       expect(onSaved).toHaveBeenCalled();
     });
+  });
+
+  it('keeps the description of the order being edited', async () => {
+    const existing: WorkOrder = {
+      id: 'wo2',
+      clientId: 'c1',
+      title: 'Revisar red',
+      description: 'Revisar el router del segundo piso.',
+      status: WorkOrderStatus.OPEN,
+      priority: WorkOrderPriority.NORMAL,
+      createdAt: now,
+      updatedAt: now,
+    };
+    const mockedUpdate = updateWorkOrder as unknown as ReturnType<typeof vi.fn>;
+    mockedUpdate.mockResolvedValueOnce(existing);
+    render(
+      <WorkOrderForm clients={clients} workOrder={existing} onSaved={vi.fn()} onCancel={vi.fn()} />,
+    );
+
+    expect(screen.getByLabelText(/descripción/i)).toHaveValue(
+      'Revisar el router del segundo piso.',
+    );
+    fireEvent.change(screen.getByLabelText(/prioridad/i), {
+      target: { value: WorkOrderPriority.HIGH },
+    });
+    fireEvent.click(screen.getByRole('button', { name: /guardar cambios/i }));
+
+    await waitFor(() =>
+      expect(mockedUpdate).toHaveBeenCalledWith(
+        'wo2',
+        expect.objectContaining({
+          priority: WorkOrderPriority.HIGH,
+          description: 'Revisar el router del segundo piso.',
+        }),
+      ),
+    );
   });
 
   it('clears validation errors when form fields are corrected', async () => {
@@ -298,7 +333,6 @@ describe('WorkOrderForm', () => {
           workOrder={{
             id: 'wo1',
             clientId: 'c1',
-            clientName: 'Acme',
             title: 'Fix',
             status: WorkOrderStatus.OPEN,
             priority: WorkOrderPriority.HIGH,
@@ -323,7 +357,6 @@ describe('WorkOrderForm', () => {
           workOrder={{
             id: 'wo1',
             clientId: 'c1',
-            clientName: 'Acme',
             title: 'Fix',
             status: WorkOrderStatus.OPEN,
             priority: WorkOrderPriority.HIGH,
