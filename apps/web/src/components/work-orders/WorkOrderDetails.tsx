@@ -4,6 +4,7 @@ import { FileDown, MessageCircle } from 'lucide-react';
 import { getClient, getWorkOrder } from '../../lib/resources';
 import { Alert, Badge, Button, LoadingState, Panel } from '../ui';
 import { PaymentsPanel } from '../payments/PaymentsPanel';
+import { priorityBadgeClass, statusBadgeClass } from './workOrderBadges';
 import { useLanguage } from '../../hooks/useLanguage';
 import { formatDateOnly, formatDateTime, priorityLabel, statusLabel } from '../../i18n/format';
 
@@ -110,10 +111,7 @@ export function WorkOrderDetails() {
   const whatsAppHref = `https://wa.me/?text=${encodeURIComponent(whatsAppMessage)}`;
 
   return (
-    <article
-      className="work-order-print-document space-y-6"
-      aria-labelledby="work-order-title"
-    >
+    <article className="work-order-print-document space-y-6" aria-labelledby="work-order-title">
       <BackToOrders />
 
       <div
@@ -137,11 +135,7 @@ export function WorkOrderDetails() {
             rel="noopener noreferrer"
             className="action-brand inline-flex min-h-11 items-center justify-center rounded-md border px-6 text-base font-medium transition-fast active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2"
           >
-            <MessageCircle
-              aria-hidden="true"
-              focusable="false"
-              className="mr-2 h-5 w-5"
-            />
+            <MessageCircle aria-hidden="true" focusable="false" className="mr-2 h-5 w-5" />
             {t('workOrders.shareWhatsApp')}
           </a>
         </div>
@@ -159,10 +153,10 @@ export function WorkOrderDetails() {
           {workOrder.title}
         </h1>
         <div className="mt-6 flex flex-wrap gap-2">
-          <Badge variant="neutral">
+          <Badge variant="tone" className={statusBadgeClass(workOrder.status)}>
             {t('workOrders.statusValue', { value: statusLabel(workOrder.status, language) })}
           </Badge>
-          <Badge variant="neutral">
+          <Badge variant="tone" className={priorityBadgeClass(workOrder.priority)}>
             {t('workOrders.priorityValue', { value: priorityLabel(workOrder.priority, language) })}
           </Badge>
         </div>
@@ -205,9 +199,7 @@ export function WorkOrderDetails() {
             <dt className="text-xs font-semibold uppercase tracking-wider text-fg-muted">
               {t('workOrders.due')}
             </dt>
-            <dd className="mt-2 text-sm text-fg-primary">
-              {dueDate}
-            </dd>
+            <dd className="mt-2 text-sm text-fg-primary">{dueDate}</dd>
           </div>
           <div>
             <dt className="text-xs font-semibold uppercase tracking-wider text-fg-muted">

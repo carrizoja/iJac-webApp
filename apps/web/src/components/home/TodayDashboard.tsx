@@ -89,10 +89,10 @@ function OrderRow({ order, overdue }: { order: WorkOrderClientSummary; overdue?:
         <span className="tabular-nums text-fg-secondary">
           {t('home.dueOn', { date: formatDateOnly(order.dueDate, language) })}
         </span>
-        <Badge variant="neutral" size="xs" className={statusBadgeClass(order.status)}>
+        <Badge variant="tone" size="xs" className={statusBadgeClass(order.status)}>
           {statusLabel(order.status, language)}
         </Badge>
-        <Badge variant="neutral" size="xs" className={priorityBadgeClass(order.priority)}>
+        <Badge variant="tone" size="xs" className={priorityBadgeClass(order.priority)}>
           {priorityLabel(order.priority, language)}
         </Badge>
       </div>

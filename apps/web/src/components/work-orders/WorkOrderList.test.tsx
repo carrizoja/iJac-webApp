@@ -210,6 +210,14 @@ describe('WorkOrderList', () => {
     const doneRow = screen.getByRole('link', { name: 'Hecha' }).closest('tr')!;
     expect(within(doneRow).getByText('Completada')).toHaveClass('status-completed-badge');
     expect(within(doneRow).getByText('Alta')).toHaveClass('priority-high-badge');
+    // The neutral badge's own color utilities load later in the stylesheet and would win.
+    for (const badge of [
+      within(openRow).getByText('Urgente'),
+      within(doneRow).getByText('Completada'),
+    ]) {
+      expect(badge).not.toHaveClass('text-fg-primary');
+      expect(badge).not.toHaveClass('bg-panel-default');
+    }
 
     fireEvent.click(screen.getByRole('button', { name: 'Tarjetas' }));
     const cards = screen.getByTestId('work-order-cards');

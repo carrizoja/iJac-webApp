@@ -383,10 +383,6 @@
   .status-warning,
   .status-error,
   .status-purple,
-  .priority-low-badge,
-  .priority-normal-badge,
-  .priority-high-badge,
-  .priority-urgent-badge,
   .status-open-badge,
   .status-in-progress-badge,
   .status-completed-badge,
@@ -403,8 +399,7 @@
     color: var(--color-status-completed);
   }
 
-  .status-warning,
-  .priority-high-badge {
+  .status-warning {
     color: var(--color-priority-high);
   }
 
@@ -416,16 +411,39 @@
     color: var(--color-accent-primary);
   }
 
-  .priority-low-badge {
-    color: var(--color-priority-low);
+  /*
+   * Priority badges stay off the status hues: low and normal are plain,
+   * high is marked by weight and outline, and only urgent is filled.
+   */
+  .priority-low-badge,
+  .priority-normal-badge {
+    border: 1px solid var(--color-border-default);
+    background: var(--color-panel-default);
+    color: var(--color-fg-secondary);
   }
 
-  .priority-normal-badge {
-    color: var(--color-priority-normal);
+  .priority-high-badge {
+    border: 1px solid currentcolor;
+    background: transparent;
+    color: var(--color-fg-primary);
+    font-weight: 600;
+  }
+
+  .priority-high-badge::before {
+    content: '▲' / '';
+    font-size: 0.65em;
   }
 
   .priority-urgent-badge {
-    color: var(--color-priority-urgent);
+    border: 1px solid var(--color-destructive);
+    background: var(--color-destructive);
+    color: #fff;
+    font-weight: 600;
+  }
+
+  .priority-urgent-badge::before {
+    content: '●' / '';
+    font-size: 0.65em;
   }
 
   .status-open-badge {

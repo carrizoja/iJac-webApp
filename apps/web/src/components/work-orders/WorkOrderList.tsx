@@ -309,12 +309,12 @@ export function WorkOrderList({ clients, onCreate, onEdit }: WorkOrderListProps)
                       </td>
                       <td className="px-4 py-3.5 text-fg-muted">{wo.clientName}</td>
                       <td className="px-4 py-3.5">
-                        <Badge variant="neutral" className={statusBadgeClass(wo.status)}>
+                        <Badge variant="tone" className={statusBadgeClass(wo.status)}>
                           {statusLabel(wo.status, language)}
                         </Badge>
                       </td>
                       <td className="px-4 py-3.5">
-                        <Badge variant="neutral" className={priorityBadgeClass(wo.priority)}>
+                        <Badge variant="tone" className={priorityBadgeClass(wo.priority)}>
                           {priorityLabel(wo.priority, language)}
                         </Badge>
                       </td>
@@ -460,10 +460,10 @@ export function WorkOrderList({ clients, onCreate, onEdit }: WorkOrderListProps)
                       </h3>
                       <p className="text-sm text-fg-muted">{wo.clientName}</p>
                       <div className="mt-2 flex flex-wrap gap-2 text-xs">
-                        <Badge variant="neutral" className={statusBadgeClass(wo.status)}>
+                        <Badge variant="tone" className={statusBadgeClass(wo.status)}>
                           {statusLabel(wo.status, language)}
                         </Badge>
-                        <Badge variant="neutral" className={priorityBadgeClass(wo.priority)}>
+                        <Badge variant="tone" className={priorityBadgeClass(wo.priority)}>
                           {priorityLabel(wo.priority, language)}
                         </Badge>
                         {wo.dueDate && (
