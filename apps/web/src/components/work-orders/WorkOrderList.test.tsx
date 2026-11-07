@@ -306,6 +306,10 @@ describe('WorkOrderList', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Tarjetas' }));
 
     const cardLink = screen.getByRole('link', { name: 'Reparación de Servidor' });
+    // Cards sit directly under the page h1, so each card title is an h2.
+    expect(
+      screen.getByRole('heading', { name: 'Reparación de Servidor', level: 2 }),
+    ).toBeInTheDocument();
     expect(cardLink).toHaveAttribute('href', '/work-orders/details?id=wo%2F1%20a');
   });
 
@@ -320,17 +324,24 @@ describe('WorkOrderList', () => {
 
     const blockedName =
       'No se puede eliminar Con pagos: tiene pagos registrados. Cancelala en su lugar.';
-    const blocked = await screen.findByRole('button', { name: blockedName });
-    expect(blocked).toBeDisabled();
-    expect(blocked.parentElement).toHaveAttribute(
-      'title',
-      'No se puede eliminar una orden con pagos registrados. Cancelala en su lugar.',
-    );
+    const reason = 'No se puede eliminar una orden con pagos registrados. Cancelala en su lugar.';
+    // Blocked, but still focusable so keyboard and screen-reader users reach the reason.
+    const expectBlocked = (button: HTMLElement) => {
+      expect(button).toHaveAttribute('aria-disabled', 'true');
+      expect(button).not.toBeDisabled();
+      expect(button).toHaveAttribute('title', reason);
+      button.focus();
+      expect(button).toHaveFocus();
+      fireEvent.click(button);
+      // No delete confirmation opens.
+      expect(screen.queryByRole('button', { name: 'Eliminar' })).not.toBeInTheDocument();
+    };
+    expectBlocked(await screen.findByRole('button', { name: blockedName }));
     expect(screen.getByRole('button', { name: 'Editar Con pagos' })).toBeEnabled();
     expect(screen.getByRole('button', { name: 'Eliminar Sin pagos' })).toBeEnabled();
 
     fireEvent.click(screen.getByRole('button', { name: 'Tarjetas' }));
-    expect(screen.getByRole('button', { name: blockedName })).toBeDisabled();
+    expectBlocked(screen.getByRole('button', { name: blockedName }));
     expect(screen.getByRole('button', { name: 'Eliminar Sin pagos' })).toBeEnabled();
     expect(deleteWorkOrder).not.toHaveBeenCalled();
   });

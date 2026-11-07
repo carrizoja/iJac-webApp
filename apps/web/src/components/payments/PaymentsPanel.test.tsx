@@ -202,8 +202,8 @@ describe('PaymentsPanel', () => {
 
     const voidButton = await screen.findByRole('button', { name: 'Anular recibo 0001-00000042' });
     const viewButton = screen.getByRole('button', { name: 'Ver recibo 0001-00000042' });
-    expect(voidButton).toHaveClass('text-destructive');
-    expect(viewButton).not.toHaveClass('text-destructive');
+    expect(voidButton).toHaveClass('text-destructive-text');
+    expect(viewButton).not.toHaveClass('text-destructive-text');
   });
 
   it('defaults the payment date to today', async () => {

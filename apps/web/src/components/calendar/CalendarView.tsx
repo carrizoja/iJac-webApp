@@ -3,7 +3,7 @@ import type { CalendarEvent } from '@ijac/shared';
 import { listCalendarEvents, syncCalendar } from '../../lib/calendar';
 import { Button, Alert, EmptyState, LoadingState, Panel } from '../ui';
 import { useLanguage } from '../../hooks/useLanguage';
-import { formatMonthYear } from '../../i18n/format';
+import { formatDateOnly, formatMonthYear } from '../../i18n/format';
 import type { TranslationKey } from '../../i18n/translations';
 import { CalendarDays, Check, TriangleAlert } from 'lucide-react';
 
@@ -240,7 +240,8 @@ export function CalendarView() {
                     key={event.id}
                     href={`/work-orders/details?id=${encodeURIComponent(event.workOrderId)}`}
                     className="flex items-center gap-1 truncate rounded bg-bg-accent/40 px-1.5 py-0.5 text-xs text-fg-primary transition-colors hover:bg-bg-accent/60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
-                    aria-label={t('calendar.viewDetails', { name: event.title })}
+                    // The grid cell is not announced, so the link names its day.
+                    aria-label={`${t('calendar.viewDetails', { name: event.title })}, ${formatDateOnly(toIsoDate(day), language)}`}
                     title={t('calendar.viewDetails', { name: event.title })}
                   >
                     <span

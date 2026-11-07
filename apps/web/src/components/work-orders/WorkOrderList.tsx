@@ -474,14 +474,14 @@ export function WorkOrderList({ clients, onCreate, onEdit }: WorkOrderListProps)
                 >
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex-1">
-                      <h3 className="font-medium text-fg-primary">
+                      <h2 className="font-medium text-fg-primary">
                         <a
                           href={workOrderDetailsHref(wo.id)}
                           className="text-fg-primary underline-offset-4 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus rounded"
                         >
                           {wo.title}
                         </a>
-                      </h3>
+                      </h2>
                       <p className="text-sm text-fg-muted">{wo.clientName}</p>
                       <div className="mt-2 flex flex-wrap gap-2 text-xs">
                         <Badge variant="tone" className={statusBadgeClass(wo.status)}>
@@ -516,21 +516,19 @@ export function WorkOrderList({ clients, onCreate, onEdit }: WorkOrderListProps)
                       >
                         {t('common.edit')}
                       </Button>
-                      <span
-                        className="inline-flex"
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className={deleteActionButtonClass}
+                        onClick={wo.hasPayments ? undefined : () => setConfirmDelete(wo.id)}
+                        disabled={confirmDelete !== null || deleting === wo.id}
+                        // A blocked delete stays focusable, so its reason can be reached.
+                        aria-disabled={wo.hasPayments ? true : undefined}
                         title={wo.hasPayments ? t('workOrders.deleteHasPayments') : undefined}
+                        aria-label={deleteLabel(wo)}
                       >
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className={deleteActionButtonClass}
-                          onClick={() => setConfirmDelete(wo.id)}
-                          disabled={confirmDelete !== null || deleting === wo.id || wo.hasPayments}
-                          aria-label={deleteLabel(wo)}
-                        >
-                          {t('common.delete')}
-                        </Button>
-                      </span>
+                        {t('common.delete')}
+                      </Button>
                     </div>
                   </div>
                 </Panel>

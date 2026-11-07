@@ -34,10 +34,21 @@ describe('CalendarView', () => {
   it('links events to the static details route with an encoded ID', async () => {
     render(<CalendarView />);
 
-    const link = await screen.findByRole('link', { name: 'Ver detalles de Revisión remota' });
+    const link = await screen.findByRole('link', { name: /^Ver detalles de Revisión remota/ });
 
     expect(link).toHaveAttribute('href', '/work-orders/details?id=work%2Forder%20%3F%201');
     expect(link).toHaveAttribute('title', 'Ver detalles de Revisión remota');
+  });
+
+  it('names the day of each event, since the grid cell is not announced', async () => {
+    render(<CalendarView />);
+    const day = new Date();
+    day.setDate(15);
+    const spoken = new Intl.DateTimeFormat('es-AR', { dateStyle: 'long' }).format(day);
+
+    expect(
+      await screen.findByRole('link', { name: `Ver detalles de Revisión remota, ${spoken}` }),
+    ).toBeInTheDocument();
   });
 
   it('loads the month again when Reintentar is pressed after a failure', async () => {
@@ -49,7 +60,7 @@ describe('CalendarView', () => {
     fireEvent.click(within(alert).getByRole('button', { name: 'Reintentar' }));
 
     expect(
-      await screen.findByRole('link', { name: 'Ver detalles de Revisión remota' }),
+      await screen.findByRole('link', { name: /^Ver detalles de Revisión remota/ }),
     ).toBeInTheDocument();
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
   });
@@ -70,7 +81,7 @@ describe('CalendarView', () => {
     [
       { attempted: 1, succeeded: 0, failed: 1 },
       'alert',
-      'text-destructive',
+      'text-destructive-text',
       /0 exitosas, 1 fallida de 1 intentada/i,
     ],
   ])(

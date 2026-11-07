@@ -18,7 +18,7 @@ export function Label({
       {...props}
     >
       {children}
-      {required && <span className="text-destructive ml-1">*</span>}
+      {required && <span className="text-destructive-text ml-1">*</span>}
     </label>
   );
 }
@@ -53,7 +53,7 @@ export function FieldError({
   return (
     <div
       role={role}
-      className={cn('text-sm text-destructive mt-1.5 font-medium', className)}
+      className={cn('text-sm text-destructive-text mt-1.5 font-medium', className)}
       {...props}
     >
       {children}

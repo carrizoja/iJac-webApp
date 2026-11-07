@@ -25,7 +25,8 @@ describe('Label', () => {
     render(<Label required>Password</Label>);
     const asterisk = screen.getByText('*');
     expect(asterisk).toBeInTheDocument();
-    expect(asterisk).toHaveClass('text-destructive');
+    // Plain destructive red is 3.7:1 on dark panels; the text token meets 4.5:1.
+    expect(asterisk).toHaveClass('text-destructive-text');
   });
 
   it('applies custom className', () => {
@@ -71,7 +72,7 @@ describe('FieldError', () => {
   it('has correct styling classes', () => {
     render(<FieldError>Error</FieldError>);
     const error = screen.getByText(/error/i);
-    expect(error).toHaveClass('text-sm', 'text-destructive', 'font-medium');
+    expect(error).toHaveClass('text-sm', 'text-destructive-text', 'font-medium');
   });
 
   it('can have custom role', () => {

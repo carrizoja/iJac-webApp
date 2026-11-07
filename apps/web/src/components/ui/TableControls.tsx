@@ -128,7 +128,7 @@ export interface RowActionButtonProps {
   title: string;
   onClick: () => void;
   disabled?: boolean;
-  /** Why the action is unavailable; disables the button and shows as its tooltip. */
+  /** Why the action is unavailable; blocks it, keeps it focusable and shows as its tooltip. */
   disabledReason?: string;
 }
 
@@ -141,27 +141,21 @@ export function RowActionButton({
   disabled,
   disabledReason,
 }: RowActionButtonProps) {
-  const button = (
+  return (
     <Button
       variant="ghost"
       size="sm"
       className={`h-9 w-9 rounded-lg border-2 px-0 transition-all duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] active:translate-y-0 ${
         action === 'edit' ? 'action-edit' : 'action-delete'
       }`}
-      onClick={onClick}
-      disabled={disabled || disabledReason !== undefined}
+      onClick={disabledReason === undefined ? onClick : undefined}
+      disabled={disabled}
+      // A blocked action stays focusable, so keyboard and screen-reader users reach its reason.
+      aria-disabled={disabledReason === undefined ? undefined : true}
       aria-label={label}
-      title={disabledReason === undefined ? title : undefined}
+      title={disabledReason ?? title}
     >
       {action === 'edit' ? <PencilIcon /> : <TrashIcon />}
     </Button>
-  );
-  // A disabled button shows no tooltip in every browser, so the wrapper carries it.
-  return disabledReason === undefined ? (
-    button
-  ) : (
-    <span className="inline-flex" title={disabledReason}>
-      {button}
-    </span>
   );
 }

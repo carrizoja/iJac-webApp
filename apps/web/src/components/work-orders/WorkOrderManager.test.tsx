@@ -225,7 +225,10 @@ describe('WorkOrderManager', () => {
     expect(await screen.findByLabelText(/título/i)).toHaveValue('Revisión');
     fireEvent.click(screen.getByRole('button', { name: 'Nueva orden' }));
 
-    expect(await screen.findByRole('heading', { name: 'Nueva orden' })).toBeInTheDocument();
+    // The page h1 is the only heading above it, so the form heading is an h2.
+    expect(
+      await screen.findByRole('heading', { name: 'Nueva orden', level: 2 }),
+    ).toBeInTheDocument();
     expect(screen.getByLabelText(/título/i)).toHaveValue('');
   });
 });

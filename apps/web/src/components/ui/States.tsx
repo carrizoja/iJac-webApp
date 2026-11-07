@@ -72,7 +72,7 @@ export function Badge({
     default: 'action-brand border',
     success: 'status-success text-status-completed bg-opacity-20',
     warning: 'status-warning text-priority-high bg-opacity-20',
-    error: 'status-error text-destructive bg-opacity-20',
+    error: 'status-error text-destructive-text bg-opacity-20',
     info: 'status-info text-status-open bg-opacity-20',
     purple: 'status-purple text-accent-primary bg-opacity-20',
     neutral: 'bg-panel-default text-fg-primary border border-border-default',
@@ -141,7 +141,7 @@ export function Alert({
     info: 'status-info text-status-open',
     success: 'status-success text-status-completed',
     warning: 'status-warning text-priority-high',
-    error: 'status-error text-destructive',
+    error: 'status-error text-destructive-text',
   };
 
   return (
