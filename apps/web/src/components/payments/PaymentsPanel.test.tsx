@@ -92,7 +92,8 @@ describe('PaymentsPanel', () => {
     const row = screen.getByRole('row', { name: /0001-00000001/ });
     expect(within(row).getByText('Transferencia bancaria')).toBeInTheDocument();
     expect(within(row).getByText('$ 30.000,00')).toBeInTheDocument();
-    expect(within(row).getByText('Vigente')).toBeInTheDocument();
+    // Only the exception (a voided payment) gets a status badge.
+    expect(within(row).queryByText('Vigente')).not.toBeInTheDocument();
     expect(listPayments).toHaveBeenCalledWith('wo-1');
   });
 

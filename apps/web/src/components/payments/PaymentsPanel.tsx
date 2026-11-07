@@ -347,9 +347,8 @@ export function PaymentsPanel({ workOrderId, workOrderStatus }: PaymentsPanelPro
                       </span>
                     </td>
                     <td className="py-3 pr-4">
-                      <Badge variant={voided ? 'error' : 'success'}>
-                        {t(voided ? 'payments.status.voided' : 'payments.status.active')}
-                      </Badge>
+                      {/* Only the exception is badged; an active payment needs no label. */}
+                      {voided && <Badge variant="error">{t('payments.status.voided')}</Badge>}
                       {voided && payment.void && (
                         <p className="mt-1 text-xs text-fg-muted">
                           {t('payments.voidedReason', { reason: payment.void.reason })}
