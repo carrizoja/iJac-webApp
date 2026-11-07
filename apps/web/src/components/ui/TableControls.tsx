@@ -127,11 +127,20 @@ export interface RowActionButtonProps {
   title: string;
   onClick: () => void;
   disabled?: boolean;
+  /** Why the action is unavailable; disables the button and shows as its tooltip. */
+  disabledReason?: string;
 }
 
 /** Icon-only edit or delete button for a table row. */
-export function RowActionButton({ action, label, title, onClick, disabled }: RowActionButtonProps) {
-  return (
+export function RowActionButton({
+  action,
+  label,
+  title,
+  onClick,
+  disabled,
+  disabledReason,
+}: RowActionButtonProps) {
+  const button = (
     <Button
       variant="ghost"
       size="sm"
@@ -139,11 +148,19 @@ export function RowActionButton({ action, label, title, onClick, disabled }: Row
         action === 'edit' ? 'action-edit' : 'action-delete'
       }`}
       onClick={onClick}
-      disabled={disabled}
+      disabled={disabled || disabledReason !== undefined}
       aria-label={label}
-      title={title}
+      title={disabledReason === undefined ? title : undefined}
     >
       {action === 'edit' ? <PencilIcon /> : <TrashIcon />}
     </Button>
+  );
+  // A disabled button shows no tooltip in every browser, so the wrapper carries it.
+  return disabledReason === undefined ? (
+    button
+  ) : (
+    <span className="inline-flex" title={disabledReason}>
+      {button}
+    </span>
   );
 }

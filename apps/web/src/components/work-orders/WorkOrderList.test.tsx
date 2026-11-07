@@ -304,6 +304,32 @@ describe('WorkOrderList', () => {
     expect(cardLink).toHaveAttribute('href', '/work-orders/details?id=wo%2F1%20a');
   });
 
+  it('does not offer to delete an order that has payments, in table and card views', async () => {
+    listWorkOrders.mockResolvedValue({
+      items: [
+        { ...sampleWorkOrder, id: 'paid', title: 'Con pagos', hasPayments: true },
+        { ...sampleWorkOrder, id: 'free', title: 'Sin pagos', hasPayments: false },
+      ],
+    });
+    render(<WorkOrderList clients={[sampleClient]} onCreate={vi.fn()} onEdit={vi.fn()} />);
+
+    const blockedName =
+      'No se puede eliminar Con pagos: tiene pagos registrados. Cancelala en su lugar.';
+    const blocked = await screen.findByRole('button', { name: blockedName });
+    expect(blocked).toBeDisabled();
+    expect(blocked.parentElement).toHaveAttribute(
+      'title',
+      'No se puede eliminar una orden con pagos registrados. Cancelala en su lugar.',
+    );
+    expect(screen.getByRole('button', { name: 'Editar Con pagos' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'Eliminar Sin pagos' })).toBeEnabled();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Tarjetas' }));
+    expect(screen.getByRole('button', { name: blockedName })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Eliminar Sin pagos' })).toBeEnabled();
+    expect(deleteWorkOrder).not.toHaveBeenCalled();
+  });
+
   it('explains that an order with payments cannot be deleted', async () => {
     listWorkOrders.mockResolvedValue({ items: [sampleWorkOrder] });
     deleteWorkOrder.mockRejectedValue(new ApiRequestError('WORK_ORDER_HAS_PAYMENTS'));

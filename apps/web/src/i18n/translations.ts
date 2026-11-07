@@ -194,6 +194,8 @@ export const es = {
   'workOrders.createdAt': 'Fecha de creación',
   'workOrders.editNamed': 'Editar {name}',
   'workOrders.deleteNamed': 'Eliminar {name}',
+  'workOrders.deleteBlockedNamed':
+    'No se puede eliminar {name}: tiene pagos registrados. Cancelala en su lugar.',
   'workOrders.confirmDelete': '¿Eliminar orden "{name}"?',
   'workOrders.back': 'Volver a órdenes',
   'workOrders.detailsLoading': 'Cargando detalle de la orden...',
@@ -527,6 +529,8 @@ export const en = {
   'workOrders.createdAt': 'Created',
   'workOrders.editNamed': 'Edit {name}',
   'workOrders.deleteNamed': 'Delete {name}',
+  'workOrders.deleteBlockedNamed':
+    'Cannot delete {name}: it has recorded payments. Cancel it instead.',
   'workOrders.confirmDelete': 'Delete order “{name}”?',
   'workOrders.back': 'Back to orders',
   'workOrders.detailsLoading': 'Loading order details...',

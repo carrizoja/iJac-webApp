@@ -86,6 +86,8 @@ export interface WorkOrderClientSummary {
   paidMinor?: number;
   /** `totalPriceMinor - paidMinor`; present only on priced work orders. */
   remainingMinor?: number;
+  /** Whether the order has any payment, voided ones included; such orders cannot be deleted. */
+  hasPayments?: boolean;
   createdAt: string;
   updatedAt: string;
 }
