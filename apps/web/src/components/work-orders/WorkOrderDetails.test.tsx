@@ -4,11 +4,12 @@ import type { Client, WorkOrder } from '@ijac/shared';
 import { Currency, WorkOrderPriority, WorkOrderStatus } from '@ijac/shared';
 import { setLanguage } from '../../i18n/language';
 
-const { getClient, getWorkOrder, listPayments, updateWorkOrder } = vi.hoisted(() => ({
+const { getClient, getWorkOrder, listPayments, updateWorkOrder, listClients } = vi.hoisted(() => ({
   getClient: vi.fn(),
   getWorkOrder: vi.fn(),
   listPayments: vi.fn(),
   updateWorkOrder: vi.fn(),
+  listClients: vi.fn(),
 }));
 
 vi.mock('../../lib/resources', () => ({
@@ -17,6 +18,8 @@ vi.mock('../../lib/resources', () => ({
   getWorkOrder,
   listPayments,
   updateWorkOrder,
+  listClients,
+  createWorkOrder: vi.fn(),
   recordPayment: vi.fn(),
   voidPayment: vi.fn(),
 }));
@@ -119,6 +122,66 @@ describe('WorkOrderDetails', () => {
     expect(screen.getByText('Estado: En progreso')).not.toHaveClass('text-fg-primary');
     expect(screen.getByText('Creada')).toBeInTheDocument();
     expect(screen.getByText('Actualizada')).toBeInTheDocument();
+  });
+
+  describe('editing in place', () => {
+    beforeEach(() => {
+      window.history.replaceState({}, '', '/work-orders/details?id=work-order-1');
+      getWorkOrder.mockResolvedValue(workOrder);
+      getClient.mockResolvedValue(client);
+      listClients.mockResolvedValue({ items: [client] });
+    });
+
+    it('opens the form with the full order, saves it and shows the result', async () => {
+      const renamed = { ...workOrder, title: 'Revisión remota y local' };
+      updateWorkOrder.mockResolvedValue(renamed);
+      render(<WorkOrderDetails />);
+
+      fireEvent.click(await screen.findByRole('button', { name: 'Editar' }));
+
+      const heading = await screen.findByRole('heading', { name: 'Editar orden' });
+      await waitFor(() => expect(heading).toHaveFocus());
+      expect(screen.getByRole('combobox', { name: 'Cambiar estado' })).toBeDisabled();
+      expect(screen.getByLabelText(/descripción/i)).toHaveValue(
+        'Validar la instalación y documentar resultados.',
+      );
+      await waitFor(() =>
+        expect(screen.getByRole('option', { name: 'Acme Corp' })).toBeInTheDocument(),
+      );
+
+      getWorkOrder.mockResolvedValue(renamed);
+      fireEvent.change(screen.getByLabelText(/título/i), {
+        target: { value: 'Revisión remota y local' },
+      });
+      fireEvent.click(screen.getByRole('button', { name: /guardar cambios/i }));
+
+      await waitFor(() =>
+        expect(updateWorkOrder).toHaveBeenCalledWith(
+          'work-order-1',
+          expect.objectContaining({
+            title: 'Revisión remota y local',
+            description: 'Validar la instalación y documentar resultados.',
+          }),
+        ),
+      );
+      expect(
+        await screen.findByRole('heading', { level: 1, name: 'Revisión remota y local' }),
+      ).toBeInTheDocument();
+      expect(screen.queryByRole('heading', { name: 'Editar orden' })).not.toBeInTheDocument();
+    });
+
+    it('closes the form on cancel and returns focus to Editar', async () => {
+      render(<WorkOrderDetails />);
+
+      const edit = await screen.findByRole('button', { name: 'Editar' });
+      edit.focus();
+      fireEvent.click(edit);
+      await screen.findByRole('heading', { name: 'Editar orden' });
+      fireEvent.click(screen.getByRole('button', { name: 'Cancelar' }));
+
+      expect(screen.queryByRole('heading', { name: 'Editar orden' })).not.toBeInTheDocument();
+      await waitFor(() => expect(edit).toHaveFocus());
+    });
   });
 
   describe('as a workspace', () => {
