@@ -242,6 +242,11 @@ export function WorkOrderList({ clients, onCreate, onEdit }: WorkOrderListProps)
           type="error"
           icon={<TriangleAlert aria-hidden="true" className="h-4 w-4" />}
           onClose={() => setErrorKey(null)}
+          action={
+            errorKey === 'workOrders.loadError'
+              ? { label: t('common.retry'), onClick: () => void load() }
+              : undefined
+          }
         >
           {t(errorKey)}
         </Alert>

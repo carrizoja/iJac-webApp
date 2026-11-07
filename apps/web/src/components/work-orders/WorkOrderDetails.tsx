@@ -125,7 +125,21 @@ export function WorkOrderDetails() {
     return (
       <div className="space-y-5">
         <BackToOrders />
-        <Alert type="error" role="alert">
+        <Alert
+          type="error"
+          role="alert"
+          action={
+            state.kind === 'load'
+              ? {
+                  label: t('common.retry'),
+                  onClick: () => {
+                    setState({ status: 'loading' });
+                    setReloadKey((key) => key + 1);
+                  },
+                }
+              : undefined
+          }
+        >
           {t(state.kind === 'not-found' ? 'workOrders.notFound' : 'workOrders.detailsError')}
         </Alert>
       </div>

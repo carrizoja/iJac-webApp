@@ -95,10 +95,7 @@ describe('PaymentsPanel', () => {
     // Only the exception (a voided payment) gets a status badge.
     expect(within(row).queryByText('Vigente')).not.toBeInTheDocument();
     expect(listPayments).toHaveBeenCalledWith('wo-1');
-    expect(screen.getByRole('region', { name: 'Lista de pagos' })).toHaveAttribute(
-      'tabindex',
-      '0',
-    );
+    expect(screen.getByRole('region', { name: 'Lista de pagos' })).toHaveAttribute('tabindex', '0');
   });
 
   it('records a payment as admin and refreshes the balance', async () => {
@@ -568,6 +565,19 @@ describe('PaymentsPanel', () => {
     renderPanel();
 
     expect(await screen.findByRole('alert')).toHaveTextContent('No se pudieron cargar los pagos.');
+  });
+
+  it('loads the payments again when Reintentar is pressed after a failure', async () => {
+    listPayments.mockRejectedValueOnce(new Error('boom'));
+    listPayments.mockResolvedValueOnce(response({ items: [makePayment()] }));
+    renderPanel();
+
+    const alert = await screen.findByRole('alert');
+    fireEvent.click(within(alert).getByRole('button', { name: 'Reintentar' }));
+
+    expect(await screen.findByRole('heading', { name: 'Pagos' })).toBeInTheDocument();
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    expect(listPayments).toHaveBeenCalledTimes(2);
   });
 
   it('renders in English', async () => {
