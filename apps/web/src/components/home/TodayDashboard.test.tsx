@@ -122,8 +122,10 @@ describe('TodayDashboard', () => {
         .map((link) => link.textContent),
     ).toEqual(['Grande', 'Chico', 'Dólares']);
     const totals = within(owed).getByTestId('owed-totals');
-    expect(totals).toHaveTextContent('$ 9.500,00');
-    expect(totals).toHaveTextContent('US$ 10,00');
+    expect(within(totals).getByText('Total adeudado')).toBeInTheDocument();
+    // Each currency's total is the block's main figure, never added to the other.
+    expect(within(totals).getByText('$ 9.500,00')).toHaveClass('text-3xl');
+    expect(within(totals).getByText('US$ 10,00')).toHaveClass('text-3xl');
     expect(within(big.closest('li') as HTMLElement).getByText('$ 9.000,00')).toBeInTheDocument();
   });
 
