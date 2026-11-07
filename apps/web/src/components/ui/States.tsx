@@ -52,7 +52,7 @@ export function Panel({
  */
 interface BadgeProps extends React.HTMLAttributes<HTMLSpanElement> {
   /** Visual variant */
-  variant?: 'default' | 'success' | 'warning' | 'error' | 'info' | 'purple' | 'neutral' | 'tone';
+  variant?: 'default' | 'success' | 'warning' | 'error' | 'info' | 'neutral' | 'tone';
   /** Size of badge (xs, sm, md) */
   size?: 'xs' | 'sm' | 'md';
   /** Removable badge with close button */
@@ -71,10 +71,9 @@ export function Badge({
   const variantClasses = {
     default: 'action-brand border',
     success: 'status-success text-status-completed bg-opacity-20',
-    warning: 'status-warning text-priority-high bg-opacity-20',
+    warning: 'status-warning text-warning bg-opacity-20',
     error: 'status-error text-destructive-text bg-opacity-20',
     info: 'status-info text-status-open bg-opacity-20',
-    purple: 'status-purple text-accent-primary bg-opacity-20',
     neutral: 'bg-panel-default text-fg-primary border border-border-default',
     /** No color of its own: the className supplies it (status and priority badges). */
     tone: '',
@@ -140,7 +139,7 @@ export function Alert({
   const typeClasses = {
     info: 'status-info text-status-open',
     success: 'status-success text-status-completed',
-    warning: 'status-warning text-priority-high',
+    warning: 'status-warning text-warning',
     error: 'status-error text-destructive-text',
   };
 
@@ -207,7 +206,7 @@ export function LoadingState({
   const spinnerContent = (
     <div
       className={cn(
-        'rounded-full border-2 border-fg-tertiary border-t-accent-primary animate-spin',
+        'rounded-full border-2 border-fg-tertiary border-t-accent-brand animate-spin',
         sizeClasses[size],
       )}
     />
@@ -218,7 +217,7 @@ export function LoadingState({
   );
 
   const pulseContent = (
-    <div className={cn('rounded-full bg-accent-primary animate-pulse', sizeClasses[size])} />
+    <div className={cn('rounded-full bg-accent-brand animate-pulse', sizeClasses[size])} />
   );
 
   const renderContent = {

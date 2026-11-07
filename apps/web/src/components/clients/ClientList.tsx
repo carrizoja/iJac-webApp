@@ -218,7 +218,7 @@ export function ClientList({ onCreate, onEdit }: ClientListProps) {
                 {sortedClients.map((client) => (
                   <Fragment key={client.id}>
                     <tr
-                      className={confirmDelete === client.id ? 'bg-priority-high/5' : 'table-row'}
+                      className={confirmDelete === client.id ? 'bg-warning/5' : 'table-row'}
                     >
                       <td className="px-4 py-3.5 font-medium">
                         {client.name}
@@ -257,7 +257,7 @@ export function ClientList({ onCreate, onEdit }: ClientListProps) {
                       <tr key={`${client.id}-delete`}>
                         <td
                           colSpan={5}
-                          className="bg-priority-high/10 px-4 py-3"
+                          className="bg-warning/10 px-4 py-3"
                           data-testid="delete-confirmation"
                         >
                           <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
@@ -299,7 +299,7 @@ export function ClientList({ onCreate, onEdit }: ClientListProps) {
               <div key={client.id}>
                 {confirmDelete === client.id && (
                   <Panel
-                    className="mb-3 border border-priority-high bg-priority-high/10"
+                    className="mb-3 border border-warning bg-warning/10"
                     data-testid="delete-confirmation"
                   >
                     <div className="space-y-3">

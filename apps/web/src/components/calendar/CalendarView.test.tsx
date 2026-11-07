@@ -86,7 +86,7 @@ describe('CalendarView', () => {
     [
       { attempted: 2, succeeded: 1, failed: 1 },
       'status',
-      'text-priority-high',
+      'text-warning',
       /1 exitosa, 1 fallida de 2 intentadas/i,
     ],
     [
