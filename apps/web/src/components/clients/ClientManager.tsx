@@ -36,7 +36,9 @@ export function ClientManager() {
           >
             {editing ? t('clients.edit') : t('clients.new')}
           </h3>
+          {/* The form copies its client into state once, so each client gets its own instance. */}
           <ClientForm
+            key={editing?.id ?? 'new'}
             client={editing ?? undefined}
             onSaved={handleSaved}
             onCancel={() => {

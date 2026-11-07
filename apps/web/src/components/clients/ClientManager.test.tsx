@@ -19,15 +19,32 @@ vi.mock('./ClientList', () => ({
       >
         Editar Acme
       </button>
+      <button
+        onClick={() =>
+          onEdit({ id: 'client-2', name: 'Beta', email: 'b@beta.test', phone: '2' } as Client)
+        }
+      >
+        Editar Beta
+      </button>
     </div>
   ),
 }));
 
-vi.mock('./ClientForm', () => ({
-  ClientForm: ({ onCancel }: { onCancel: () => void }) => (
-    <button onClick={onCancel}>Cancelar formulario</button>
-  ),
-}));
+// Like the real form, it copies the client into state once, when it mounts.
+vi.mock('./ClientForm', async () => {
+  const { useState } = await import('react');
+  return {
+    ClientForm: ({ client, onCancel }: { client?: Client; onCancel: () => void }) => {
+      const [name] = useState(client?.name ?? '');
+      return (
+        <div>
+          <p data-testid="form-client-name">{name}</p>
+          <button onClick={onCancel}>Cancelar formulario</button>
+        </div>
+      );
+    },
+  };
+});
 
 import { ClientManager } from './ClientManager';
 
@@ -42,6 +59,16 @@ describe('ClientManager', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Cancelar formulario' }));
     fireEvent.click(screen.getByRole('button', { name: 'Editar Acme' }));
     expect(screen.getByText('Editar cliente')).toBeInTheDocument();
+  });
+
+  it('starts the form from the client just chosen when switching to another', () => {
+    render(<ClientManager />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Editar Acme' }));
+    expect(screen.getByTestId('form-client-name')).toHaveTextContent('Acme');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Editar Beta' }));
+    expect(screen.getByTestId('form-client-name')).toHaveTextContent('Beta');
   });
 
   describe('bringing the form into view', () => {

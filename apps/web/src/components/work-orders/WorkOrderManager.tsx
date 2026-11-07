@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import type { WorkOrder, WorkOrderClientSummary, Client } from '@ijac/shared';
 import { WorkOrderList } from './WorkOrderList';
 import { WorkOrderForm } from './WorkOrderForm';
@@ -30,19 +30,29 @@ export function WorkOrderManager() {
   );
 
   // The list only has summaries; the form needs the full order so it can keep the description.
+  // Only the latest Edit click counts, so a slower response for an earlier row is ignored.
+  const latestEdit = useRef(0);
   const startEditing = async (summary: WorkOrderClientSummary) => {
+    const request = ++latestEdit.current;
     setEditLoadError(false);
     try {
-      setEditing(await getWorkOrder(summary.id));
+      const order = await getWorkOrder(summary.id);
+      if (request !== latestEdit.current) return;
+      setEditing(order);
       setCreating(false);
     } catch {
-      setEditLoadError(true);
+      if (request === latestEdit.current) setEditLoadError(true);
     }
   };
 
-  const handleSaved = () => {
+  const closeForm = () => {
+    latestEdit.current += 1;
     setEditing(null);
     setCreating(false);
+  };
+
+  const handleSaved = () => {
+    closeForm();
     setRefreshKey((k) => k + 1);
   };
 
@@ -77,14 +87,13 @@ export function WorkOrderManager() {
           >
             {editing ? t('workOrders.edit') : t('workOrders.new')}
           </h3>
+          {/* The form copies its order into state once, so each order gets its own instance. */}
           <WorkOrderForm
+            key={editing?.id ?? 'new'}
             clients={clients}
             workOrder={editing ?? undefined}
             onSaved={handleSaved}
-            onCancel={() => {
-              setEditing(null);
-              setCreating(false);
-            }}
+            onCancel={closeForm}
           />
         </div>
       )}
@@ -92,7 +101,10 @@ export function WorkOrderManager() {
       <WorkOrderList
         key={refreshKey}
         clients={clients}
-        onCreate={() => setCreating(true)}
+        onCreate={() => {
+          closeForm();
+          setCreating(true);
+        }}
         onEdit={(summary) => void startEditing(summary)}
       />
     </div>
