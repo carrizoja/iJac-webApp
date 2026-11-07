@@ -156,6 +156,11 @@ export function WorkOrderList({ clients, onCreate, onEdit }: WorkOrderListProps)
     setClientFilter('');
   };
   const todayKey = localDateKey(new Date());
+  // Orders with payments (voided ones included) cannot be deleted; the API refuses them.
+  const deleteLabel = (wo: WorkOrderClientSummary) =>
+    t(wo.hasPayments ? 'workOrders.deleteBlockedNamed' : 'workOrders.deleteNamed', {
+      name: wo.title,
+    });
 
   return (
     <div className="space-y-5" data-testid="work-order-list">
@@ -357,10 +362,13 @@ export function WorkOrderList({ clients, onCreate, onEdit }: WorkOrderListProps)
                           />
                           <RowActionButton
                             action="delete"
-                            label={t('workOrders.deleteNamed', { name: wo.title })}
+                            label={deleteLabel(wo)}
                             title={t('common.delete')}
                             onClick={() => setConfirmDelete(wo.id)}
                             disabled={confirmDelete !== null || deleting === wo.id}
+                            disabledReason={
+                              wo.hasPayments ? t('workOrders.deleteHasPayments') : undefined
+                            }
                           />
                         </div>
                       </td>
@@ -492,16 +500,21 @@ export function WorkOrderList({ clients, onCreate, onEdit }: WorkOrderListProps)
                       >
                         {t('common.edit')}
                       </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className={deleteActionButtonClass}
-                        onClick={() => setConfirmDelete(wo.id)}
-                        disabled={confirmDelete !== null || deleting === wo.id}
-                        aria-label={t('workOrders.deleteNamed', { name: wo.title })}
+                      <span
+                        className="inline-flex"
+                        title={wo.hasPayments ? t('workOrders.deleteHasPayments') : undefined}
                       >
-                        {t('common.delete')}
-                      </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className={deleteActionButtonClass}
+                          onClick={() => setConfirmDelete(wo.id)}
+                          disabled={confirmDelete !== null || deleting === wo.id || wo.hasPayments}
+                          aria-label={deleteLabel(wo)}
+                        >
+                          {t('common.delete')}
+                        </Button>
+                      </span>
                     </div>
                   </div>
                 </Panel>
