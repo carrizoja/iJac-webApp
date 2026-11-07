@@ -115,6 +115,7 @@ export function PaymentsPanel({ workOrderId, workOrderStatus }: PaymentsPanelPro
   const canRecord = canManage && balance !== null && !cancelled && !settled;
   const money = (minor: number) => (balance ? formatMoney(minor, balance.currency) : '');
   const remainingText = balance ? money(balance.remainingMinor) : '';
+  const anyVoided = items.some((payment) => payment.status === PaymentStatus.VOIDED);
 
   const openRecord = () => {
     idempotencyKey.current = crypto.randomUUID();
@@ -308,7 +309,12 @@ export function PaymentsPanel({ workOrderId, workOrderStatus }: PaymentsPanelPro
       {items.length === 0 ? (
         <p className="mt-6 text-sm text-fg-muted">{t('payments.empty')}</p>
       ) : (
-        <div className="mt-6 overflow-x-auto">
+        <div
+          className="mt-6 overflow-x-auto rounded focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
+          role="region"
+          aria-label={t('payments.list')}
+          tabIndex={0}
+        >
           <table className="w-full text-left text-sm" aria-label={t('payments.list')}>
             <thead>
               <tr className="text-xs uppercase tracking-wider text-fg-muted">
@@ -324,9 +330,12 @@ export function PaymentsPanel({ workOrderId, workOrderStatus }: PaymentsPanelPro
                 <th scope="col" className="py-2 pr-4">
                   {t('payments.amount')}
                 </th>
-                <th scope="col" className="py-2 pr-4">
-                  {t('payments.status')}
-                </th>
+                {/* Only voided payments carry a status, so the column appears with the first one. */}
+                {anyVoided && (
+                  <th scope="col" className="py-2 pr-4">
+                    {t('payments.status')}
+                  </th>
+                )}
                 <th scope="col" className="work-order-print-hidden py-2">
                   <span className="sr-only">{t('common.actions')}</span>
                 </th>
@@ -346,15 +355,17 @@ export function PaymentsPanel({ workOrderId, workOrderStatus }: PaymentsPanelPro
                         {formatMoney(payment.amountMinor, payment.currency)}
                       </span>
                     </td>
-                    <td className="py-3 pr-4">
-                      {/* Only the exception is badged; an active payment needs no label. */}
-                      {voided && <Badge variant="error">{t('payments.status.voided')}</Badge>}
-                      {voided && payment.void && (
-                        <p className="mt-1 text-xs text-fg-muted">
-                          {t('payments.voidedReason', { reason: payment.void.reason })}
-                        </p>
-                      )}
-                    </td>
+                    {anyVoided && (
+                      <td className="py-3 pr-4">
+                        {/* Only the exception is badged; an active payment needs no label. */}
+                        {voided && <Badge variant="error">{t('payments.status.voided')}</Badge>}
+                        {voided && payment.void && (
+                          <p className="mt-1 text-xs text-fg-muted">
+                            {t('payments.voidedReason', { reason: payment.void.reason })}
+                          </p>
+                        )}
+                      </td>
+                    )}
                     <td className="work-order-print-hidden py-3">
                       <div className="flex flex-wrap items-center gap-2">
                         <Button

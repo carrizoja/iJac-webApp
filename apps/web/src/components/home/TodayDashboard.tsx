@@ -6,7 +6,7 @@ import { collectAllPages } from '../../lib/collectAllPages';
 import { useLanguage } from '../../hooks/useLanguage';
 import { formatDateOnly, localeFor, priorityLabel, statusLabel } from '../../i18n/format';
 import type { TranslationKey } from '../../i18n/translations';
-import { Badge, LoadingState, Panel } from '../ui';
+import { Alert, Badge, LoadingState, Panel } from '../ui';
 import { priorityBadgeClass, statusBadgeClass } from '../work-orders/workOrderBadges';
 import { localDateKey, summarizeToday } from './todaySummary';
 
@@ -55,12 +55,9 @@ function OrdersBody({
       <LoadingState size="sm" message={t('home.loading')} className="flex-row justify-start" />
     );
   }
+  // The failure itself is announced once, above the blocks, with a retry.
   if (state.kind === 'error') {
-    return (
-      <p role="alert" className="text-sm text-destructive">
-        {t('home.loadError')}
-      </p>
-    );
+    return <p className="text-sm text-fg-muted">{t('home.unavailable')}</p>;
   }
   return <>{children(state.items)}</>;
 }
@@ -132,12 +129,22 @@ export function TodayDashboard() {
   const [calendarConnected, setCalendarConnected] = useState<boolean | null>(null);
   const [today] = useState(() => new Date());
   const todayKey = localDateKey(today);
+  /** Bumped by "Reintentar" to load the orders again. */
+  const [ordersAttempt, setOrdersAttempt] = useState(0);
 
   useEffect(() => {
     let active = true;
+    setOrders({ kind: 'loading' });
     collectAllPages((cursor) => listWorkOrders({ cursor }))
       .then((items) => active && setOrders({ kind: 'ready', items }))
       .catch(() => active && setOrders({ kind: 'error' }));
+    return () => {
+      active = false;
+    };
+  }, [ordersAttempt]);
+
+  useEffect(() => {
+    let active = true;
     getCalendarConnectionStatus()
       .then((status) => active && setCalendarConnected(status.connected))
       .catch(() => active && setCalendarConnected(null));
@@ -163,6 +170,15 @@ export function TodayDashboard() {
   return (
     <div className="space-y-6">
       <p className="text-fg-secondary first-letter:uppercase">{dateLine}</p>
+
+      {orders.kind === 'error' && (
+        <Alert
+          type="error"
+          action={{ label: t('home.retry'), onClick: () => setOrdersAttempt((n) => n + 1) }}
+        >
+          {t('home.loadError')}
+        </Alert>
+      )}
 
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="space-y-6 lg:col-span-2">

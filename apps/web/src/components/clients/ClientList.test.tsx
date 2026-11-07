@@ -207,7 +207,9 @@ describe('ClientList', () => {
 
     await waitFor(() => expect(screen.getByText('Acme Inc')).toBeInTheDocument());
     expect(screen.getByTestId('client-table')).toBeInTheDocument();
-    expect(screen.getByTestId('client-table-container')).toBeInTheDocument();
+    const scroller = screen.getByRole('region', { name: 'Lista de clientes' });
+    expect(scroller).toBe(screen.getByTestId('client-table-container'));
+    expect(scroller).toHaveAttribute('tabindex', '0');
     expect(screen.getByRole('columnheader', { name: 'Nombre' })).toBeInTheDocument();
     expect(screen.getByRole('columnheader', { name: 'Email' })).toBeInTheDocument();
     expect(screen.getByRole('columnheader', { name: 'Teléfono' })).toBeInTheDocument();

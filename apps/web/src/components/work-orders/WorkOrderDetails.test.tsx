@@ -186,6 +186,19 @@ describe('WorkOrderDetails', () => {
     });
   });
 
+  it('names a client once when the organization repeats the name', async () => {
+    window.history.replaceState({}, '', '/work-orders/details?id=work-order-1');
+    getWorkOrder.mockResolvedValue(workOrder);
+    getClient.mockResolvedValue({ ...client, organization: ' acme corp ' });
+    render(<WorkOrderDetails />);
+
+    const header = (await screen.findByRole('heading', { level: 1 })).closest(
+      'header',
+    ) as HTMLElement;
+    expect(within(header).getByText('Acme Corp')).toBeInTheDocument();
+    expect(within(header).queryByText(/\(/)).not.toBeInTheDocument();
+  });
+
   describe('as a workspace', () => {
     beforeEach(() => {
       window.history.replaceState({}, '', '/work-orders/details?id=work-order-1');

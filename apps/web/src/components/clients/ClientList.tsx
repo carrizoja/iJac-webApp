@@ -185,9 +185,13 @@ export function ClientList({ onCreate, onEdit }: ClientListProps) {
             />
           </Panel>
         ) : viewMode === 'table' ? (
+          // The table can be wider than the screen, so its box must be focusable to scroll by keyboard.
           <div
-            className="w-full max-w-full overflow-x-auto rounded-xl border border-border-subtle bg-bg-primary/60"
+            className="w-full max-w-full overflow-x-auto rounded-xl border border-border-subtle bg-bg-primary/60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
             data-testid="client-table-container"
+            role="region"
+            aria-label={t('clients.listCaption')}
+            tabIndex={0}
           >
             <table className="w-full min-w-[640px] text-left text-sm" data-testid="client-table">
               <caption className="sr-only">{t('clients.listCaption')}</caption>

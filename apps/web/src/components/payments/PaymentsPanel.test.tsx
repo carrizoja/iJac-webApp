@@ -95,6 +95,10 @@ describe('PaymentsPanel', () => {
     // Only the exception (a voided payment) gets a status badge.
     expect(within(row).queryByText('Vigente')).not.toBeInTheDocument();
     expect(listPayments).toHaveBeenCalledWith('wo-1');
+    expect(screen.getByRole('region', { name: 'Lista de pagos' })).toHaveAttribute(
+      'tabindex',
+      '0',
+    );
   });
 
   it('records a payment as admin and refreshes the balance', async () => {
@@ -461,6 +465,25 @@ describe('PaymentsPanel', () => {
     expect(
       await screen.findByRole('button', { name: 'Anular recibo 0001-00000042' }),
     ).toBeInTheDocument();
+  });
+
+  it('shows the status column only when some payment is voided', async () => {
+    listPayments.mockResolvedValue(response({ items: [makePayment()] }));
+    const { unmount } = renderPanel();
+    await screen.findByRole('row', { name: /0001-00000042/ });
+    expect(screen.queryByRole('columnheader', { name: 'Estado' })).not.toBeInTheDocument();
+    unmount();
+
+    listPayments.mockResolvedValue(
+      response({
+        items: [
+          makePayment(),
+          makePayment({ id: 'pay-2', receiptNumber: 43, status: PaymentStatus.VOIDED }),
+        ],
+      }),
+    );
+    renderPanel();
+    expect(await screen.findByRole('columnheader', { name: 'Estado' })).toBeInTheDocument();
   });
 
   it('names the payment being voided by client, amount, date and method', async () => {
