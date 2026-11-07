@@ -1,8 +1,8 @@
-import { useState, useEffect } from 'react';
-import type { WorkOrderClientSummary, Client } from '@ijac/shared';
+import { useState, useEffect, useRef } from 'react';
+import type { WorkOrder, WorkOrderClientSummary, Client } from '@ijac/shared';
 import { WorkOrderList } from './WorkOrderList';
 import { WorkOrderForm } from './WorkOrderForm';
-import { listClients } from '../../lib/resources';
+import { getWorkOrder, listClients } from '../../lib/resources';
 import { collectAllPages } from '../../lib/collectAllPages';
 import { useLanguage } from '../../hooks/useLanguage';
 import { useRevealOnOpen } from '../../hooks/useRevealOnOpen';
@@ -10,7 +10,8 @@ import { Alert } from '../ui';
 
 export function WorkOrderManager() {
   const { t } = useLanguage();
-  const [editing, setEditing] = useState<WorkOrderClientSummary | null>(null);
+  const [editing, setEditing] = useState<WorkOrder | null>(null);
+  const [editLoadError, setEditLoadError] = useState(false);
   const [creating, setCreating] = useState(false);
   const [clients, setClients] = useState<Client[]>([]);
   const [refreshKey, setRefreshKey] = useState(0);
@@ -28,9 +29,30 @@ export function WorkOrderManager() {
     editing ? editing.id : creating ? 'new' : null,
   );
 
-  const handleSaved = () => {
+  // The list only has summaries; the form needs the full order so it can keep the description.
+  // Only the latest Edit click counts, so a slower response for an earlier row is ignored.
+  const latestEdit = useRef(0);
+  const startEditing = async (summary: WorkOrderClientSummary) => {
+    const request = ++latestEdit.current;
+    setEditLoadError(false);
+    try {
+      const order = await getWorkOrder(summary.id);
+      if (request !== latestEdit.current) return;
+      setEditing(order);
+      setCreating(false);
+    } catch {
+      if (request === latestEdit.current) setEditLoadError(true);
+    }
+  };
+
+  const closeForm = () => {
+    latestEdit.current += 1;
     setEditing(null);
     setCreating(false);
+  };
+
+  const handleSaved = () => {
+    closeForm();
     setRefreshKey((k) => k + 1);
   };
 
@@ -43,6 +65,12 @@ export function WorkOrderManager() {
       {clientsError ? (
         <Alert type="error" onClose={() => setClientsError(false)}>
           {t('clients.loadError')}
+        </Alert>
+      ) : null}
+
+      {editLoadError ? (
+        <Alert type="error" onClose={() => setEditLoadError(false)}>
+          {t('workOrders.editLoadError')}
         </Alert>
       ) : null}
 
@@ -59,14 +87,13 @@ export function WorkOrderManager() {
           >
             {editing ? t('workOrders.edit') : t('workOrders.new')}
           </h3>
+          {/* The form copies its order into state once, so each order gets its own instance. */}
           <WorkOrderForm
+            key={editing?.id ?? 'new'}
             clients={clients}
             workOrder={editing ?? undefined}
             onSaved={handleSaved}
-            onCancel={() => {
-              setEditing(null);
-              setCreating(false);
-            }}
+            onCancel={closeForm}
           />
         </div>
       )}
@@ -74,8 +101,11 @@ export function WorkOrderManager() {
       <WorkOrderList
         key={refreshKey}
         clients={clients}
-        onCreate={() => setCreating(true)}
-        onEdit={setEditing}
+        onCreate={() => {
+          closeForm();
+          setCreating(true);
+        }}
+        onEdit={(summary) => void startEditing(summary)}
       />
     </div>
   );
