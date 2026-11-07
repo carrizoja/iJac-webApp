@@ -29,7 +29,7 @@ describe('Protected', () => {
     render(
       <Protected>
         <div>Protected Content</div>
-      </Protected>
+      </Protected>,
     );
 
     expect(screen.getByText('Cargando...')).toBeInTheDocument();
@@ -47,7 +47,7 @@ describe('Protected', () => {
     render(
       <Protected>
         <div>Protected Content</div>
-      </Protected>
+      </Protected>,
     );
 
     await waitFor(() => {
@@ -68,7 +68,7 @@ describe('Protected', () => {
     render(
       <Protected>
         <div>Protected Content</div>
-      </Protected>
+      </Protected>,
     );
 
     await waitFor(() => {
@@ -82,7 +82,7 @@ describe('Protected', () => {
     const { rerender } = render(
       <Protected>
         <div>Protected Content</div>
-      </Protected>
+      </Protected>,
     );
 
     // Initially loading
@@ -96,7 +96,7 @@ describe('Protected', () => {
     rerender(
       <Protected>
         <div>Protected Content</div>
-      </Protected>
+      </Protected>,
     );
 
     expect(screen.getByText('Cargando...')).toBeInTheDocument();
@@ -112,7 +112,7 @@ describe('Protected', () => {
     rerender(
       <Protected>
         <div>Protected Content</div>
-      </Protected>
+      </Protected>,
     );
 
     await waitFor(() => {

@@ -58,10 +58,6 @@ export function WorkOrderManager() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h2 className="text-xl font-semibold text-fg-primary">{t('workOrders.pageHeading')}</h2>
-      </div>
-
       {clientsError ? (
         <Alert type="error" onClose={() => setClientsError(false)}>
           {t('clients.loadError')}

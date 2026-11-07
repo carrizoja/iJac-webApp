@@ -2,6 +2,7 @@ import React, { useEffect, useRef } from 'react';
 import { cn } from './cn';
 import { Button } from './Button';
 import { useLanguage } from '../../hooks/useLanguage';
+import { X } from 'lucide-react';
 
 const FOCUSABLE =
   'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
@@ -179,7 +180,7 @@ export function Dialog({
             className="absolute top-4 right-4 text-fg-muted hover:text-fg-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus rounded"
             aria-label={t('common.closeDialog')}
           >
-            ✕
+            <X aria-hidden="true" className="h-4 w-4" />
           </button>
         )}
 

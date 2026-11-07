@@ -5,6 +5,7 @@ import { Button, Alert, EmptyState, LoadingState, Panel } from '../ui';
 import { useLanguage } from '../../hooks/useLanguage';
 import { formatMonthYear } from '../../i18n/format';
 import type { TranslationKey } from '../../i18n/translations';
+import { CalendarDays, Check, TriangleAlert } from 'lucide-react';
 
 function startOfMonth(date: Date): Date {
   return new Date(date.getFullYear(), date.getMonth(), 1);
@@ -111,10 +112,22 @@ export function CalendarView() {
 
   const syncAlert = syncResult
     ? syncResult.failed === 0
-      ? { type: 'success' as const, icon: '✓', role: 'status' as const }
+      ? {
+          type: 'success' as const,
+          icon: <Check aria-hidden="true" className="h-4 w-4" />,
+          role: 'status' as const,
+        }
       : syncResult.succeeded === 0
-        ? { type: 'error' as const, icon: '⚠️', role: 'alert' as const }
-        : { type: 'warning' as const, icon: '⚠️', role: 'status' as const }
+        ? {
+            type: 'error' as const,
+            icon: <TriangleAlert aria-hidden="true" className="h-4 w-4" />,
+            role: 'alert' as const,
+          }
+        : {
+            type: 'warning' as const,
+            icon: <TriangleAlert aria-hidden="true" className="h-4 w-4" />,
+            role: 'status' as const,
+          }
     : null;
 
   if (loading) {
@@ -130,7 +143,7 @@ export function CalendarView() {
       {errorKey && !syncResult && (
         <Alert
           type="error"
-          icon="⚠️"
+          icon={<TriangleAlert aria-hidden="true" className="h-4 w-4" />}
           onClose={() => setErrorKey(null)}
           role="alert"
           aria-live="assertive"
@@ -263,7 +276,7 @@ export function CalendarView() {
       {events.length === 0 && (
         <Panel className="calendar-state-panel">
           <EmptyState
-            icon="📅"
+            icon={<CalendarDays aria-hidden="true" className="h-10 w-10" />}
             title={t('calendar.emptyTitle')}
             description={t('calendar.emptyDescription')}
           />

@@ -1,6 +1,7 @@
 import { cn } from './cn';
 import { Button } from './Button';
 import { useLanguage } from '../../hooks/useLanguage';
+import { X } from 'lucide-react';
 
 /**
  * Panel component for grouped content with consistent styling
@@ -102,7 +103,7 @@ export function Badge({
           className="ml-1 hover:opacity-70 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-offset-1 rounded"
           aria-label={t('common.removeBadge')}
         >
-          ✕
+          <X aria-hidden="true" className="h-4 w-4" />
         </button>
       )}
     </span>
@@ -169,7 +170,7 @@ export function Alert({
           className="flex-shrink-0 hover:opacity-70 focus-visible:outline-none focus-visible:ring-1 rounded"
           aria-label={t('common.dismissAlert')}
         >
-          ✕
+          <X aria-hidden="true" className="h-4 w-4" />
         </button>
       )}
     </div>

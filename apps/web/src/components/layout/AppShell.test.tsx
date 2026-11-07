@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 
 // Mock useAuth and Firebase before importing AppShell
@@ -67,6 +67,38 @@ describe('AppShell', () => {
     );
   });
 
+  describe('current page', () => {
+    afterEach(() => window.history.replaceState(null, '', '/'));
+
+    function currentLinks() {
+      const nav = screen.getByRole('navigation', { name: 'Navegación principal' });
+      return within(nav)
+        .getAllByRole('link')
+        .filter((link) => link.getAttribute('aria-current') === 'page')
+        .map((link) => link.textContent);
+    }
+
+    it('marks only the section the page belongs to', () => {
+      window.history.replaceState(null, '', '/work-orders/details?id=1');
+      render(
+        <AppShell>
+          <div>Content</div>
+        </AppShell>,
+      );
+      expect(currentLinks()).toEqual(['Órdenes']);
+    });
+
+    it('marks Inicio only on the home page', () => {
+      window.history.replaceState(null, '', '/');
+      render(
+        <AppShell>
+          <div>Content</div>
+        </AppShell>,
+      );
+      expect(currentLinks()).toEqual(['Inicio']);
+    });
+  });
+
   it('starts with accessible mobile navigation collapsed', () => {
     render(
       <AppShell>
@@ -107,13 +139,13 @@ describe('AppShell', () => {
       </AppShell>,
     );
 
-    fireEvent.click(screen.getByRole('button', { name: 'Cambiar a inglés' }));
+    fireEvent.click(screen.getByRole('button', { name: /Cambiar a inglés/ }));
 
     const navigation = screen.getByRole('navigation', { name: 'Primary navigation' });
     expect(within(navigation).getByRole('link', { name: 'Home' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Sign out' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Switch to light theme' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Switch to Spanish' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Switch to Spanish/ })).toBeInTheDocument();
   });
 
   it('opens and closes the mobile navigation from its trigger', () => {

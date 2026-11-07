@@ -36,6 +36,7 @@ import { collectAllPages } from '../../lib/collectAllPages';
 import { readStoredTableSort, storeTableSort } from '../../lib/tableSort';
 import { isOverdue, localDateKey } from '../home/todaySummary';
 import { priorityBadgeClass, statusBadgeClass } from './workOrderBadges';
+import { ClipboardList, TriangleAlert } from 'lucide-react';
 
 const SORT_STORAGE_KEY = 'ijac.workOrders.sort';
 const COLUMN_SORT_KEYS = [
@@ -237,7 +238,11 @@ export function WorkOrderList({ clients, onCreate, onEdit }: WorkOrderListProps)
       </div>
 
       {errorKey && (
-        <Alert type="error" icon="⚠️" onClose={() => setErrorKey(null)}>
+        <Alert
+          type="error"
+          icon={<TriangleAlert aria-hidden="true" className="h-4 w-4" />}
+          onClose={() => setErrorKey(null)}
+        >
           {t(errorKey)}
         </Alert>
       )}
@@ -267,7 +272,7 @@ export function WorkOrderList({ clients, onCreate, onEdit }: WorkOrderListProps)
               />
             ) : (
               <EmptyState
-                icon="📋"
+                icon={<ClipboardList aria-hidden="true" className="h-10 w-10" />}
                 title={t('workOrders.emptyTitle')}
                 description={t('workOrders.emptyDescription')}
               />
