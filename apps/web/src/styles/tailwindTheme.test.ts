@@ -17,7 +17,7 @@ describe('tailwind theme colors', () => {
 
   it('retires the cyan, purple and priority color utilities', async () => {
     for (const retired of ['text-accent-light', 'bg-accent-primary', 'text-priority-high']) {
-      expect(await cssFor(retired), retired).not.toContain('color');
+      expect((await cssFor(retired)).trim(), retired).toBe('');
     }
   });
 

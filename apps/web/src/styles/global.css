@@ -471,7 +471,7 @@
   .login-orb-bottom {
     right: calc(50% - 20rem);
     bottom: -14rem;
-    background: var(--color-accent-brand);
+    background: var(--color-action-brand);
   }
 
   .login-reveal {
@@ -597,8 +597,6 @@
   .bg-status-completed {
     background-color: var(--color-status-completed);
   }
-
-  /* Priority utilities */
 
   /* Transition utilities */
   .transition-fast {
