@@ -51,7 +51,7 @@ export function Panel({
  */
 interface BadgeProps extends React.HTMLAttributes<HTMLSpanElement> {
   /** Visual variant */
-  variant?: 'default' | 'success' | 'warning' | 'error' | 'info' | 'purple' | 'neutral';
+  variant?: 'default' | 'success' | 'warning' | 'error' | 'info' | 'purple' | 'neutral' | 'tone';
   /** Size of badge (xs, sm, md) */
   size?: 'xs' | 'sm' | 'md';
   /** Removable badge with close button */
@@ -75,6 +75,8 @@ export function Badge({
     info: 'status-info text-status-open bg-opacity-20',
     purple: 'status-purple text-accent-primary bg-opacity-20',
     neutral: 'bg-panel-default text-fg-primary border border-border-default',
+    /** No color of its own: the className supplies it (status and priority badges). */
+    tone: '',
   };
 
   const sizeClasses = {

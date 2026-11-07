@@ -112,8 +112,9 @@ describe('WorkOrderDetails', () => {
     expect(screen.getByText('Acme Corp')).toBeInTheDocument();
     expect(screen.getByText('Acme Argentina')).toBeInTheDocument();
     expect(screen.getByText('Validar la instalación y documentar resultados.')).toBeInTheDocument();
-    expect(screen.getByText('Estado: En progreso')).toBeInTheDocument();
-    expect(screen.getByText('Prioridad: Alta')).toBeInTheDocument();
+    expect(screen.getByText('Estado: En progreso')).toHaveClass('status-in-progress-badge');
+    expect(screen.getByText('Prioridad: Alta')).toHaveClass('priority-high-badge');
+    expect(screen.getByText('Estado: En progreso')).not.toHaveClass('text-fg-primary');
     expect(screen.getByText('Creada')).toBeInTheDocument();
     expect(screen.getByText('Actualizada')).toBeInTheDocument();
   });
