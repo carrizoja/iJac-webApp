@@ -156,6 +156,11 @@ export function ClientList({ onCreate, onEdit }: ClientListProps) {
           type="error"
           icon={<TriangleAlert aria-hidden="true" className="h-4 w-4" />}
           onClose={() => setErrorKey(null)}
+          action={
+            errorKey === 'clients.loadError'
+              ? { label: t('common.retry'), onClick: () => void load(debouncedSearch, true) }
+              : undefined
+          }
         >
           {t(errorKey)}
         </Alert>
