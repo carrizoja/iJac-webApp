@@ -603,10 +603,33 @@ describe('WorkOrderList', () => {
       await waitFor(() => expect(window.location.search).toBe('?from=home'));
     });
 
+    it('drops a client from the URL that is not in the client list', async () => {
+      // e.g. a deleted client: the dropdown could not show it, so it must not filter silently.
+      window.history.replaceState(null, '', '/work-orders?client=gone');
+      listWorkOrders.mockResolvedValue({ items: [servidor] });
+      render(<WorkOrderList clients={[sampleClient]} onCreate={vi.fn()} onEdit={vi.fn()} />);
+
+      expect(
+        await screen.findByRole('link', { name: 'Reparación de Servidor' }),
+      ).toBeInTheDocument();
+      await waitFor(() =>
+        expect(listWorkOrders).toHaveBeenLastCalledWith(
+          expect.objectContaining({ clientId: undefined }),
+        ),
+      );
+      expect(screen.getByLabelText('Filtrar por cliente')).toHaveValue('');
+      await waitFor(() =>
+        expect(new URLSearchParams(window.location.search).has('client')).toBe(false),
+      );
+    });
+
     it('opens with the search and client filter from the URL', async () => {
       window.history.replaceState(null, '', '/work-orders?q=notebook&client=client-2');
       listWorkOrders.mockResolvedValue({ items: [perez] });
-      render(<WorkOrderList clients={[sampleClient]} onCreate={vi.fn()} onEdit={vi.fn()} />);
+      const perezClient = { ...sampleClient, id: 'client-2', name: 'José Pérez' };
+      render(
+        <WorkOrderList clients={[sampleClient, perezClient]} onCreate={vi.fn()} onEdit={vi.fn()} />,
+      );
 
       expect(await screen.findByRole('link', { name: 'Notebook lenta' })).toBeInTheDocument();
       expect(screen.getByRole('searchbox', { name: 'Buscar órdenes' })).toHaveValue('notebook');

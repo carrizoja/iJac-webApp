@@ -110,7 +110,7 @@ export function WorkOrderList({ clients, onCreate, onEdit }: WorkOrderListProps)
   const [priorityFilter, setPriorityFilter] = useState(() =>
     readUrlFilter('priority', WORK_ORDER_PRIORITIES),
   );
-  // Client ids are not known until the clients load; an unknown one just matches no orders.
+  // Client ids are checked once the clients load (see below).
   const [clientFilter, setClientFilter] = useState(() => readUrlParam('client'));
   const [search, setSearch] = useState(() => readUrlParam('q'));
   const [deleting, setDeleting] = useState<string | null>(null);
@@ -127,6 +127,14 @@ export function WorkOrderList({ clients, onCreate, onEdit }: WorkOrderListProps)
     () => sortWorkOrders(workOrders, sort).filter((wo) => matchesOrderSearch(wo, search)),
     [workOrders, sort, search],
   );
+
+  // A client id from the URL that is not in the list (e.g. a deleted client) cannot be shown in
+  // the dropdown, so it must not filter silently. Clients load after the list, so wait for them.
+  useEffect(() => {
+    if (clients.length > 0 && clientFilter && !clients.some((c) => c.id === clientFilter)) {
+      setClientFilter('');
+    }
+  }, [clients, clientFilter]);
 
   useEffect(() => {
     writeUrlFilters({
