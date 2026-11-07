@@ -189,18 +189,22 @@ export function TodayDashboard() {
             <OrdersBody state={orders}>
               {() =>
                 summary && summary.owed.length > 0 ? (
-                  <div className="space-y-3">
-                    <p className="text-sm text-fg-secondary" data-testid="owed-totals">
-                      {t('home.owed.total')}{' '}
-                      {summary.owedTotals.map((total, index) => (
-                        <span key={total.currency}>
-                          {index > 0 && ' · '}
-                          <strong className="font-semibold tabular-nums text-fg-primary">
+                  <div className="space-y-4">
+                    <dl data-testid="owed-totals">
+                      <dt className="text-xs font-semibold uppercase tracking-wider text-fg-muted">
+                        {t('home.owed.total')}
+                      </dt>
+                      <dd className="mt-1 flex flex-wrap items-baseline gap-x-6 gap-y-1">
+                        {summary.owedTotals.map((total) => (
+                          <span
+                            key={total.currency}
+                            className="text-3xl font-semibold tabular-nums text-fg-primary"
+                          >
                             {money(total.remainingMinor, total.currency)}
-                          </strong>
-                        </span>
-                      ))}
-                    </p>
+                          </span>
+                        ))}
+                      </dd>
+                    </dl>
                     <ul className="divide-y divide-border-subtle">
                       {summary.owed.map((order) => (
                         <li
