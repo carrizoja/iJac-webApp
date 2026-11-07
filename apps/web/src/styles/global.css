@@ -90,6 +90,7 @@
     --color-destructive: #dc2626; /* Destructive actions */
     --color-destructive-hover: #b91c1c; /* Destructive hover */
     --color-destructive-active: #991b1b; /* Destructive active */
+    --color-destructive-text: #f87171; /* Red text on dark panels (6.4:1 on #111827) */
 
     /* Focus/selection */
     --color-focus: #60a5fa; /* Focus ring color */
@@ -173,6 +174,7 @@
     --color-destructive: #b91c1c;
     --color-destructive-hover: #991b1b;
     --color-destructive-active: #7f1d1d;
+    --color-destructive-text: #b91c1c;
     --color-focus: #0369a1;
     --color-focus-offset: #fff;
     --color-navbar: #fff;

@@ -342,7 +342,9 @@ export function WorkOrderList({ clients, onCreate, onEdit }: WorkOrderListProps)
                           <span className="inline-flex flex-wrap items-center gap-2">
                             <span
                               className={
-                                isOverdue(wo, todayKey) ? 'font-medium text-destructive' : undefined
+                                isOverdue(wo, todayKey)
+                                  ? 'font-medium text-destructive-text'
+                                  : undefined
                               }
                             >
                               {formatDateOnly(wo.dueDate, language)}

@@ -71,16 +71,43 @@ describe('TodayDashboard', () => {
     const lateRow = late.closest('li') as HTMLElement;
     // The 'Vencidas' group heading already says so; the date itself turns red.
     expect(within(lateRow).queryByText('Vencida')).not.toBeInTheDocument();
-    expect(within(lateRow).getByText(/2 de noviembre/)).toHaveClass('text-destructive');
+    expect(within(lateRow).getByText(/2 de noviembre/)).toHaveClass('text-destructive-text');
     expect(within(lateRow).getByText('Urgente')).toBeInTheDocument();
     expect(within(lateRow).getByText('Acme')).toBeInTheDocument();
 
     const soonRow = within(attention)
       .getByRole('link', { name: 'Instalar red' })
       .closest('li') as HTMLElement;
-    expect(within(soonRow).getByText(/9 de noviembre/)).not.toHaveClass('text-destructive');
-    const links = within(attention).getAllByRole('link');
+    expect(within(soonRow).getByText(/9 de noviembre/)).not.toHaveClass('text-destructive-text');
+    const links = within(attention)
+      .getAllByRole('link')
+      .filter((link) => link.getAttribute('href')?.startsWith('/work-orders/'));
     expect(links.map((link) => link.textContent)).toEqual(['Reparar servidor', 'Instalar red']);
+    expect(within(attention).getByTestId('overdue-count')).toHaveTextContent('1 vencida');
+  });
+
+  it('leads the attention block with the overdue count, as large as the money owed', async () => {
+    listWorkOrders.mockResolvedValue({
+      items: [
+        order({ id: 'a', title: 'Uno', dueDate: '2026-11-02T00:00:00.000Z' }),
+        order({ id: 'b', title: 'Dos', dueDate: '2026-11-03T00:00:00.000Z' }),
+      ],
+    });
+    render(<TodayDashboard />);
+
+    const count = await within(section('Atención')).findByTestId('overdue-count');
+    expect(count).toHaveTextContent('2 vencidas');
+    expect(within(count).getByText('2')).toHaveClass('text-3xl', 'text-destructive-text');
+  });
+
+  it('shows no overdue count when nothing is overdue', async () => {
+    listWorkOrders.mockResolvedValue({
+      items: [order({ id: 'soon', title: 'Instalar red', dueDate: '2026-11-09T00:00:00.000Z' })],
+    });
+    render(<TodayDashboard />);
+
+    await within(section('Atención')).findByRole('link', { name: 'Instalar red' });
+    expect(screen.queryByTestId('overdue-count')).not.toBeInTheDocument();
   });
 
   it('lists money owed largest first with a total per currency, linking to the payments', async () => {
@@ -131,19 +158,45 @@ describe('TodayDashboard', () => {
     expect(within(big.closest('li') as HTMLElement).getByText('$ 9.000,00')).toBeInTheDocument();
   });
 
-  it("shows today's orders and offers to connect the calendar when it is not connected", async () => {
+  it("lists today's orders in the attention block between overdue and the coming days", async () => {
     getCalendarConnectionStatus.mockResolvedValue({ connected: false, status: 'disconnected' });
     listWorkOrders.mockResolvedValue({
-      items: [order({ id: 't', title: 'Visita hoy', dueDate: '2026-11-06T00:00:00.000Z' })],
+      items: [
+        order({ id: 'soon', title: 'Instalar red', dueDate: '2026-11-09T00:00:00.000Z' }),
+        order({ id: 't', title: 'Visita hoy', dueDate: '2026-11-06T00:00:00.000Z' }),
+        order({ id: 'late', title: 'Reparar servidor', dueDate: '2026-11-02T00:00:00.000Z' }),
+      ],
     });
     render(<TodayDashboard />);
 
-    const agenda = section('Agenda de hoy');
-    expect(await within(agenda).findByRole('link', { name: 'Visita hoy' })).toBeInTheDocument();
+    const attention = section('Atención');
+    const today = await within(attention).findByRole('link', { name: 'Visita hoy' });
+    expect(today).toHaveAttribute('href', '/work-orders/details?id=t');
     expect(
-      await within(agenda).findByRole('link', { name: 'Conectá Google Calendar' }),
+      within(attention)
+        .getAllByRole('heading', { level: 3 })
+        .map((heading) => heading.textContent),
+    ).toEqual(['Vencidas', 'Vencen hoy', 'Próximos 7 días']);
+    expect(
+      within(attention)
+        .getAllByRole('link')
+        .filter((link) => link.getAttribute('href')?.startsWith('/work-orders/'))
+        .map((link) => link.textContent),
+    ).toEqual(['Reparar servidor', 'Visita hoy', 'Instalar red']);
+    expect(within(today.closest('li') as HTMLElement).getByText(/6 de noviembre/)).not.toHaveClass(
+      'text-destructive-text',
+    );
+    expect(
+      await within(attention).findByRole('link', { name: 'Conectá Google Calendar' }),
     ).toHaveAttribute('href', '/calendar');
-    expect(within(section('Atención')).queryByText('Visita hoy')).not.toBeInTheDocument();
+    expect(screen.queryByRole('region', { name: 'Agenda de hoy' })).not.toBeInTheDocument();
+  });
+
+  it('links to the calendar from the attention block when it is connected', async () => {
+    render(<TodayDashboard />);
+    expect(
+      await within(section('Atención')).findByRole('link', { name: 'Ver calendario' }),
+    ).toHaveAttribute('href', '/calendar');
   });
 
   it('links each open-work count to the filtered order list', async () => {
@@ -168,13 +221,12 @@ describe('TodayDashboard', () => {
   it('says plainly when there is nothing to show', async () => {
     render(<TodayDashboard />);
     expect(
-      await within(section('Atención')).findByText('No hay órdenes vencidas ni próximas a vencer'),
+      await within(section('Atención')).findByText(
+        'No hay órdenes vencidas, para hoy ni para los próximos 7 días',
+      ),
     ).toBeInTheDocument();
     expect(
       within(section('Cobros pendientes')).getByText('No hay saldos pendientes'),
-    ).toBeInTheDocument();
-    expect(
-      within(section('Agenda de hoy')).getByText('No hay órdenes para hoy'),
     ).toBeInTheDocument();
   });
 
@@ -189,7 +241,7 @@ describe('TodayDashboard', () => {
     expect(within(section('Atención')).getByText('No disponible')).toBeInTheDocument();
     expect(within(section('Cobros pendientes')).getByText('No disponible')).toBeInTheDocument();
     expect(
-      await within(section('Agenda de hoy')).findByRole('link', {
+      await within(section('Atención')).findByRole('link', {
         name: 'Conectá Google Calendar',
       }),
     ).toBeInTheDocument();
