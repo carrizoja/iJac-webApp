@@ -6,8 +6,11 @@ import {
   type WorkOrder,
   type WorkOrderStatus,
 } from '@ijac/shared';
-import { FileDown, MessageCircle } from 'lucide-react';
-import { getClient, getWorkOrder, updateWorkOrder } from '../../lib/resources';
+import { FileDown, MessageCircle, Pencil } from 'lucide-react';
+import { getClient, getWorkOrder, listClients, updateWorkOrder } from '../../lib/resources';
+import { collectAllPages } from '../../lib/collectAllPages';
+import { useRevealOnOpen } from '../../hooks/useRevealOnOpen';
+import { WorkOrderForm } from './WorkOrderForm';
 import { Alert, Badge, Button, LoadingState, Panel, Select } from '../ui';
 import { PaymentsPanel } from '../payments/PaymentsPanel';
 import { priorityBadgeClass, statusBadgeClass } from './workOrderBadges';
@@ -39,6 +42,27 @@ export function WorkOrderDetails() {
   const [savingStatus, setSavingStatus] = useState(false);
   const [statusError, setStatusError] = useState(false);
   const [statusAnnouncement, setStatusAnnouncement] = useState('');
+  const [editing, setEditing] = useState(false);
+  const [clients, setClients] = useState<Client[]>([]);
+  const [clientsError, setClientsError] = useState(false);
+  /** Bumped after an edit is saved so the order and its client load again. */
+  const [reloadKey, setReloadKey] = useState(0);
+  const { panelRef, focusRef } = useRevealOnOpen<HTMLHeadingElement>(
+    editing && state.status === 'ready' ? state.workOrder.id : null,
+  );
+
+  // The form offers every client, so they load only when editing starts.
+  useEffect(() => {
+    if (!editing) return;
+    let active = true;
+    setClientsError(false);
+    collectAllPages((cursor) => listClients({ cursor }))
+      .then((items) => active && setClients(items))
+      .catch(() => active && setClientsError(true));
+    return () => {
+      active = false;
+    };
+  }, [editing]);
 
   useEffect(() => {
     const id = new URLSearchParams(window.location.search).get('id')?.trim();
@@ -70,7 +94,7 @@ export function WorkOrderDetails() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [reloadKey]);
 
   if (state.status === 'loading') {
     return (
@@ -155,29 +179,40 @@ export function WorkOrderDetails() {
             </h1>
             <p className="text-fg-secondary">{clientDisplayName}</p>
           </div>
-          <div
-            className="work-order-print-hidden flex flex-wrap gap-2"
-            role="group"
-            aria-label={t('workOrders.documentActions')}
-          >
+          <div className="work-order-print-hidden flex flex-wrap gap-2">
             <Button
               type="button"
-              variant="secondary"
+              variant="primary"
               size="sm"
-              onClick={() => window.print()}
-              startIcon={<FileDown aria-hidden="true" focusable="false" className="h-4 w-4" />}
+              onClick={() => setEditing(true)}
+              startIcon={<Pencil aria-hidden="true" focusable="false" className="h-4 w-4" />}
             >
-              {t('workOrders.savePdf')}
+              {t('common.edit')}
             </Button>
-            <a
-              href={whatsAppHref}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex h-9 items-center justify-center rounded-md border border-border-default bg-panel-default px-3 text-sm font-medium text-fg-primary transition-fast hover:bg-panel-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2"
+            <div
+              className="flex flex-wrap gap-2"
+              role="group"
+              aria-label={t('workOrders.documentActions')}
             >
-              <MessageCircle aria-hidden="true" focusable="false" className="mr-2 h-4 w-4" />
-              {t('workOrders.shareWhatsApp')}
-            </a>
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                onClick={() => window.print()}
+                startIcon={<FileDown aria-hidden="true" focusable="false" className="h-4 w-4" />}
+              >
+                {t('workOrders.savePdf')}
+              </Button>
+              <a
+                href={whatsAppHref}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex h-9 items-center justify-center rounded-md border border-border-default bg-panel-default px-3 text-sm font-medium text-fg-primary transition-fast hover:bg-panel-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2"
+              >
+                <MessageCircle aria-hidden="true" focusable="false" className="mr-2 h-4 w-4" />
+                {t('workOrders.shareWhatsApp')}
+              </a>
+            </div>
           </div>
         </div>
 
@@ -203,7 +238,8 @@ export function WorkOrderDetails() {
               id="work-order-status"
               label={t('workOrders.changeStatus')}
               value={workOrder.status}
-              disabled={savingStatus}
+              // While the form is open it saves the status too, so changing it here would be undone.
+              disabled={savingStatus || editing}
               onChange={(event) => void changeStatus(event.target.value as WorkOrderStatus)}
               options={WORK_ORDER_STATUSES.map((status) => ({
                 value: status,
@@ -225,6 +261,37 @@ export function WorkOrderDetails() {
           {t('workOrders.pdfHelper')}
         </p>
       </header>
+
+      {editing && (
+        <div
+          ref={panelRef}
+          className="work-order-print-hidden scroll-mt-24 rounded-xl border border-border-subtle bg-bg-primary/70 p-4 sm:p-6"
+          data-testid="work-order-edit-panel"
+        >
+          <h2
+            ref={focusRef}
+            tabIndex={-1}
+            className="mb-5 font-heading text-xl font-semibold text-fg-primary focus:outline-none"
+          >
+            {t('workOrders.edit')}
+          </h2>
+          {clientsError ? (
+            <Alert type="error" className="mb-4">
+              {t('clients.loadError')}
+            </Alert>
+          ) : null}
+          <WorkOrderForm
+            key={workOrder.id}
+            clients={clients.length > 0 ? clients : [client]}
+            workOrder={workOrder}
+            onSaved={() => {
+              setEditing(false);
+              setReloadKey((key) => key + 1);
+            }}
+            onCancel={() => setEditing(false)}
+          />
+        </div>
+      )}
 
       <PaymentsPanel workOrderId={workOrder.id} workOrderStatus={workOrder.status} />
 
