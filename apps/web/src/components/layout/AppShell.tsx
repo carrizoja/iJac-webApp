@@ -20,10 +20,23 @@ const navLinks: NavLink[] = [
   { href: '/settings', labelKey: 'nav.settings' },
 ];
 
+/** Home matches only itself; every other section also covers its sub-pages. */
+function isCurrentSection(href: string, pathname: string): boolean {
+  const path = pathname.replace(/\/+$/, '') || '/';
+  return href === '/' ? path === '/' : path === href || path.startsWith(`${href}/`);
+}
+
 export function AppShell({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
   const { t } = useLanguage();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  // Read after mount: the shell is also rendered on the server, where there is no location.
+  const [pathname, setPathname] = useState<string | null>(null);
+  useEffect(() => setPathname(window.location.pathname), []);
+  const currentProps = (href: string) =>
+    pathname !== null && isCurrentSection(href, pathname)
+      ? { 'aria-current': 'page' as const }
+      : {};
   const mobileMenuButtonRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
@@ -63,6 +76,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                     <a
                       key={link.href}
                       href={link.href}
+                      {...currentProps(link.href)}
                       className="navbar-link rounded-lg px-3 py-2 transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-focus"
                     >
                       {t(link.labelKey)}
@@ -123,6 +137,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                   <a
                     key={link.href}
                     href={link.href}
+                    {...currentProps(link.href)}
                     className="navbar-link flex min-h-11 items-center rounded-lg px-3 py-2 transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-focus"
                     onClick={() => setMobileMenuOpen(false)}
                   >

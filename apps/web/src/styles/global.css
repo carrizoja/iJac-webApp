@@ -275,6 +275,12 @@
     color: var(--color-fg-secondary);
   }
 
+  .navbar-link[aria-current='page'] {
+    background: var(--color-navbar-hover);
+    color: var(--color-fg-primary);
+    font-weight: 600;
+  }
+
   .navbar-brand-control:hover,
   .navbar-control:hover,
   .navbar-link:hover {

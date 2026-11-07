@@ -31,12 +31,12 @@ describe('SignIn', () => {
     expect(screen.getByRole('button', { name: 'Continuar con Google' })).toBeInTheDocument();
     expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
     expect(screen.queryByLabelText(/password/i)).not.toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Cambiar a inglés' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Cambiar a inglés/ })).toBeInTheDocument();
   });
 
   it('switches the complete signed-out experience to English', () => {
     render(<SignIn />);
-    fireEvent.click(screen.getByRole('button', { name: 'Cambiar a inglés' }));
+    fireEvent.click(screen.getByRole('button', { name: /Cambiar a inglés/ }));
     expect(screen.getByRole('heading', { name: 'Sign in to iJac' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Continue with Google' })).toBeInTheDocument();
     expect(document.documentElement.lang).toBe('en');
