@@ -96,6 +96,7 @@ export default {
           DEFAULT: 'var(--color-destructive)',
           hover: 'var(--color-destructive-hover)',
           active: 'var(--color-destructive-active)',
+          text: 'var(--color-destructive-text)',
         },
 
         /* Focus */

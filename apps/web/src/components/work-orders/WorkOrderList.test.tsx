@@ -258,6 +258,8 @@ describe('WorkOrderList', () => {
 
       const lateRow = (await screen.findByRole('link', { name: 'Atrasada' })).closest('tr')!;
       expect(within(lateRow).getByText('Vencida')).toBeInTheDocument();
+      // The overdue date uses the readable red text color, not the button red.
+      expect(lateRow.querySelector('.text-destructive-text')).not.toBeNull();
       const todayRow = screen.getByRole('link', { name: 'Hoy' }).closest('tr')!;
       expect(within(todayRow).queryByText('Vencida')).not.toBeInTheDocument();
       const doneRow = screen.getByRole('link', { name: 'Terminada' }).closest('tr')!;

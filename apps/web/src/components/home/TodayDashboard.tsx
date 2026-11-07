@@ -81,7 +81,9 @@ function OrderRow({ order, overdue }: { order: WorkOrderClientSummary; overdue?:
         {/* Overdue rows sit under the 'Vencidas' heading, so the date alone turns red. */}
         <span
           className={
-            overdue ? 'font-medium tabular-nums text-destructive' : 'tabular-nums text-fg-secondary'
+            overdue
+              ? 'font-medium tabular-nums text-destructive-text'
+              : 'tabular-nums text-fg-secondary'
           }
         >
           {t('home.dueOn', { date: formatDateOnly(order.dueDate, language) })}
@@ -185,13 +187,33 @@ export function TodayDashboard() {
           <Block id="home-attention" title={t('home.attention.title')}>
             <OrdersBody state={orders}>
               {() =>
-                summary && summary.overdue.length + summary.upcoming.length > 0 ? (
+                summary &&
+                summary.overdue.length + summary.dueToday.length + summary.upcoming.length > 0 ? (
                   <div className="space-y-4">
+                    {/* Overdue work is the first thing to act on, so its count leads the block. */}
+                    {summary.overdue.length > 0 && (
+                      <p
+                        data-testid="overdue-count"
+                        className="flex items-baseline gap-2 font-semibold"
+                      >
+                        <span className="text-3xl tabular-nums text-destructive-text">
+                          {summary.overdue.length}
+                        </span>{' '}
+                        <span className="text-fg-primary">
+                          {t(
+                            summary.overdue.length === 1
+                              ? 'home.attention.overdueCountOne'
+                              : 'home.attention.overdueCountOther',
+                          )}
+                        </span>
+                      </p>
+                    )}
                     <OrderGroup
                       title={t('home.attention.overdue')}
                       orders={summary.overdue}
                       overdue
                     />
+                    <OrderGroup title={t('home.attention.today')} orders={summary.dueToday} />
                     <OrderGroup title={t('home.attention.upcoming')} orders={summary.upcoming} />
                   </div>
                 ) : (
@@ -199,6 +221,21 @@ export function TodayDashboard() {
                 )
               }
             </OrdersBody>
+            {calendarConnected === false && (
+              <p className="text-sm text-fg-secondary">
+                <a href="/calendar" className={linkClass}>
+                  {t('home.agenda.connect')}
+                </a>{' '}
+                {t('home.agenda.connectHint')}
+              </p>
+            )}
+            {calendarConnected === true && (
+              <p className="text-sm">
+                <a href="/calendar" className={linkClass}>
+                  {t('home.agenda.openCalendar')}
+                </a>
+              </p>
+            )}
           </Block>
 
           <Block id="home-owed" title={t('home.owed.title')}>
@@ -251,42 +288,6 @@ export function TodayDashboard() {
         </div>
 
         <div className="space-y-6">
-          <Block id="home-agenda" title={t('home.agenda.title')}>
-            <OrdersBody state={orders}>
-              {() =>
-                summary && summary.dueToday.length > 0 ? (
-                  <ul className="divide-y divide-border-subtle">
-                    {summary.dueToday.map((order) => (
-                      <li key={order.id} className="space-y-0.5 py-3">
-                        <a href={detailsHref(order.id)} className={linkClass}>
-                          {order.title}
-                        </a>
-                        <p className="text-sm text-fg-muted">{order.clientName}</p>
-                      </li>
-                    ))}
-                  </ul>
-                ) : (
-                  <EmptyLine messageKey="home.agenda.empty" />
-                )
-              }
-            </OrdersBody>
-            {calendarConnected === false && (
-              <p className="text-sm text-fg-secondary">
-                <a href="/calendar" className={linkClass}>
-                  {t('home.agenda.connect')}
-                </a>{' '}
-                {t('home.agenda.connectHint')}
-              </p>
-            )}
-            {calendarConnected === true && (
-              <p className="text-sm">
-                <a href="/calendar" className={linkClass}>
-                  {t('home.agenda.openCalendar')}
-                </a>
-              </p>
-            )}
-          </Block>
-
           <Block id="home-open" title={t('home.open.title')}>
             <OrdersBody state={orders}>
               {() =>
