@@ -3,6 +3,7 @@ import { getCalendarConnectionStatus, startCalendarConnection } from '../../lib/
 import { Button, Alert, Panel, LoadingState } from '../ui';
 import { useLanguage } from '../../hooks/useLanguage';
 import type { TranslationKey } from '../../i18n/translations';
+import { Check, TriangleAlert } from 'lucide-react';
 
 export function CalendarConnection() {
   const { t } = useLanguage();
@@ -82,19 +83,31 @@ export function CalendarConnection() {
         </span>
       </div>
       {connectionFeedback === 'success' && (
-        <Alert type="success" icon="✓" className="mt-2" role="status" aria-live="polite">
+        <Alert
+          type="success"
+          icon={<Check aria-hidden="true" className="h-4 w-4" />}
+          className="mt-2"
+          role="status"
+          aria-live="polite"
+        >
           {t('calendar.connectionSuccess')}
         </Alert>
       )}
       {connectionFeedback === 'error' && (
-        <Alert type="error" icon="⚠️" className="mt-2" role="alert" aria-live="assertive">
+        <Alert
+          type="error"
+          icon={<TriangleAlert aria-hidden="true" className="h-4 w-4" />}
+          className="mt-2"
+          role="alert"
+          aria-live="assertive"
+        >
           {t('calendar.connectionError')}
         </Alert>
       )}
       {errorKey && (
         <Alert
           type="error"
-          icon="⚠️"
+          icon={<TriangleAlert aria-hidden="true" className="h-4 w-4" />}
           onClose={() => setErrorKey(null)}
           className="mt-2"
           role="alert"

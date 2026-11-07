@@ -3,6 +3,7 @@ import { isValidCuit, normalizeTaxId, type Client } from '@ijac/shared';
 import { ApiRequestError, createClient, updateClient } from '../../lib/resources';
 import { Input, Textarea, Button, Alert } from '../ui';
 import { useLanguage } from '../../hooks/useLanguage';
+import { TriangleAlert } from 'lucide-react';
 
 interface ClientFormProps {
   client?: Client;
@@ -78,7 +79,11 @@ export function ClientForm({ client, onSaved, onCancel }: ClientFormProps) {
   return (
     <form onSubmit={handleSubmit} className="space-y-5" data-testid="client-form">
       {errors.general && (
-        <Alert type="error" icon="⚠️" onClose={() => setErrors({ ...errors, general: undefined })}>
+        <Alert
+          type="error"
+          icon={<TriangleAlert aria-hidden="true" className="h-4 w-4" />}
+          onClose={() => setErrors({ ...errors, general: undefined })}
+        >
           {errors.general}
         </Alert>
       )}

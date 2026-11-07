@@ -13,6 +13,7 @@ import { formatMoneyInput, parseMoneyInput } from '../../lib/money';
 import { Input, Textarea, Select, Button, Alert } from '../ui';
 import { useLanguage } from '../../hooks/useLanguage';
 import { priorityLabel, statusLabel } from '../../i18n/format';
+import { TriangleAlert } from 'lucide-react';
 
 interface WorkOrderFormProps {
   clients: Client[];
@@ -120,7 +121,11 @@ export function WorkOrderForm({ clients, workOrder, onSaved, onCancel }: WorkOrd
   return (
     <form onSubmit={handleSubmit} className="space-y-5" noValidate>
       {errors.general && (
-        <Alert type="error" icon="⚠️" onClose={() => setErrors({ ...errors, general: undefined })}>
+        <Alert
+          type="error"
+          icon={<TriangleAlert aria-hidden="true" className="h-4 w-4" />}
+          onClose={() => setErrors({ ...errors, general: undefined })}
+        >
           {errors.general}
         </Alert>
       )}

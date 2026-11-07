@@ -10,6 +10,7 @@ import { Alert, Button, Input, LoadingState } from '../ui';
 import { useLanguage } from '../../hooks/useLanguage';
 import { BrandingSettings } from './BrandingSettings';
 import type { TranslationKey } from '../../i18n/translations';
+import { Check, TriangleAlert } from 'lucide-react';
 
 type Form = Required<OrganizationProfileInput>;
 type Field = Exclude<keyof Form, 'signatoryName'>;
@@ -163,14 +164,19 @@ export function OrganizationSettings() {
       >
         {!profile && notConfigured}
         {saved && (
-          <Alert type="success" icon="✓" role="status" onClose={() => setSaved(false)}>
+          <Alert
+            type="success"
+            icon={<Check aria-hidden="true" className="h-4 w-4" />}
+            role="status"
+            onClose={() => setSaved(false)}
+          >
             {t('settings.saved')}
           </Alert>
         )}
         {errors.general && (
           <Alert
             type="error"
-            icon="⚠️"
+            icon={<TriangleAlert aria-hidden="true" className="h-4 w-4" />}
             onClose={() => setErrors({ ...errors, general: undefined })}
           >
             {errors.general}

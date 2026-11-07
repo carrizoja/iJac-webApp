@@ -83,7 +83,7 @@ describe('Badge', () => {
     render(<Badge onRemove={() => {}}>Removable</Badge>);
     const removeBtn = screen.getByLabelText(/quitar etiqueta/i);
     expect(removeBtn).toBeInTheDocument();
-    expect(removeBtn).toHaveTextContent('✕');
+    expect(removeBtn.querySelector('svg[aria-hidden="true"]')).toBeInTheDocument();
   });
 
   it('calls onRemove handler when remove button is clicked', () => {

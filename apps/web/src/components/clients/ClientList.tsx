@@ -25,6 +25,7 @@ import {
   type ClientSort,
   type ClientSortKey,
 } from './clientSort';
+import { TriangleAlert, Users } from 'lucide-react';
 
 const SORT_STORAGE_KEY = 'ijac.clients.sort';
 const COLUMN_SORT_KEYS = ['name', 'email', 'phone', 'organization'] as const;
@@ -151,7 +152,11 @@ export function ClientList({ onCreate, onEdit }: ClientListProps) {
       </div>
 
       {errorKey && (
-        <Alert type="error" icon="⚠️" onClose={() => setErrorKey(null)}>
+        <Alert
+          type="error"
+          icon={<TriangleAlert aria-hidden="true" className="h-4 w-4" />}
+          onClose={() => setErrorKey(null)}
+        >
           {t(errorKey)}
         </Alert>
       )}
@@ -174,7 +179,7 @@ export function ClientList({ onCreate, onEdit }: ClientListProps) {
         ) : clients.length === 0 ? (
           <Panel className="clients-state-panel">
             <EmptyState
-              icon="👥"
+              icon={<Users aria-hidden="true" className="h-10 w-10" />}
               title={t('clients.emptyTitle')}
               description={t('clients.emptyDescription')}
             />
