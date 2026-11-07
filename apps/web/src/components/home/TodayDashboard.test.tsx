@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { render, screen, within } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import {
   Currency,
   WorkOrderPriority,
@@ -178,21 +178,33 @@ describe('TodayDashboard', () => {
     ).toBeInTheDocument();
   });
 
-  it('shows the load error in each order block while the calendar line still works', async () => {
-    listWorkOrders.mockRejectedValue(new Error('NETWORK_ERROR'));
+  it('shows one load error with a retry, while the calendar line still works', async () => {
+    listWorkOrders.mockRejectedValueOnce(new Error('NETWORK_ERROR'));
     getCalendarConnectionStatus.mockResolvedValue({ connected: false, status: 'disconnected' });
     render(<TodayDashboard />);
 
-    expect(
-      await within(section('Atención')).findByText('No se pudieron cargar las órdenes.'),
-    ).toBeInTheDocument();
-    expect(
-      within(section('Cobros pendientes')).getByText('No se pudieron cargar las órdenes.'),
-    ).toBeInTheDocument();
+    const alert = await screen.findByRole('alert');
+    expect(alert).toHaveTextContent('No se pudieron cargar las órdenes.');
+    expect(screen.getAllByRole('alert')).toHaveLength(1);
+    expect(within(section('Atención')).getByText('No disponible')).toBeInTheDocument();
+    expect(within(section('Cobros pendientes')).getByText('No disponible')).toBeInTheDocument();
     expect(
       await within(section('Agenda de hoy')).findByRole('link', {
         name: 'Conectá Google Calendar',
       }),
     ).toBeInTheDocument();
+
+    listWorkOrders.mockResolvedValue({
+      items: [
+        order({ id: 'late', title: 'Reparar servidor', dueDate: '2026-11-02T00:00:00.000Z' }),
+      ],
+    });
+    fireEvent.click(within(alert).getByRole('button', { name: 'Reintentar' }));
+
+    expect(
+      await within(section('Atención')).findByRole('link', { name: 'Reparar servidor' }),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    expect(listWorkOrders).toHaveBeenCalledTimes(2);
   });
 });
