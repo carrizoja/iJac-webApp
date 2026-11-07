@@ -82,6 +82,27 @@ describe('summarizeToday', () => {
     expect(ids(summarizeToday(items, TODAY).owed)).toEqual(['big-done', 'small']);
   });
 
+  it('groups the money owed by currency, largest balance first within each', () => {
+    // Minor units of different currencies are not comparable, so they are never sorted together.
+    const items = [
+      order({ id: 'usd-small', totalPriceMinor: 300, remainingMinor: 300, currency: Currency.USD }),
+      order({
+        id: 'ars-big',
+        totalPriceMinor: 900000,
+        remainingMinor: 900000,
+        currency: Currency.ARS,
+      }),
+      order({ id: 'usd-big', totalPriceMinor: 1000, remainingMinor: 1000, currency: Currency.USD }),
+      order({ id: 'ars-small', totalPriceMinor: 500, remainingMinor: 500, currency: Currency.ARS }),
+    ];
+    expect(ids(summarizeToday(items, TODAY).owed)).toEqual([
+      'ars-big',
+      'ars-small',
+      'usd-big',
+      'usd-small',
+    ]);
+  });
+
   it('totals the amount owed per currency without mixing them', () => {
     const items = [
       order({ id: 'a', totalPriceMinor: 1000, remainingMinor: 400, currency: Currency.ARS }),

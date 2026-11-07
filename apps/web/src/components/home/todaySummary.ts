@@ -15,7 +15,7 @@ export interface TodaySummary {
   upcoming: WorkOrderClientSummary[];
   /** Pending orders due today. */
   dueToday: WorkOrderClientSummary[];
-  /** Non-cancelled orders with money still owed, largest balance first. */
+  /** Non-cancelled orders with money still owed, by currency, then largest balance first. */
   owed: WorkOrderClientSummary[];
   /** Amount owed per currency; currencies are never added together. */
   owedTotals: OwedTotal[];
@@ -65,7 +65,12 @@ export function summarizeToday(
         order.currency !== undefined &&
         (order.remainingMinor ?? 0) > 0,
     )
-    .sort((a, b) => (b.remainingMinor ?? 0) - (a.remainingMinor ?? 0));
+    // Minor units of different currencies are not comparable, so group by currency first.
+    .sort(
+      (a, b) =>
+        (a.currency as Currency).localeCompare(b.currency as Currency) ||
+        (b.remainingMinor ?? 0) - (a.remainingMinor ?? 0),
+    );
 
   const totals = new Map<Currency, number>();
   for (const order of owed) {

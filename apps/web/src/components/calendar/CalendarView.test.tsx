@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import { WorkOrderPriority, WorkOrderStatus } from '@ijac/shared';
 
@@ -40,14 +40,16 @@ describe('CalendarView', () => {
     expect(link).toHaveAttribute('title', 'Ver detalles de Revisión remota');
   });
 
-  it('names the day of each event, since the grid cell is not announced', async () => {
+  it('names the day and status of each event, since the grid cell is not announced', async () => {
     render(<CalendarView />);
     const day = new Date();
     day.setDate(15);
     const spoken = new Intl.DateTimeFormat('es-AR', { dateStyle: 'long' }).format(day);
 
     expect(
-      await screen.findByRole('link', { name: `Ver detalles de Revisión remota, ${spoken}` }),
+      await screen.findByRole('link', {
+        name: `Ver detalles de Revisión remota, ${spoken}, Abierta`,
+      }),
     ).toBeInTheDocument();
   });
 
@@ -108,5 +110,116 @@ describe('CalendarView', () => {
     expect(await screen.findByRole('status')).toHaveTextContent(
       'Sync: 1 succeeded, 0 failed out of 1 attempted.',
     );
+  });
+
+  describe('on a fixed day', () => {
+    beforeEach(() => {
+      setLanguage('es');
+      // Friday 20 November 2026; only Date is faked so promises and timers still run.
+      vi.useFakeTimers({ toFake: ['Date'] });
+      vi.setSystemTime(new Date(2026, 10, 20, 10, 0));
+      listCalendarEvents.mockResolvedValue([
+        {
+          id: 'late',
+          workOrderId: 'late',
+          title: 'Atrasada',
+          dueDate: '2026-11-18T12:00:00.000Z',
+          status: WorkOrderStatus.IN_PROGRESS,
+          priority: WorkOrderPriority.NORMAL,
+        },
+        {
+          id: 'done',
+          workOrderId: 'done',
+          title: 'Terminada',
+          dueDate: '2026-11-18T12:00:00.000Z',
+          status: WorkOrderStatus.COMPLETED,
+          priority: WorkOrderPriority.NORMAL,
+        },
+        {
+          id: 'soon',
+          workOrderId: 'soon',
+          title: 'Próxima',
+          dueDate: '2026-11-25T12:00:00.000Z',
+          status: WorkOrderStatus.OPEN,
+          priority: WorkOrderPriority.NORMAL,
+        },
+      ]);
+    });
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    it('starts the week on Monday, as in Argentina', async () => {
+      render(<CalendarView />);
+      await screen.findByTestId('calendar-view');
+
+      const weekdays = within(screen.getByTestId('calendar-weekdays')).getAllByText(/./);
+      expect(weekdays.map((cell) => cell.textContent)).toEqual([
+        'Lun',
+        'Mar',
+        'Mié',
+        'Jue',
+        'Vie',
+        'Sáb',
+        'Dom',
+      ]);
+      // November 2026 starts on a Sunday, so the grid opens on Monday 26 October.
+      expect(screen.getAllByTestId('calendar-day')[0]).toHaveAttribute('data-date', '2026-10-26');
+    });
+
+    it('marks today, and only today', async () => {
+      render(<CalendarView />);
+      await screen.findByTestId('calendar-view');
+
+      const current = screen
+        .getAllByTestId('calendar-day')
+        .filter((cell) => cell.getAttribute('aria-current') === 'date');
+      expect(current).toHaveLength(1);
+      expect(current[0]).toHaveAttribute('data-date', '2026-11-20');
+    });
+
+    it('marks pending orders past their due date as overdue, and nothing else', async () => {
+      render(<CalendarView />);
+
+      expect(
+        await screen.findByRole('link', {
+          name: 'Ver detalles de Atrasada, 18 de noviembre de 2026, En progreso, Vencida',
+        }),
+      ).toHaveAttribute('data-overdue', 'true');
+      expect(
+        screen.getByRole('link', {
+          name: 'Ver detalles de Terminada, 18 de noviembre de 2026, Completada',
+        }),
+      ).not.toHaveAttribute('data-overdue');
+      expect(
+        screen.getByRole('link', {
+          name: 'Ver detalles de Próxima, 25 de noviembre de 2026, Abierta',
+        }),
+      ).not.toHaveAttribute('data-overdue');
+    });
+
+    it('explains the status colors and the overdue mark in a legend', async () => {
+      render(<CalendarView />);
+
+      const legend = await screen.findByRole('list', { name: 'Referencias' });
+      expect(
+        within(legend)
+          .getAllByRole('listitem')
+          .map((item) => item.textContent),
+      ).toEqual(['Abierta', 'En progreso', 'Completada', 'Cancelada', 'Vencida']);
+    });
+
+    it('lists only the days with orders on a phone, each with its full date', async () => {
+      render(<CalendarView />);
+      await screen.findByTestId('calendar-view');
+
+      const days = screen.getAllByTestId('calendar-day');
+      const withOrders = days.filter((cell) => cell.querySelector('a'));
+      const without = days.filter((cell) => !cell.querySelector('a'));
+      // On phones the 7-column grid becomes a list; empty days are hidden below `sm`.
+      expect(without.every((cell) => cell.classList.contains('hidden'))).toBe(true);
+      expect(withOrders.some((cell) => cell.classList.contains('hidden'))).toBe(false);
+      expect(within(withOrders[0]).getByText('miércoles, 18 de noviembre')).toBeInTheDocument();
+    });
   });
 });
