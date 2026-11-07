@@ -41,16 +41,25 @@ describe('CalendarView', () => {
   });
 
   it('names the day and status of each event, since the grid cell is not announced', async () => {
-    render(<CalendarView />);
     const day = new Date();
     day.setDate(15);
-    const spoken = new Intl.DateTimeFormat('es-AR', { dateStyle: 'long' }).format(day);
+    // Pin today before the 15th, so the open event is never overdue whatever day this runs.
+    const beforeDue = new Date(day);
+    beforeDue.setDate(10);
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(beforeDue);
+    try {
+      render(<CalendarView />);
+      const spoken = new Intl.DateTimeFormat('es-AR', { dateStyle: 'long' }).format(day);
 
-    expect(
-      await screen.findByRole('link', {
-        name: `Ver detalles de Revisión remota, ${spoken}, Abierta`,
-      }),
-    ).toBeInTheDocument();
+      expect(
+        await screen.findByRole('link', {
+          name: `Ver detalles de Revisión remota, ${spoken}, Abierta`,
+        }),
+      ).toBeInTheDocument();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('loads the month again when Reintentar is pressed after a failure', async () => {
