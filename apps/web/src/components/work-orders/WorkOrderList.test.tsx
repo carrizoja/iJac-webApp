@@ -45,6 +45,8 @@ describe('WorkOrderList', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     window.localStorage.clear();
+    // The list writes its filters to the URL; each test starts from a clean one.
+    window.history.replaceState(null, '', '/');
     listWorkOrders.mockResolvedValue({ items: [] });
     deleteWorkOrder.mockResolvedValue(undefined);
   });
@@ -282,7 +284,9 @@ describe('WorkOrderList', () => {
     });
 
     expect(await screen.findByText('Sin resultados')).toBeInTheDocument();
-    expect(screen.getByText('Ninguna orden coincide con los filtros elegidos')).toBeInTheDocument();
+    expect(
+      screen.getByText('Ninguna orden coincide con la búsqueda o los filtros elegidos'),
+    ).toBeInTheDocument();
     expect(screen.queryByText('Creá tu primera orden para comenzar')).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'Limpiar filtros' }));
@@ -517,6 +521,98 @@ describe('WorkOrderList', () => {
       expect(edit).toHaveAttribute('title', 'Editar');
       expect(remove).toHaveAttribute('title', 'Eliminar');
       expect(screen.getByTestId('work-order-row-actions')).toHaveClass('row-actions');
+    });
+  });
+
+  describe('searching orders', () => {
+    const perez = {
+      ...sampleWorkOrder,
+      id: 'perez',
+      title: 'Notebook lenta',
+      clientId: 'client-2',
+      clientName: 'José Pérez',
+    };
+    const servidor = { ...sampleWorkOrder, id: 'servidor', title: 'Reparación de Servidor' };
+
+    afterEach(() => window.history.replaceState(null, '', '/'));
+
+    it('finds orders by title or client name as you type, ignoring accents', async () => {
+      listWorkOrders.mockResolvedValue({ items: [perez, servidor] });
+      render(<WorkOrderList clients={[sampleClient]} onCreate={vi.fn()} onEdit={vi.fn()} />);
+      await screen.findByRole('link', { name: 'Notebook lenta' });
+
+      const search = screen.getByRole('searchbox', { name: 'Buscar órdenes' });
+      expect(search).toHaveAttribute('placeholder', 'Título o cliente');
+
+      fireEvent.change(search, { target: { value: 'perez' } });
+      expect(screen.getByRole('link', { name: 'Notebook lenta' })).toBeInTheDocument();
+      expect(
+        screen.queryByRole('link', { name: 'Reparación de Servidor' }),
+      ).not.toBeInTheDocument();
+
+      fireEvent.change(search, { target: { value: 'SERVIDOR' } });
+      expect(screen.getByRole('link', { name: 'Reparación de Servidor' })).toBeInTheDocument();
+      expect(screen.queryByRole('link', { name: 'Notebook lenta' })).not.toBeInTheDocument();
+    });
+
+    it('says nothing matches and clears the search with the filters', async () => {
+      listWorkOrders.mockResolvedValue({ items: [perez, servidor] });
+      render(<WorkOrderList clients={[sampleClient]} onCreate={vi.fn()} onEdit={vi.fn()} />);
+      await screen.findByRole('link', { name: 'Notebook lenta' });
+
+      const search = screen.getByRole('searchbox', { name: 'Buscar órdenes' });
+      fireEvent.change(search, { target: { value: 'impresora' } });
+      expect(screen.getByText('Sin resultados')).toBeInTheDocument();
+
+      fireEvent.click(screen.getByRole('button', { name: 'Limpiar filtros' }));
+      expect(search).toHaveValue('');
+      expect(screen.getByRole('link', { name: 'Notebook lenta' })).toBeInTheDocument();
+      expect(screen.getByRole('link', { name: 'Reparación de Servidor' })).toBeInTheDocument();
+    });
+
+    it('keeps the search and filters in the page URL', async () => {
+      window.history.replaceState(null, '', '/work-orders?from=home');
+      listWorkOrders.mockResolvedValue({ items: [perez, servidor] });
+      render(<WorkOrderList clients={[sampleClient]} onCreate={vi.fn()} onEdit={vi.fn()} />);
+      await screen.findByRole('link', { name: 'Notebook lenta' });
+
+      fireEvent.change(screen.getByRole('searchbox', { name: 'Buscar órdenes' }), {
+        target: { value: 'pérez' },
+      });
+      fireEvent.change(screen.getByLabelText('Filtrar por estado'), { target: { value: 'open' } });
+      fireEvent.change(screen.getByLabelText('Filtrar por cliente'), {
+        target: { value: 'client-1' },
+      });
+
+      await waitFor(() => {
+        const params = new URLSearchParams(window.location.search);
+        expect(params.get('q')).toBe('pérez');
+        expect(params.get('status')).toBe('open');
+        expect(params.get('client')).toBe('client-1');
+        expect(params.has('priority')).toBe(false);
+        // Parameters it does not own are left alone.
+        expect(params.get('from')).toBe('home');
+      });
+      expect(window.location.pathname).toBe('/work-orders');
+
+      // A search that matches nothing shows "Limpiar filtros", which empties the URL again.
+      fireEvent.change(screen.getByRole('searchbox', { name: 'Buscar órdenes' }), {
+        target: { value: 'impresora' },
+      });
+      fireEvent.click(await screen.findByRole('button', { name: 'Limpiar filtros' }));
+      await waitFor(() => expect(window.location.search).toBe('?from=home'));
+    });
+
+    it('opens with the search and client filter from the URL', async () => {
+      window.history.replaceState(null, '', '/work-orders?q=notebook&client=client-2');
+      listWorkOrders.mockResolvedValue({ items: [perez] });
+      render(<WorkOrderList clients={[sampleClient]} onCreate={vi.fn()} onEdit={vi.fn()} />);
+
+      expect(await screen.findByRole('link', { name: 'Notebook lenta' })).toBeInTheDocument();
+      expect(screen.getByRole('searchbox', { name: 'Buscar órdenes' })).toHaveValue('notebook');
+      expect(listWorkOrders).toHaveBeenCalledWith(
+        expect.objectContaining({ clientId: 'client-2' }),
+      );
     });
   });
 });

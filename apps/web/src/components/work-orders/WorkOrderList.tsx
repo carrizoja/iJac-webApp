@@ -8,6 +8,7 @@ import {
   formatMoney,
 } from '@ijac/shared';
 import {
+  Input,
   Select,
   Button,
   Alert,
@@ -36,6 +37,7 @@ import { collectAllPages } from '../../lib/collectAllPages';
 import { readStoredTableSort, storeTableSort } from '../../lib/tableSort';
 import { isOverdue, localDateKey } from '../home/todaySummary';
 import { priorityBadgeClass, statusBadgeClass } from './workOrderBadges';
+import { matchesOrderSearch } from './workOrderSearch';
 import { ClipboardList, TriangleAlert } from 'lucide-react';
 
 const SORT_STORAGE_KEY = 'ijac.workOrders.sort';
@@ -68,11 +70,29 @@ function workOrderDetailsHref(id: string): string {
   return `/work-orders/details?id=${encodeURIComponent(id)}`;
 }
 
+function readUrlParam(name: string): string {
+  if (typeof window === 'undefined') return '';
+  return new URLSearchParams(window.location.search).get(name) ?? '';
+}
+
 /** A filter value from the page URL (e.g. `?status=open` from the home page), if it is a known one. */
 function readUrlFilter(name: string, allowed: readonly string[]): string {
-  if (typeof window === 'undefined') return '';
-  const value = new URLSearchParams(window.location.search).get(name) ?? '';
+  const value = readUrlParam(name);
   return allowed.includes(value) ? value : '';
+}
+
+/** Writes the search and filters to the page URL, so a reload or Back keeps the same view. */
+function writeUrlFilters(filters: Record<string, string>): void {
+  const params = new URLSearchParams(window.location.search);
+  for (const [name, value] of Object.entries(filters)) {
+    if (value) params.set(name, value);
+    else params.delete(name);
+  }
+  const query = params.toString();
+  const next = `${window.location.pathname}${query ? `?${query}` : ''}${window.location.hash}`;
+  if (next !== `${window.location.pathname}${window.location.search}${window.location.hash}`) {
+    window.history.replaceState(window.history.state, '', next);
+  }
 }
 
 export function WorkOrderList({ clients, onCreate, onEdit }: WorkOrderListProps) {
@@ -90,7 +110,9 @@ export function WorkOrderList({ clients, onCreate, onEdit }: WorkOrderListProps)
   const [priorityFilter, setPriorityFilter] = useState(() =>
     readUrlFilter('priority', WORK_ORDER_PRIORITIES),
   );
-  const [clientFilter, setClientFilter] = useState('');
+  // Client ids are not known until the clients load; an unknown one just matches no orders.
+  const [clientFilter, setClientFilter] = useState(() => readUrlParam('client'));
+  const [search, setSearch] = useState(() => readUrlParam('q'));
   const [deleting, setDeleting] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
   const [sort, setSort] = useState<WorkOrderSort>(() =>
@@ -101,7 +123,19 @@ export function WorkOrderList({ clients, onCreate, onEdit }: WorkOrderListProps)
     setSort(next);
     storeTableSort(SORT_STORAGE_KEY, next);
   };
-  const sortedWorkOrders = useMemo(() => sortWorkOrders(workOrders, sort), [workOrders, sort]);
+  const sortedWorkOrders = useMemo(
+    () => sortWorkOrders(workOrders, sort).filter((wo) => matchesOrderSearch(wo, search)),
+    [workOrders, sort, search],
+  );
+
+  useEffect(() => {
+    writeUrlFilters({
+      q: search.trim(),
+      status: statusFilter,
+      priority: priorityFilter,
+      client: clientFilter,
+    });
+  }, [search, statusFilter, priorityFilter, clientFilter]);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -147,8 +181,9 @@ export function WorkOrderList({ clients, onCreate, onEdit }: WorkOrderListProps)
     }
   };
 
-  const filtered = Boolean(statusFilter || priorityFilter || clientFilter);
+  const filtered = Boolean(statusFilter || priorityFilter || clientFilter || search.trim());
   const clearFilters = () => {
+    setSearch('');
     setStatusFilter('');
     setPriorityFilter('');
     setClientFilter('');
@@ -164,6 +199,15 @@ export function WorkOrderList({ clients, onCreate, onEdit }: WorkOrderListProps)
     <div className="space-y-5" data-testid="work-order-list">
       <div className="flex flex-col gap-3 rounded-xl border border-border-subtle bg-bg-primary/60 p-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex flex-wrap gap-2">
+          <Input
+            id="workOrderSearch"
+            type="search"
+            aria-label={t('workOrders.search')}
+            placeholder={t('workOrders.searchPlaceholder')}
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="w-full rounded-xl sm:w-64"
+          />
           <Select
             id="statusFilter"
             aria-label={t('workOrders.filterStatus')}
@@ -260,7 +304,7 @@ export function WorkOrderList({ clients, onCreate, onEdit }: WorkOrderListProps)
           <Panel className="work-orders-state-panel" data-testid="work-orders-loading-state">
             <LoadingState message={t('workOrders.loading')} />
           </Panel>
-        ) : workOrders.length === 0 ? (
+        ) : sortedWorkOrders.length === 0 ? (
           <Panel className="work-orders-state-panel">
             {filtered ? (
               <EmptyState
