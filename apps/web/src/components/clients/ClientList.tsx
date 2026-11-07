@@ -45,10 +45,7 @@ interface ClientListProps {
 
 export function ClientList({ onCreate, onEdit }: ClientListProps) {
   const { t } = useLanguage();
-  const neonActionButtonBaseClass =
-    'rounded-lg border-2 px-4 transition-all duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] active:translate-y-0';
-  const editActionButtonClass = `${neonActionButtonBaseClass} action-edit`;
-  const deleteActionButtonClass = `${neonActionButtonBaseClass} action-delete`;
+  const rowActionButtonClass = 'rounded-lg px-4';
   const [clients, setClients] = useState<Client[]>([]);
   const [viewMode, setViewMode] = useState<ViewMode>('table');
   const [initialLoading, setInitialLoading] = useState(true);
@@ -143,8 +140,8 @@ export function ClientList({ onCreate, onEdit }: ClientListProps) {
           <ViewModeToggle value={viewMode} onChange={setViewMode} ariaLabel={t('clients.view')} />
           <Button
             onClick={onCreate}
-            className="action-brand min-h-11 shrink-0 whitespace-nowrap rounded-xl border-2 px-6 transition-all duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] active:translate-y-0"
-            variant="ghost"
+            className="min-h-11 shrink-0 whitespace-nowrap rounded-xl px-6"
+            variant="primary"
           >
             {t('clients.new')}
           </Button>
@@ -269,18 +266,18 @@ export function ClientList({ onCreate, onEdit }: ClientListProps) {
                             </p>
                             <div className="flex gap-2 justify-end">
                               <Button
-                                variant="ghost"
+                                variant="secondary"
                                 size="sm"
-                                className="action-surface rounded-lg border transition-colors duration-200"
+                                className="rounded-lg"
                                 onClick={() => setConfirmDelete(null)}
                                 disabled={deleting === client.id}
                               >
                                 {t('common.cancel')}
                               </Button>
                               <Button
-                                variant="ghost"
+                                variant="delete"
                                 size="sm"
-                                className={deleteActionButtonClass}
+                                className={rowActionButtonClass}
                                 onClick={() => handleDelete(client.id)}
                                 isLoading={deleting === client.id}
                               >
@@ -311,18 +308,18 @@ export function ClientList({ onCreate, onEdit }: ClientListProps) {
                       </p>
                       <div className="flex gap-2 justify-end">
                         <Button
-                          variant="ghost"
+                          variant="secondary"
                           size="sm"
-                          className="action-surface rounded-lg border transition-colors duration-200"
+                          className="rounded-lg"
                           onClick={() => setConfirmDelete(null)}
                           disabled={deleting === client.id}
                         >
                           {t('common.cancel')}
                         </Button>
                         <Button
-                          variant="ghost"
+                          variant="delete"
                           size="sm"
-                          className={deleteActionButtonClass}
+                          className={rowActionButtonClass}
                           onClick={() => handleDelete(client.id)}
                           isLoading={deleting === client.id}
                         >
@@ -357,9 +354,9 @@ export function ClientList({ onCreate, onEdit }: ClientListProps) {
                     </div>
                     <div className="flex flex-wrap gap-2">
                       <Button
-                        variant="ghost"
+                        variant="edit"
                         size="sm"
-                        className={editActionButtonClass}
+                        className={rowActionButtonClass}
                         onClick={() => onEdit?.(client)}
                         disabled={confirmDelete !== null}
                         aria-label={t('clients.editNamed', { name: client.name })}
@@ -367,9 +364,9 @@ export function ClientList({ onCreate, onEdit }: ClientListProps) {
                         {t('common.edit')}
                       </Button>
                       <Button
-                        variant="ghost"
+                        variant="delete"
                         size="sm"
-                        className={deleteActionButtonClass}
+                        className={rowActionButtonClass}
                         onClick={() => setConfirmDelete(client.id)}
                         disabled={confirmDelete !== null || deleting === client.id}
                         aria-label={t('clients.deleteNamed', { name: client.name })}

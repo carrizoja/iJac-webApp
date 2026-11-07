@@ -176,6 +176,8 @@ describe('WorkOrderDetails', () => {
       render(<WorkOrderDetails />);
 
       const edit = await screen.findByRole('button', { name: 'Editar' });
+      // Editing is secondary; recording a payment is the page's primary action.
+      expect(edit).toHaveClass('action-surface');
       edit.focus();
       fireEvent.click(edit);
       await screen.findByRole('heading', { name: 'Editar orden' });

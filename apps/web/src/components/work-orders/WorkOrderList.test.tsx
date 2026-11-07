@@ -266,7 +266,9 @@ describe('WorkOrderList', () => {
       expect(within(doneRow).queryByText('Vencida')).not.toBeInTheDocument();
 
       fireEvent.click(screen.getByRole('button', { name: 'Tarjetas' }));
-      expect(screen.getAllByText('Vencida')).toHaveLength(1);
+      // One badge says it is overdue and when it was due, instead of two red badges.
+      expect(screen.getAllByText(/Vencida/)).toHaveLength(1);
+      expect(screen.getByText('Vencida · 2 de noviembre de 2026')).toHaveClass('status-error');
     });
   });
 

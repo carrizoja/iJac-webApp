@@ -14,7 +14,7 @@ import {
   getBrandingImage,
   saveBrandingImage,
 } from '../../lib/resources';
-import { Alert, Button, LoadingState } from '../ui';
+import { Alert, Button, buttonVariants, cn, LoadingState } from '../ui';
 import { useLanguage } from '../../hooks/useLanguage';
 import type { TranslationKey } from '../../i18n/translations';
 
@@ -167,7 +167,12 @@ export function BrandingSettings() {
                 )}
               </div>
               <div className="flex flex-wrap gap-2">
-                <label className="action-brand inline-flex min-h-10 cursor-pointer items-center rounded-md border-2 px-4 text-sm font-medium focus-within:ring-2 focus-within:ring-focus">
+                <label
+                  className={cn(
+                    buttonVariants({ variant: 'primary' }),
+                    'cursor-pointer focus-within:ring-2 focus-within:ring-focus',
+                  )}
+                >
                   {image ? t('settings.branding.replace') : t('settings.branding.upload')}
                   <input
                     type="file"

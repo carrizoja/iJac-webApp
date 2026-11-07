@@ -11,7 +11,17 @@ import { getClient, getWorkOrder, listClients, updateWorkOrder } from '../../lib
 import { collectAllPages } from '../../lib/collectAllPages';
 import { useRevealOnOpen } from '../../hooks/useRevealOnOpen';
 import { WorkOrderForm } from './WorkOrderForm';
-import { Alert, Badge, Button, Dialog, LoadingState, Panel, Select } from '../ui';
+import {
+  Alert,
+  Badge,
+  Button,
+  buttonVariants,
+  cn,
+  Dialog,
+  LoadingState,
+  Panel,
+  Select,
+} from '../ui';
 import { PaymentsPanel } from '../payments/PaymentsPanel';
 import { priorityBadgeClass, statusBadgeClass } from './workOrderBadges';
 import { isOverdue, localDateKey } from '../home/todaySummary';
@@ -29,7 +39,10 @@ function BackToOrders() {
   return (
     <a
       href="/work-orders"
-      className="work-order-print-hidden action-surface inline-flex min-h-11 items-center rounded-lg border px-4 text-sm font-medium transition-colors hover:border-accent-brand hover:text-accent-brand focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
+      className={cn(
+        buttonVariants({ variant: 'secondary' }),
+        'work-order-print-hidden min-h-11 rounded-lg px-4',
+      )}
     >
       {t('workOrders.back')}
     </a>
@@ -219,7 +232,7 @@ export function WorkOrderDetails() {
           <div className="work-order-print-hidden flex flex-wrap gap-2">
             <Button
               type="button"
-              variant="primary"
+              variant="secondary"
               size="sm"
               onClick={() => setEditing(true)}
               startIcon={<Pencil aria-hidden="true" focusable="false" className="h-4 w-4" />}

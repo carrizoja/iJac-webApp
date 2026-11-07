@@ -7,8 +7,6 @@ import { Check, TriangleAlert } from 'lucide-react';
 
 export function CalendarConnection() {
   const { t } = useLanguage();
-  const primaryActionButtonClass =
-    'action-brand rounded-xl border-2 px-6 transition-all duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] active:translate-y-0';
   const [status, setStatus] = useState<{ connected: boolean; status: string } | null>(null);
   const [loading, setLoading] = useState(true);
   const [errorKey, setErrorKey] = useState<TranslationKey | null>(null);
@@ -121,8 +119,8 @@ export function CalendarConnection() {
           onClick={handleConnect}
           isLoading={connecting}
           aria-busy={connecting}
-          className={`mt-4 min-h-11 ${primaryActionButtonClass}`}
-          variant="ghost"
+          className="mt-4 min-h-11 rounded-xl px-6"
+          variant="primary"
         >
           {connecting ? t('calendar.connecting') : t('calendar.connect')}
         </Button>

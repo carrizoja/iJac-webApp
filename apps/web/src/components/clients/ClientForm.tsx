@@ -144,8 +144,8 @@ export function ClientForm({ client, onSaved, onCancel }: ClientFormProps) {
       <div className="flex flex-col-reverse gap-3 border-t border-border-subtle pt-5 sm:flex-row sm:justify-end">
         <Button
           type="button"
-          variant="ghost"
-          className="action-surface min-h-11 rounded-xl border px-5 transition-colors duration-200"
+          variant="secondary"
+          className="min-h-11 rounded-xl px-5"
           onClick={onCancel}
         >
           {t('common.cancel')}
@@ -153,8 +153,8 @@ export function ClientForm({ client, onSaved, onCancel }: ClientFormProps) {
         <Button
           type="submit"
           isLoading={submitting}
-          variant="ghost"
-          className="action-brand min-h-11 shrink-0 whitespace-nowrap rounded-xl border-2 px-6 transition-all duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] active:translate-y-0"
+          variant="primary"
+          className="min-h-11 shrink-0 whitespace-nowrap rounded-xl px-6"
         >
           {submitting ? t('common.saving') : client ? t('common.saveChanges') : t('clients.create')}
         </Button>

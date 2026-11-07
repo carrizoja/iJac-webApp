@@ -21,25 +21,34 @@ const buttonVariants = cva(
   {
     variants: {
       variant: {
-        /* Primary: brand action (same look as the "New client" button) */
+        /* Primary: brand action with its glow on hover */
         primary: [
           'action-brand border-2',
+          'transition-all duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] active:translate-y-0',
           'focus-visible:ring-focus',
         ],
 
-        /* Secondary: panel with border */
+        /* Secondary: the neutral outline used next to a primary action */
         secondary: [
-          'bg-panel-default text-fg-primary border border-border-default',
-          'hover:bg-panel-hover',
+          'action-surface border',
+          'transition-colors duration-200',
+          'focus-visible:ring-focus',
+        ],
+
+        /* Edit and delete: outlined row actions that glow on hover */
+        edit: [
+          'action-edit border-2',
+          'transition-all duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] active:translate-y-0',
+          'focus-visible:ring-focus',
+        ],
+        delete: [
+          'action-delete border-2',
+          'transition-all duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] active:translate-y-0',
           'focus-visible:ring-focus',
         ],
 
         /* Ghost: text-only */
-        ghost: [
-          'text-fg-primary',
-          'hover:bg-panel-default',
-          'focus-visible:ring-focus',
-        ],
+        ghost: ['text-fg-primary', 'hover:bg-panel-default', 'focus-visible:ring-focus'],
 
         /* Destructive: red variant */
         destructive: [
@@ -68,7 +77,7 @@ const buttonVariants = cva(
       size: 'base',
       pending: false,
     },
-  }
+  },
 );
 
 type ButtonVariants = VariantProps<typeof buttonVariants>;
@@ -116,7 +125,7 @@ export function Button({
           size,
           pending: pending || isLoading,
         }),
-        className
+        className,
       )}
       disabled={disabled || isLoading}
       aria-busy={isLoading}
@@ -129,4 +138,5 @@ export function Button({
   );
 }
 
+export { buttonVariants };
 export type { ButtonProps, ButtonVariants };

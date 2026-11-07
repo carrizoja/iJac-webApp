@@ -207,8 +207,8 @@ export function OrganizationSettings() {
           <Button
             type="submit"
             isLoading={submitting}
-            variant="ghost"
-            className="action-brand min-h-11 shrink-0 whitespace-nowrap rounded-xl border-2 px-6 transition-all duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] active:translate-y-0"
+            variant="primary"
+            className="min-h-11 shrink-0 whitespace-nowrap rounded-xl px-6"
           >
             {submitting ? t('common.saving') : t('common.saveChanges')}
           </Button>

@@ -72,6 +72,23 @@ describe('PaymentsPanel', () => {
     setLanguage('es');
   });
 
+  it('makes recording a payment the primary action', async () => {
+    listPayments.mockResolvedValue(
+      response({
+        items: [],
+        balance: {
+          currency: Currency.ARS,
+          totalMinor: 100000,
+          paidMinor: 0,
+          remainingMinor: 100000,
+        },
+      }),
+    );
+    renderPanel();
+    expect(await screen.findByRole('button', { name: 'Registrar pago' })).toHaveClass(
+      'action-brand',
+    );
+  });
   it('shows the balance summary and payment list', async () => {
     const active = makePayment({ id: 'a', receiptNumber: 1, amountMinor: 3000000 });
     listPayments.mockResolvedValue(
