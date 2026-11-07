@@ -174,7 +174,7 @@ export function TodayDashboard() {
       {orders.kind === 'error' && (
         <Alert
           type="error"
-          action={{ label: t('home.retry'), onClick: () => setOrdersAttempt((n) => n + 1) }}
+          action={{ label: t('common.retry'), onClick: () => setOrdersAttempt((n) => n + 1) }}
         >
           {t('home.loadError')}
         </Alert>

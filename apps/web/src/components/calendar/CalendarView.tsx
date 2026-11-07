@@ -145,6 +145,11 @@ export function CalendarView() {
           type="error"
           icon={<TriangleAlert aria-hidden="true" className="h-4 w-4" />}
           onClose={() => setErrorKey(null)}
+          action={
+            errorKey === 'calendar.loadError'
+              ? { label: t('common.retry'), onClick: () => void load() }
+              : undefined
+          }
           role="alert"
           aria-live="assertive"
         >

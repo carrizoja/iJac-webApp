@@ -420,6 +420,35 @@ describe('WorkOrderDetails', () => {
     expectDocumentActionsAbsent();
   });
 
+  it('loads the order again when Reintentar is pressed after a failure', async () => {
+    window.history.replaceState({}, '', '/work-orders/details?id=work-order-1');
+    getWorkOrder.mockRejectedValueOnce(new Error('NETWORK_ERROR'));
+    getWorkOrder.mockResolvedValueOnce(workOrder);
+    getClient.mockResolvedValue(client);
+
+    render(<WorkOrderDetails />);
+
+    const alert = await screen.findByRole('alert');
+    expect(alert).toHaveTextContent('No se pudo cargar la orden de trabajo.');
+    fireEvent.click(within(alert).getByRole('button', { name: 'Reintentar' }));
+
+    expect(
+      await screen.findByRole('heading', { level: 1, name: workOrder.title }),
+    ).toBeInTheDocument();
+    expect(getWorkOrder).toHaveBeenCalledTimes(2);
+  });
+
+  it('offers no retry when the order does not exist', async () => {
+    window.history.replaceState({}, '', '/work-orders/details?id=missing');
+    getWorkOrder.mockRejectedValue(new Error('NOT_FOUND'));
+
+    render(<WorkOrderDetails />);
+
+    const alert = await screen.findByRole('alert');
+    expect(alert).toHaveTextContent('No encontramos la orden de trabajo solicitada.');
+    expect(within(alert).queryByRole('button', { name: 'Reintentar' })).not.toBeInTheDocument();
+  });
+
   it('shows the formatted total price inside the printable document', async () => {
     window.history.replaceState({}, '', '/work-orders/details?id=work-order-1');
     getWorkOrder.mockResolvedValue({

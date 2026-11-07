@@ -371,9 +371,21 @@ describe('WorkOrderList', () => {
     render(<WorkOrderList clients={[sampleClient]} onCreate={vi.fn()} onEdit={vi.fn()} />);
 
     const alert = await screen.findByRole('alert');
-    expect(alert).toHaveTextContent('No se pudieron cargar las órdenes. Intentá nuevamente.');
+    expect(alert).toHaveTextContent('No se pudieron cargar las órdenes.');
     expect(alert).not.toHaveTextContent('Fallo al conectar');
     expect(screen.getByRole('button', { name: 'Cerrar alerta' })).toBeInTheDocument();
+  });
+
+  it('loads the orders again when Reintentar is pressed after a failure', async () => {
+    listWorkOrders.mockRejectedValueOnce(new Error('NETWORK_ERROR'));
+    listWorkOrders.mockResolvedValueOnce({ items: [sampleWorkOrder] });
+    render(<WorkOrderList clients={[sampleClient]} onCreate={vi.fn()} onEdit={vi.fn()} />);
+
+    const alert = await screen.findByRole('alert');
+    fireEvent.click(within(alert).getByRole('button', { name: 'Reintentar' }));
+
+    expect((await screen.findAllByText(sampleWorkOrder.title)).length).toBeGreaterThan(0);
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
   });
 
   it('shows the formatted total price in table and card views, and a dash when unpriced', async () => {

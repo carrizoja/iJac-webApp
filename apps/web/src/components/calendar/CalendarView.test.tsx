@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import { WorkOrderPriority, WorkOrderStatus } from '@ijac/shared';
 
 const { listCalendarEvents, syncCalendar } = vi.hoisted(() => ({
@@ -38,6 +38,20 @@ describe('CalendarView', () => {
 
     expect(link).toHaveAttribute('href', '/work-orders/details?id=work%2Forder%20%3F%201');
     expect(link).toHaveAttribute('title', 'Ver detalles de Revisión remota');
+  });
+
+  it('loads the month again when Reintentar is pressed after a failure', async () => {
+    listCalendarEvents.mockRejectedValueOnce(new Error('NETWORK_ERROR'));
+    render(<CalendarView />);
+
+    const alert = await screen.findByRole('alert');
+    expect(alert).toHaveTextContent('No se pudo cargar el calendario.');
+    fireEvent.click(within(alert).getByRole('button', { name: 'Reintentar' }));
+
+    expect(
+      await screen.findByRole('link', { name: 'Ver detalles de Revisión remota' }),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
   });
 
   it.each([

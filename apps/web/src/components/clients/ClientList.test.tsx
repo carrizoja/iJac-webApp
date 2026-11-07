@@ -190,12 +190,24 @@ describe('ClientList', () => {
     expect(screen.getByRole('button', { name: 'Eliminar' })).toBeInTheDocument();
   });
 
+  it('loads the clients again when Reintentar is pressed after a failure', async () => {
+    listClients.mockRejectedValueOnce(new Error('NETWORK_ERROR'));
+    listClients.mockResolvedValue({ items: [client] });
+    render(<ClientList onCreate={vi.fn()} onEdit={vi.fn()} />);
+
+    const alert = await screen.findByRole('alert');
+    fireEvent.click(within(alert).getByRole('button', { name: 'Reintentar' }));
+
+    expect(await screen.findByText('Acme Inc')).toBeInTheDocument();
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  });
+
   it('shows request errors as an actionable alert', async () => {
     listClients.mockRejectedValueOnce(new Error('No se pudo cargar'));
     render(<ClientList onCreate={vi.fn()} onEdit={vi.fn()} />);
 
     const alert = await screen.findByRole('alert');
-    expect(alert).toHaveTextContent('No se pudieron cargar los clientes. Intentá nuevamente.');
+    expect(alert).toHaveTextContent('No se pudieron cargar los clientes.');
     expect(alert).not.toHaveTextContent('Old request failed');
     expect(screen.getByRole('button', { name: 'Cerrar alerta' })).toBeInTheDocument();
   });

@@ -102,7 +102,17 @@ export function PaymentsPanel({ workOrderId, workOrderStatus }: PaymentsPanelPro
   if (state.status === 'error') {
     return (
       <Panel size="lg" className="border border-border-default">
-        <Alert type="error" role="alert">
+        <Alert
+          type="error"
+          role="alert"
+          action={{
+            label: t('common.retry'),
+            onClick: () => {
+              setState({ status: 'loading' });
+              void reload();
+            },
+          }}
+        >
           {t('payments.loadError')}
         </Alert>
       </Panel>
