@@ -90,11 +90,11 @@ The web application SHALL present signed-out users with a dedicated iJac-branded
 - **THEN** the access experience provides visible focus in logical order and removes or substantially reduces nonessential decorative movement without hiding state changes
 
 ### Requirement: Editorial client-management page composition
-The Clients page SHALL present the existing client-management workflow inside an iJac editorial composition with breadcrumb context, a concise accent pill, a prominent page heading, supporting explanation, a large rounded bordered surface, and reference-aligned primary and secondary actions.
+The Clients page SHALL present the existing client-management workflow with breadcrumb context, the same plain page heading and one-line description used by the other internal pages, a large rounded bordered surface, and reference-aligned primary and secondary actions. The page SHALL leave the single main landmark to the application shell.
 
 #### Scenario: Open the Clients page
 - **WHEN** an authenticated user opens the Clients page
-- **THEN** the page presents the current location, an iJac-branded introduction, the client search/create controls, and client content in a visually coherent dark editorial surface
+- **THEN** the page presents the current location, a plain "Clientes" heading with a one-line description, the client search/create controls, and client content in a visually coherent dark surface, with exactly one main landmark
 
 #### Scenario: Use the page actions
 - **WHEN** the user focuses or activates create, edit, cancel, save, search, or delete actions
@@ -102,7 +102,7 @@ The Clients page SHALL present the existing client-management workflow inside an
 
 #### Scenario: View client content on mobile
 - **WHEN** an authenticated user opens the Clients page on a supported mobile viewport
-- **THEN** the breadcrumb, introduction, controls, forms, cards, empty state, and deletion confirmation reflow in reading order without horizontal overflow and retain touch targets of at least 44 by 44 CSS pixels
+- **THEN** the breadcrumb, heading, controls, forms, cards, empty state, and deletion confirmation reflow in reading order without horizontal overflow and retain touch targets of at least 44 by 44 CSS pixels
 
 #### Scenario: Preserve client workflow outcomes
 - **WHEN** the user searches, creates, edits, cancels, or confirms deletion of a client through the redesigned page
@@ -110,4 +110,4 @@ The Clients page SHALL present the existing client-management workflow inside an
 
 #### Scenario: Render client loading, empty, and error states
 - **WHEN** client data is loading, no records match, or a request fails
-- **THEN** the page renders a perceivable state using the same editorial surface, semantic iJac treatments, accessible status cues, and actionable recovery behavior without shifting unrelated content unexpectedly
+- **THEN** the page renders a perceivable state using the same surface, semantic iJac treatments, accessible status cues, and actionable recovery behavior without shifting unrelated content unexpectedly
