@@ -72,9 +72,10 @@ export function CalendarConnection() {
       <div className="mt-2 flex items-center gap-2 text-sm">
         <span
           className={`inline-block h-2 w-2 rounded-full ${
-            status?.connected ? 'bg-status-success' : 'bg-fg-muted'
+            status?.connected ? 'bg-status-completed' : 'bg-fg-muted'
           }`}
           aria-hidden="true"
+          data-testid="calendar-connection-dot"
         />
         <span className="text-fg-muted">
           {status?.connected ? t('calendar.connected') : t('calendar.disconnected')}
