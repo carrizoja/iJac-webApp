@@ -151,7 +151,12 @@ export function WorkOrderDetails() {
 
   const overdue = isOverdue(workOrder, localDateKey(new Date()));
   const organization = client.organization?.trim();
-  const clientDisplayName = organization ? `${client.name} (${organization})` : client.name;
+  // Skip the organization when it only repeats the client's name.
+  const showOrganization =
+    organization !== undefined &&
+    organization !== '' &&
+    organization.toLocaleLowerCase() !== client.name.trim().toLocaleLowerCase();
+  const clientDisplayName = showOrganization ? `${client.name} (${organization})` : client.name;
   const dueDate = formatDateOnly(workOrder.dueDate, language);
   const detailsUrl = window.location.href;
   const whatsAppMessage = [

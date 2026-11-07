@@ -463,6 +463,25 @@ describe('PaymentsPanel', () => {
     ).toBeInTheDocument();
   });
 
+  it('shows the status column only when some payment is voided', async () => {
+    listPayments.mockResolvedValue(response({ items: [makePayment()] }));
+    const { unmount } = renderPanel();
+    await screen.findByRole('row', { name: /0001-00000042/ });
+    expect(screen.queryByRole('columnheader', { name: 'Estado' })).not.toBeInTheDocument();
+    unmount();
+
+    listPayments.mockResolvedValue(
+      response({
+        items: [
+          makePayment(),
+          makePayment({ id: 'pay-2', receiptNumber: 43, status: PaymentStatus.VOIDED }),
+        ],
+      }),
+    );
+    renderPanel();
+    expect(await screen.findByRole('columnheader', { name: 'Estado' })).toBeInTheDocument();
+  });
+
   it('names the payment being voided by client, amount, date and method', async () => {
     listPayments.mockResolvedValue(response({ items: [makePayment()] }));
     renderPanel();
