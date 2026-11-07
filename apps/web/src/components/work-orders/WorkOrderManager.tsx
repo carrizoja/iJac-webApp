@@ -5,6 +5,7 @@ import { WorkOrderForm } from './WorkOrderForm';
 import { listClients } from '../../lib/resources';
 import { collectAllPages } from '../../lib/collectAllPages';
 import { useLanguage } from '../../hooks/useLanguage';
+import { useRevealOnOpen } from '../../hooks/useRevealOnOpen';
 import { Alert } from '../ui';
 
 export function WorkOrderManager() {
@@ -22,6 +23,10 @@ export function WorkOrderManager() {
       .then(setClients)
       .catch(() => setClientsError(true));
   }, [refreshKey]);
+
+  const { panelRef, focusRef } = useRevealOnOpen<HTMLHeadingElement>(
+    editing ? editing.id : creating ? 'new' : null,
+  );
 
   const handleSaved = () => {
     setEditing(null);
@@ -43,10 +48,15 @@ export function WorkOrderManager() {
 
       {(creating || editing) && (
         <div
-          className="rounded-xl border border-border-subtle bg-bg-primary/70 p-4 sm:p-6"
+          ref={panelRef}
+          className="scroll-mt-24 rounded-xl border border-border-subtle bg-bg-primary/70 p-4 sm:p-6"
           data-testid="work-order-form-panel"
         >
-          <h3 className="mb-5 font-heading text-xl font-semibold text-fg-primary">
+          <h3
+            ref={focusRef}
+            tabIndex={-1}
+            className="mb-5 font-heading text-xl font-semibold text-fg-primary focus:outline-none"
+          >
             {editing ? t('workOrders.edit') : t('workOrders.new')}
           </h3>
           <WorkOrderForm

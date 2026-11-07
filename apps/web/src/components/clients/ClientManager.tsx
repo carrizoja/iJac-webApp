@@ -3,12 +3,17 @@ import type { Client } from '@ijac/shared';
 import { ClientList } from './ClientList';
 import { ClientForm } from './ClientForm';
 import { useLanguage } from '../../hooks/useLanguage';
+import { useRevealOnOpen } from '../../hooks/useRevealOnOpen';
 
 export function ClientManager() {
   const { t } = useLanguage();
   const [editing, setEditing] = useState<Client | null>(null);
   const [creating, setCreating] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
+
+  const { panelRef, focusRef } = useRevealOnOpen<HTMLHeadingElement>(
+    editing ? editing.id : creating ? 'new' : null,
+  );
 
   const handleSaved = () => {
     setEditing(null);
@@ -20,10 +25,15 @@ export function ClientManager() {
     <div className="space-y-6" data-testid="clients-manager">
       {(creating || editing) && (
         <div
-          className="rounded-xl border border-border-subtle bg-bg-primary/70 p-4 sm:p-6"
+          ref={panelRef}
+          className="scroll-mt-24 rounded-xl border border-border-subtle bg-bg-primary/70 p-4 sm:p-6"
           data-testid="client-form-panel"
         >
-          <h3 className="mb-5 font-heading text-xl font-semibold text-fg-primary">
+          <h3
+            ref={focusRef}
+            tabIndex={-1}
+            className="mb-5 font-heading text-xl font-semibold text-fg-primary focus:outline-none"
+          >
             {editing ? t('clients.edit') : t('clients.new')}
           </h3>
           <ClientForm
