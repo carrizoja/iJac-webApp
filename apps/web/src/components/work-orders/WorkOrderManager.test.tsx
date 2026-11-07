@@ -2,16 +2,18 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import type { Client } from '@ijac/shared';
 
-const { listClients, listWorkOrders, deleteWorkOrder } = vi.hoisted(() => ({
+const { listClients, listWorkOrders, deleteWorkOrder, getWorkOrder } = vi.hoisted(() => ({
   listClients: vi.fn(),
   listWorkOrders: vi.fn(),
   deleteWorkOrder: vi.fn(),
+  getWorkOrder: vi.fn(),
 }));
 
 vi.mock('../../lib/resources', () => ({
   listClients,
   listWorkOrders,
   deleteWorkOrder,
+  getWorkOrder,
   ApiRequestError: class ApiRequestError extends Error {},
 }));
 
@@ -28,6 +30,28 @@ function client(id: string, name: string): Client {
     updatedAt: '2026-11-01T00:00:00.000Z',
   };
 }
+
+const summary = {
+  id: 'wo-1',
+  title: 'Revisión',
+  clientId: 'c1',
+  clientName: 'Acme',
+  status: 'open',
+  priority: 'normal',
+  createdAt: '2026-11-01T00:00:00.000Z',
+  updatedAt: '2026-11-01T00:00:00.000Z',
+};
+
+const fullOrder = {
+  id: 'wo-1',
+  title: 'Revisión',
+  description: 'Cambiar el disco del servidor.',
+  clientId: 'c1',
+  status: 'open',
+  priority: 'normal',
+  createdAt: '2026-11-01T00:00:00.000Z',
+  updatedAt: '2026-11-01T00:00:00.000Z',
+};
 
 describe('WorkOrderManager', () => {
   beforeEach(() => {
@@ -62,32 +86,51 @@ describe('WorkOrderManager', () => {
       const scroll = vi.fn();
       Element.prototype.scrollIntoView = scroll;
       listClients.mockResolvedValue({ items: [client('c1', 'Acme')] });
-      listWorkOrders.mockResolvedValue({
-        items: [
-          {
-            id: 'wo-1',
-            title: 'Revisión',
-            clientId: 'c1',
-            clientName: 'Acme',
-            status: 'open',
-            priority: 'normal',
-            createdAt: '2026-11-01T00:00:00.000Z',
-            updatedAt: '2026-11-01T00:00:00.000Z',
-          },
-        ],
-      });
+      listWorkOrders.mockResolvedValue({ items: [summary] });
+      getWorkOrder.mockResolvedValue(fullOrder);
       render(<WorkOrderManager />);
 
       const edit = await screen.findByRole('button', { name: 'Editar Revisión' });
       edit.focus();
       fireEvent.click(edit);
 
-      const heading = screen.getByRole('heading', { name: 'Editar orden' });
+      const heading = await screen.findByRole('heading', { name: 'Editar orden' });
       expect(heading).toHaveFocus();
       expect(scroll.mock.contexts[0]).toBe(screen.getByTestId('work-order-form-panel'));
 
       fireEvent.click(screen.getByRole('button', { name: 'Cancelar' }));
       expect(edit).toHaveFocus();
+    });
+  });
+
+  describe('editing from the list', () => {
+    beforeEach(() => {
+      listClients.mockResolvedValue({ items: [client('c1', 'Acme')] });
+      listWorkOrders.mockResolvedValue({ items: [summary] });
+    });
+
+    it('loads the full order so the form shows and keeps its description', async () => {
+      getWorkOrder.mockResolvedValue(fullOrder);
+      render(<WorkOrderManager />);
+
+      fireEvent.click(await screen.findByRole('button', { name: 'Editar Revisión' }));
+
+      expect(getWorkOrder).toHaveBeenCalledWith('wo-1');
+      expect(await screen.findByLabelText(/descripción/i)).toHaveValue(
+        'Cambiar el disco del servidor.',
+      );
+    });
+
+    it('does not open the form when the order cannot be loaded', async () => {
+      getWorkOrder.mockRejectedValue(new Error('NETWORK_ERROR'));
+      render(<WorkOrderManager />);
+
+      fireEvent.click(await screen.findByRole('button', { name: 'Editar Revisión' }));
+
+      expect(
+        await screen.findByText('No se pudo cargar la orden para editarla. Probá de nuevo.'),
+      ).toBeInTheDocument();
+      expect(screen.queryByTestId('work-order-form-panel')).not.toBeInTheDocument();
     });
   });
 });
