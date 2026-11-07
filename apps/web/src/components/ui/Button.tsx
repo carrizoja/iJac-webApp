@@ -14,6 +14,8 @@ const buttonVariants = cva(
     'transition-fast',
     'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2',
     'disabled:opacity-50 disabled:cursor-not-allowed',
+    // Blocked buttons stay focusable so their reason can be reached; they look disabled.
+    'aria-disabled:opacity-50 aria-disabled:cursor-not-allowed',
     'active:scale-95',
   ],
   {

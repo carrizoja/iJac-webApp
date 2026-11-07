@@ -344,7 +344,7 @@
     border-color: var(--color-action-delete);
   }
 
-  .action-delete:hover {
+  .action-delete:hover:not(:disabled, [aria-disabled='true']) {
     background: var(--color-action-delete-hover);
     border-color: var(--color-action-delete-hover);
     box-shadow: var(--shadow-action-delete);
@@ -412,7 +412,7 @@
   }
 
   .status-error {
-    color: var(--color-destructive);
+    color: var(--color-destructive-text);
   }
 
   .status-purple {

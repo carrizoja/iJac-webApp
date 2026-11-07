@@ -76,13 +76,13 @@ export function WorkOrderManager() {
           className="scroll-mt-24 rounded-xl border border-border-subtle bg-bg-primary/70 p-4 sm:p-6"
           data-testid="work-order-form-panel"
         >
-          <h3
+          <h2
             ref={focusRef}
             tabIndex={-1}
             className="mb-5 font-heading text-xl font-semibold text-fg-primary focus:outline-none"
           >
             {editing ? t('workOrders.edit') : t('workOrders.new')}
-          </h3>
+          </h2>
           {/* The form copies its order into state once, so each order gets its own instance. */}
           <WorkOrderForm
             key={editing?.id ?? 'new'}

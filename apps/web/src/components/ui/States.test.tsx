@@ -66,7 +66,7 @@ describe('Badge', () => {
   it('renders with error variant', () => {
     const { container } = render(<Badge variant="error">Error</Badge>);
     const badge = container.firstChild;
-    expect(badge).toHaveClass('bg-opacity-20');
+    expect(badge).toHaveClass('bg-opacity-20', 'text-destructive-text');
   });
 
   it('renders with different sizes', () => {
@@ -124,6 +124,8 @@ describe('Alert', () => {
     render(<Alert type="error">Error</Alert>);
     const alert = screen.getByRole('alert');
     expect(alert).toBeInTheDocument();
+    // Plain destructive red is 3.7:1 on dark panels; the text token meets 4.5:1.
+    expect(alert).toHaveClass('text-destructive-text');
   });
 
   it('displays icon when provided', () => {

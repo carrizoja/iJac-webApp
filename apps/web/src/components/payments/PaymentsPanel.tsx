@@ -392,7 +392,7 @@ export function PaymentsPanel({ workOrderId, workOrderStatus }: PaymentsPanelPro
                             type="button"
                             variant="ghost"
                             size="sm"
-                            className="ml-2 text-destructive hover:text-destructive-hover"
+                            className="ml-2 text-destructive-text"
                             aria-label={t('payments.voidNamed', { number })}
                             onClick={() => openVoid(payment)}
                           >
