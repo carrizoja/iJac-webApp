@@ -462,6 +462,20 @@ describe('PaymentsPanel', () => {
     ).toBeInTheDocument();
   });
 
+  it('names the payment being voided by client, amount, date and method', async () => {
+    listPayments.mockResolvedValue(response({ items: [makePayment()] }));
+    renderPanel();
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Anular recibo 0001-00000042' }));
+
+    const dialog = await screen.findByRole('alertdialog');
+    const summary = within(dialog).getByTestId('void-payment-summary');
+    expect(within(summary).getByText('Acme Corp')).toBeInTheDocument();
+    expect(within(summary).getByText('$ 150.000,00')).toBeInTheDocument();
+    expect(within(summary).getByText('5 de agosto de 2026')).toBeInTheDocument();
+    expect(within(summary).getByText('Transferencia bancaria')).toBeInTheDocument();
+  });
+
   it('requires a reason to void and sends the trimmed reason', async () => {
     const payment = makePayment();
     listPayments.mockResolvedValue(response({ items: [payment] }));
