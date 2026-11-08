@@ -359,4 +359,15 @@ describe('ClientList', () => {
       expect(screen.getByTestId('client-row-actions')).toHaveClass('row-actions');
     });
   });
+
+  it('remembers the chosen view for the next visit', async () => {
+    listClients.mockResolvedValue({ items: [client] });
+    const first = render(<ClientList onCreate={vi.fn()} onEdit={vi.fn()} />);
+    fireEvent.click(await screen.findByRole('button', { name: 'Tarjetas' }));
+    first.unmount();
+
+    render(<ClientList onCreate={vi.fn()} onEdit={vi.fn()} />);
+    expect(await screen.findByTestId('client-cards')).toBeInTheDocument();
+    expect(screen.queryByTestId('client-table')).not.toBeInTheDocument();
+  });
 });

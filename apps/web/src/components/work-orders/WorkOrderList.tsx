@@ -35,12 +35,14 @@ import {
 } from './workOrderSort';
 import { collectAllPages } from '../../lib/collectAllPages';
 import { readStoredTableSort, storeTableSort } from '../../lib/tableSort';
+import { readViewMode, storeViewMode } from '../../lib/viewMode';
 import { isOverdue, localDateKey } from '../home/todaySummary';
 import { priorityBadgeClass, statusBadgeClass } from './workOrderBadges';
 import { matchesOrderSearch } from './workOrderSearch';
-import { ClipboardList, TriangleAlert } from 'lucide-react';
+import { ClipboardList, SlidersHorizontal, TriangleAlert } from 'lucide-react';
 
 const SORT_STORAGE_KEY = 'ijac.workOrders.sort';
+const VIEW_STORAGE_KEY = 'ijac.workOrders.view';
 const COLUMN_SORT_KEYS = [
   'title',
   'client',
@@ -100,6 +102,14 @@ export function WorkOrderList({ clients, onCreate, onEdit }: WorkOrderListProps)
   const rowActionButtonClass = 'rounded-lg px-4';
   const [workOrders, setWorkOrders] = useState<WorkOrderClientSummary[]>([]);
   const [viewMode, setViewMode] = useState<ViewMode>('table');
+  // Read after mount: the server render cannot know the screen size or the stored view.
+  useEffect(() => setViewMode(readViewMode(VIEW_STORAGE_KEY)), []);
+  const changeViewMode = (next: ViewMode) => {
+    setViewMode(next);
+    storeViewMode(VIEW_STORAGE_KEY, next);
+  };
+  /** On phones the filters fold behind one button; from `sm` up they are always shown. */
+  const [filtersOpen, setFiltersOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   // Only the first load replaces the list; later reloads keep the filters and rows on screen.
   const [loaded, setLoaded] = useState(false);
@@ -196,6 +206,7 @@ export function WorkOrderList({ clients, onCreate, onEdit }: WorkOrderListProps)
     setPriorityFilter('');
     setClientFilter('');
   };
+  const activeFilterCount = [statusFilter, priorityFilter, clientFilter].filter(Boolean).length;
   const todayKey = localDateKey(new Date());
   // Orders with payments (voided ones included) cannot be deleted; the API refuses them.
   const deleteLabel = (wo: WorkOrderClientSummary) =>
@@ -216,48 +227,66 @@ export function WorkOrderList({ clients, onCreate, onEdit }: WorkOrderListProps)
             onChange={(e) => setSearch(e.target.value)}
             className="w-full rounded-xl sm:w-64"
           />
-          <Select
-            id="statusFilter"
-            aria-label={t('workOrders.filterStatus')}
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            className="w-full rounded-xl sm:w-40"
+          <Button
+            type="button"
+            variant="secondary"
+            className="min-h-11 w-full rounded-xl sm:hidden"
+            aria-expanded={filtersOpen}
+            aria-controls="workOrderFilters"
+            onClick={() => setFiltersOpen((open) => !open)}
           >
-            <option value="">{t('workOrders.allStatuses')}</option>
-            {WORK_ORDER_STATUSES.map((s) => (
-              <option key={s} value={s}>
-                {statusLabel(s, language)}
-              </option>
-            ))}
-          </Select>
-          <Select
-            id="priorityFilter"
-            aria-label={t('workOrders.filterPriority')}
-            value={priorityFilter}
-            onChange={(e) => setPriorityFilter(e.target.value)}
-            className="w-full rounded-xl sm:w-48"
+            <SlidersHorizontal aria-hidden="true" className="h-4 w-4" />
+            {activeFilterCount > 0
+              ? t('workOrders.filtersActive', { count: activeFilterCount })
+              : t('workOrders.filters')}
+          </Button>
+          <div
+            id="workOrderFilters"
+            className={`${filtersOpen ? 'flex' : 'hidden'} w-full flex-col gap-2 sm:contents`}
           >
-            <option value="">{t('workOrders.allPriorities')}</option>
-            {WORK_ORDER_PRIORITIES.map((p) => (
-              <option key={p} value={p}>
-                {priorityLabel(p, language)}
-              </option>
-            ))}
-          </Select>
-          <Select
-            id="clientFilter"
-            aria-label={t('workOrders.filterClient')}
-            value={clientFilter}
-            onChange={(e) => setClientFilter(e.target.value)}
-            className="w-full rounded-xl sm:w-40"
-          >
-            <option value="">{t('workOrders.allClients')}</option>
-            {clients.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name}
-              </option>
-            ))}
-          </Select>
+            <Select
+              id="statusFilter"
+              aria-label={t('workOrders.filterStatus')}
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              className="w-full rounded-xl sm:w-40"
+            >
+              <option value="">{t('workOrders.allStatuses')}</option>
+              {WORK_ORDER_STATUSES.map((s) => (
+                <option key={s} value={s}>
+                  {statusLabel(s, language)}
+                </option>
+              ))}
+            </Select>
+            <Select
+              id="priorityFilter"
+              aria-label={t('workOrders.filterPriority')}
+              value={priorityFilter}
+              onChange={(e) => setPriorityFilter(e.target.value)}
+              className="w-full rounded-xl sm:w-48"
+            >
+              <option value="">{t('workOrders.allPriorities')}</option>
+              {WORK_ORDER_PRIORITIES.map((p) => (
+                <option key={p} value={p}>
+                  {priorityLabel(p, language)}
+                </option>
+              ))}
+            </Select>
+            <Select
+              id="clientFilter"
+              aria-label={t('workOrders.filterClient')}
+              value={clientFilter}
+              onChange={(e) => setClientFilter(e.target.value)}
+              className="w-full rounded-xl sm:w-40"
+            >
+              <option value="">{t('workOrders.allClients')}</option>
+              {clients.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                </option>
+              ))}
+            </Select>
+          </div>
         </div>
         <div className="flex flex-wrap items-center gap-3">
           {viewMode === 'cards' && (
@@ -273,7 +302,7 @@ export function WorkOrderList({ clients, onCreate, onEdit }: WorkOrderListProps)
           )}
           <ViewModeToggle
             value={viewMode}
-            onChange={setViewMode}
+            onChange={changeViewMode}
             ariaLabel={t('workOrders.view')}
           />
           <Button onClick={onCreate} className="min-h-11 rounded-xl px-6" variant="primary">
