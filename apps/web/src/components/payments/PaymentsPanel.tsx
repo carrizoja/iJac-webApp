@@ -11,6 +11,7 @@ import { ApiRequestError, listPayments, voidPayment } from '../../lib/resources'
 import { useLanguage } from '../../hooks/useLanguage';
 import { formatDateOnly } from '../../i18n/format';
 import { Alert, Badge, Button, Dialog, LoadingState, Panel, Textarea } from '../ui';
+import { PaymentSummary } from './PaymentSummary';
 import { ReceiptPrintView } from './ReceiptPrintView';
 import { RecordPaymentDialog, paymentMethodKey as methodKey } from './RecordPaymentDialog';
 
@@ -334,26 +335,22 @@ export function PaymentsPanel({
       >
         {voidTarget && (
           // Voiding cannot be undone, so the dialog names exactly which payment it affects.
-          <dl
-            className="mb-4 grid grid-cols-2 gap-x-4 gap-y-2 rounded-lg border border-border-default p-3 text-sm"
+          <PaymentSummary
+            className="mb-4"
             data-testid="void-payment-summary"
-          >
-            {(
-              [
-                ['payments.client', voidTarget.client.name],
-                ['payments.amount', formatMoney(voidTarget.amountMinor, voidTarget.currency)],
-                ['payments.date', formatDateOnly(voidTarget.paymentDate, language)],
-                ['payments.method', t(methodKey(voidTarget.method))],
-              ] as const
-            ).map(([key, value]) => (
-              <div key={key}>
-                <dt className="text-xs font-semibold uppercase tracking-wider text-fg-muted">
-                  {t(key)}
-                </dt>
-                <dd className="mt-0.5 font-medium tabular-nums text-fg-primary">{value}</dd>
-              </div>
-            ))}
-          </dl>
+            items={[
+              { label: t('payments.client'), value: voidTarget.client.name },
+              {
+                label: t('payments.amount'),
+                value: formatMoney(voidTarget.amountMinor, voidTarget.currency),
+              },
+              {
+                label: t('payments.date'),
+                value: formatDateOnly(voidTarget.paymentDate, language),
+              },
+              { label: t('payments.method'), value: t(methodKey(voidTarget.method)) },
+            ]}
+          />
         )}
         <p>{t('payments.voidWarning')}</p>
         <Textarea

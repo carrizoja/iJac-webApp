@@ -12,6 +12,7 @@ import { parseMoneyInput } from '../../lib/money';
 import { useLanguage } from '../../hooks/useLanguage';
 import type { TranslationKey } from '../../i18n/translations';
 import { Alert, Dialog, Input, Select, Textarea } from '../ui';
+import { PaymentSummary } from './PaymentSummary';
 
 type AmountError = 'invalid' | 'exceeds';
 
@@ -150,7 +151,7 @@ export function RecordPaymentDialog({
 
   const submit = async () => {
     if (submitting || blocked) return;
-    const amountMinor = parseMoneyInput(form.amount);
+    const amountMinor = typedMinor;
     const next: RecordErrors = {};
     if (amountMinor === null || amountMinor <= 0) next.amount = 'invalid';
     else if (amountMinor > remainingMinor) next.amount = 'exceeds';
@@ -208,28 +209,14 @@ export function RecordPaymentDialog({
           void submit();
         }}
       >
-        {/* Recorded payments cannot be edited, so the dialog names what this one is for. */}
-        <dl
-          className="grid grid-cols-2 gap-x-4 gap-y-2 rounded-lg border border-border-default p-3 text-sm"
+        <PaymentSummary
           data-testid="record-payment-summary"
-        >
-          {(
-            [
-              ['payments.order', orderTitle],
-              ['payments.client', clientName],
-              ['payments.remaining', remainingText],
-            ] as const
-          ).map(([key, value]) => (
-            <div key={key} className={key === 'payments.order' ? 'col-span-2' : undefined}>
-              <dt className="text-xs font-semibold uppercase tracking-wider text-fg-muted">
-                {t(key)}
-              </dt>
-              <dd className="mt-0.5 break-words font-medium tabular-nums text-fg-primary">
-                {value}
-              </dd>
-            </div>
-          ))}
-        </dl>
+          items={[
+            { label: t('payments.order'), value: orderTitle, wide: true },
+            { label: t('payments.client'), value: clientName },
+            { label: t('payments.remaining'), value: remainingText },
+          ]}
+        />
         {blocked && (
           <Alert type="warning" role="alert">
             <p>{t('payments.profileMissing')}</p>

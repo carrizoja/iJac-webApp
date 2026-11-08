@@ -61,6 +61,9 @@ function order(overrides: Partial<WorkOrderClientSummary>): WorkOrderClientSumma
 
 const section = (name: string) => screen.getByRole('region', { name });
 
+/** The submit button names the amount once one is typed: "Registrar $ 250,00". */
+const SUBMIT_PAYMENT = /^Registrar( \$|$)/;
+
 describe('TodayDashboard', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -326,7 +329,7 @@ describe('TodayDashboard', () => {
       const summary = within(within(dialog).getByTestId('record-payment-summary'));
       expect(summary.getByText('Chico')).toBeInTheDocument();
       expect(summary.getByText('Acme')).toBeInTheDocument();
-      fireEvent.click(within(dialog).getByRole('button', { name: /^Registrar( \$|$)/ }));
+      fireEvent.click(within(dialog).getByRole('button', { name: SUBMIT_PAYMENT }));
 
       expect(await screen.findByText('Pago registrado · Recibo 0001-00000042')).toBeInTheDocument();
       expect(screen.getByRole('button', { name: 'Ver recibo' })).toBeInTheDocument();
@@ -353,7 +356,7 @@ describe('TodayDashboard', () => {
       );
       const dialog = await screen.findByRole('dialog');
       fireEvent.change(within(dialog).getByLabelText(/Importe/), { target: { value: '1.000,00' } });
-      fireEvent.click(within(dialog).getByRole('button', { name: /^Registrar( \$|$)/ }));
+      fireEvent.click(within(dialog).getByRole('button', { name: SUBMIT_PAYMENT }));
 
       await screen.findByText(/Pago registrado/);
       const row = within(owed).getByRole('link', { name: 'Grande' }).closest('li') as HTMLElement;
@@ -375,7 +378,7 @@ describe('TodayDashboard', () => {
 
       fireEvent.click(await within(owed).findByRole('button', { name: 'Registrar pago de Chico' }));
       const dialog = await screen.findByRole('dialog');
-      fireEvent.click(within(dialog).getByRole('button', { name: /^Registrar( \$|$)/ }));
+      fireEvent.click(within(dialog).getByRole('button', { name: SUBMIT_PAYMENT }));
 
       expect(
         await within(dialog).findByText('El importe supera el saldo pendiente ($ 200,00)'),
