@@ -97,8 +97,10 @@
     --color-action-border-hover: #3a3a3a;
     --color-action-brand: #00d084;
     --color-action-brand-hover: #00c978;
+
     /* White on the bright green is about 2:1; dark text reads at over 10:1. */
     --color-action-brand-hover-fg: #020617;
+
     /* Edit is a neutral outline that glows in the brand green on hover. */
     --color-action-edit: var(--color-action-border);
     --color-action-edit-hover: var(--color-action-brand-hover);
