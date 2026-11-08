@@ -638,4 +638,53 @@ describe('WorkOrderList', () => {
       );
     });
   });
+
+  describe('on phones and between visits', () => {
+    afterEach(() => vi.restoreAllMocks());
+
+    it('remembers the chosen view for the next visit', async () => {
+      listWorkOrders.mockResolvedValue({ items: [sampleWorkOrder] });
+      const first = render(
+        <WorkOrderList clients={[sampleClient]} onCreate={vi.fn()} onEdit={vi.fn()} />,
+      );
+      fireEvent.click(await screen.findByRole('button', { name: 'Tarjetas' }));
+      first.unmount();
+
+      render(<WorkOrderList clients={[sampleClient]} onCreate={vi.fn()} onEdit={vi.fn()} />);
+      expect(await screen.findByTestId('work-order-cards')).toBeInTheDocument();
+      expect(screen.queryByTestId('work-order-table')).not.toBeInTheDocument();
+    });
+
+    it('opens as cards on a phone when no view was chosen', async () => {
+      vi.spyOn(window, 'matchMedia').mockImplementation(
+        (query: string) => ({ matches: query === '(max-width: 639px)' }) as MediaQueryList,
+      );
+      listWorkOrders.mockResolvedValue({ items: [sampleWorkOrder] });
+      render(<WorkOrderList clients={[sampleClient]} onCreate={vi.fn()} onEdit={vi.fn()} />);
+      expect(await screen.findByTestId('work-order-cards')).toBeInTheDocument();
+    });
+
+    it('folds the filters behind one Filtros button that counts the active ones', async () => {
+      render(<WorkOrderList clients={[sampleClient]} onCreate={vi.fn()} onEdit={vi.fn()} />);
+      const toggle = await screen.findByRole('button', { name: 'Filtros' });
+      const panel = document.getElementById(toggle.getAttribute('aria-controls') ?? '');
+      expect(toggle).toHaveAttribute('aria-expanded', 'false');
+      expect(panel).toHaveClass('hidden', 'sm:contents');
+      expect(within(panel as HTMLElement).getByLabelText('Filtrar por estado')).toBeInTheDocument();
+      // Search stays outside, always visible.
+      expect(within(panel as HTMLElement).queryByLabelText('Buscar órdenes')).toBeNull();
+
+      fireEvent.click(toggle);
+      expect(toggle).toHaveAttribute('aria-expanded', 'true');
+      expect(panel).not.toHaveClass('hidden');
+
+      fireEvent.change(screen.getByLabelText('Filtrar por estado'), {
+        target: { value: WorkOrderStatus.OPEN },
+      });
+      fireEvent.change(screen.getByLabelText('Filtrar por prioridad'), {
+        target: { value: WorkOrderPriority.HIGH },
+      });
+      expect(screen.getByRole('button', { name: 'Filtros (2)' })).toBe(toggle);
+    });
+  });
 });

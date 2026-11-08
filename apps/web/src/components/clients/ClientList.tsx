@@ -18,6 +18,7 @@ import { useLanguage } from '../../hooks/useLanguage';
 import type { TranslationKey } from '../../i18n/translations';
 import { collectAllPages } from '../../lib/collectAllPages';
 import { nextTableSort, readStoredTableSort, storeTableSort } from '../../lib/tableSort';
+import { readViewMode, storeViewMode } from '../../lib/viewMode';
 import {
   CLIENT_SORT_KEYS,
   DEFAULT_CLIENT_SORT,
@@ -28,6 +29,7 @@ import {
 import { TriangleAlert, Users } from 'lucide-react';
 
 const SORT_STORAGE_KEY = 'ijac.clients.sort';
+const VIEW_STORAGE_KEY = 'ijac.clients.view';
 const COLUMN_SORT_KEYS = ['name', 'email', 'phone', 'organization'] as const;
 
 const SORT_LABEL_KEYS: Record<ClientSortKey, TranslationKey> = {
@@ -48,6 +50,12 @@ export function ClientList({ onCreate, onEdit }: ClientListProps) {
   const rowActionButtonClass = 'rounded-lg px-4';
   const [clients, setClients] = useState<Client[]>([]);
   const [viewMode, setViewMode] = useState<ViewMode>('table');
+  // Read after mount: the server render cannot know the screen size or the stored view.
+  useEffect(() => setViewMode(readViewMode(VIEW_STORAGE_KEY)), []);
+  const changeViewMode = (next: ViewMode) => {
+    setViewMode(next);
+    storeViewMode(VIEW_STORAGE_KEY, next);
+  };
   const [initialLoading, setInitialLoading] = useState(true);
   const [searching, setSearching] = useState(false);
   const [errorKey, setErrorKey] = useState<TranslationKey | null>(null);
@@ -137,7 +145,11 @@ export function ClientList({ onCreate, onEdit }: ClientListProps) {
               onChange={changeSort}
             />
           )}
-          <ViewModeToggle value={viewMode} onChange={setViewMode} ariaLabel={t('clients.view')} />
+          <ViewModeToggle
+            value={viewMode}
+            onChange={changeViewMode}
+            ariaLabel={t('clients.view')}
+          />
           <Button
             onClick={onCreate}
             className="min-h-11 shrink-0 whitespace-nowrap rounded-xl px-6"
@@ -217,9 +229,7 @@ export function ClientList({ onCreate, onEdit }: ClientListProps) {
               <tbody className="divide-y divide-border-subtle/50 text-fg-primary">
                 {sortedClients.map((client) => (
                   <Fragment key={client.id}>
-                    <tr
-                      className={confirmDelete === client.id ? 'bg-warning/5' : 'table-row'}
-                    >
+                    <tr className={confirmDelete === client.id ? 'bg-warning/5' : 'table-row'}>
                       <td className="px-4 py-3.5 font-medium">
                         {client.name}
                         {client.taxId && (
