@@ -230,7 +230,7 @@ export function WorkOrderList({ clients, onCreate, onEdit }: WorkOrderListProps)
           <Button
             type="button"
             variant="secondary"
-            className="min-h-11 w-full rounded-xl sm:hidden"
+            className="min-h-11 w-full gap-2 rounded-xl sm:hidden"
             aria-expanded={filtersOpen}
             aria-controls="workOrderFilters"
             onClick={() => setFiltersOpen((open) => !open)}
