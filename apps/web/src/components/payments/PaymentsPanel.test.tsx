@@ -106,9 +106,9 @@ describe('PaymentsPanel', () => {
       }),
     );
     renderPanel();
-    expect(await screen.findByRole('button', { name: 'Registrar pago' })).toHaveClass(
-      'action-brand',
-    );
+    const record = await screen.findByRole('button', { name: 'Registrar pago' });
+    expect(record).toHaveClass('action-brand');
+    expect(record.querySelector('svg')).toHaveAttribute('aria-hidden', 'true');
   });
   it('shows the balance summary and payment list', async () => {
     const active = makePayment({ id: 'a', receiptNumber: 1, amountMinor: 3000000 });

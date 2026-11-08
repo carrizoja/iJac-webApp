@@ -1,12 +1,13 @@
 import { useEffect, useState } from 'react';
 import {
   WORK_ORDER_STATUSES,
-  formatMoney,
   type Client,
   type WorkOrder,
   WorkOrderStatus,
 } from '@ijac/shared';
-import { FileDown, MessageCircle, Pencil } from 'lucide-react';
+import { CircleCheck, CirclePlay, FileDown, MessageCircle, Pencil } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
+import type { TranslationKey } from '../../i18n/translations';
 import { getClient, getWorkOrder, listClients, updateWorkOrder } from '../../lib/resources';
 import { collectAllPages } from '../../lib/collectAllPages';
 import { useRevealOnOpen } from '../../hooks/useRevealOnOpen';
@@ -49,6 +50,22 @@ function BackToOrders() {
     </a>
   );
 }
+
+/** The one forward move from each active status; finished orders have none. */
+const NEXT_STEP: Partial<
+  Record<WorkOrderStatus, { status: WorkOrderStatus; label: TranslationKey; icon: LucideIcon }>
+> = {
+  [WorkOrderStatus.OPEN]: {
+    status: WorkOrderStatus.IN_PROGRESS,
+    label: 'workOrders.nextStep.start',
+    icon: CirclePlay,
+  },
+  [WorkOrderStatus.IN_PROGRESS]: {
+    status: WorkOrderStatus.COMPLETED,
+    label: 'workOrders.nextStep.complete',
+    icon: CircleCheck,
+  },
+};
 
 export function WorkOrderDetails() {
   const { language, t } = useLanguage();
@@ -195,6 +212,7 @@ export function WorkOrderDetails() {
     void changeStatus(selectedStatus);
   };
 
+  const nextStep = NEXT_STEP[workOrder.status];
   const overdue = isOverdue(workOrder, localDateKey(new Date()));
   const organization = client.organization?.trim();
   // Skip the organization when it only repeats the client's name.
@@ -286,7 +304,7 @@ export function WorkOrderDetails() {
               {t('workOrders.shareMessageDue', { value: dueDate })}
             </span>
           </div>
-          <div className="work-order-print-hidden flex w-full items-end gap-2 sm:w-auto">
+          <div className="work-order-print-hidden flex w-full flex-wrap items-end gap-2 sm:w-auto">
             <div className="min-w-0 flex-1 sm:w-56 sm:flex-none">
               <Select
                 id="work-order-status"
@@ -311,6 +329,20 @@ export function WorkOrderDetails() {
             >
               {t('workOrders.saveStatus')}
             </Button>
+            {nextStep && (
+              <Button
+                type="button"
+                variant="primary"
+                className="w-full sm:w-auto"
+                onClick={() => void changeStatus(nextStep.status)}
+                disabled={savingStatus || editing}
+                startIcon={
+                  <nextStep.icon aria-hidden="true" focusable="false" className="h-4 w-4" />
+                }
+              >
+                {t(nextStep.label)}
+              </Button>
+            )}
           </div>
         </div>
         <p
@@ -390,36 +422,20 @@ export function WorkOrderDetails() {
         </p>
       </Panel>
 
-      <Panel size="lg" className="border border-border-default" data-print-panel>
-        <dl className="grid gap-6 sm:grid-cols-3">
-          <div>
-            <dt className="text-xs font-semibold uppercase tracking-wider text-fg-muted">
-              {t('workOrders.totalPrice')}
-            </dt>
-            <dd className="mt-2 text-sm font-semibold text-fg-primary">
-              {workOrder.totalPriceMinor !== undefined && workOrder.currency
-                ? formatMoney(workOrder.totalPriceMinor, workOrder.currency)
-                : t('workOrders.noPrice')}
-            </dd>
+      {/* Record keeping, not a decision: a quiet line under the content. */}
+      <dl className="flex flex-wrap gap-x-6 gap-y-1 px-1 text-xs text-fg-muted" data-print-panel>
+        {(
+          [
+            ['workOrders.created', workOrder.createdAt],
+            ['workOrders.updated', workOrder.updatedAt],
+          ] as const
+        ).map(([key, value]) => (
+          <div key={key} className="flex gap-1.5">
+            <dt className="font-semibold">{t(key)}</dt>
+            <dd className="tabular-nums">{formatDateTime(value, language)}</dd>
           </div>
-          <div>
-            <dt className="text-xs font-semibold uppercase tracking-wider text-fg-muted">
-              {t('workOrders.created')}
-            </dt>
-            <dd className="mt-2 text-sm text-fg-primary">
-              {formatDateTime(workOrder.createdAt, language)}
-            </dd>
-          </div>
-          <div>
-            <dt className="text-xs font-semibold uppercase tracking-wider text-fg-muted">
-              {t('workOrders.updated')}
-            </dt>
-            <dd className="mt-2 text-sm text-fg-primary">
-              {formatDateTime(workOrder.updatedAt, language)}
-            </dd>
-          </div>
-        </dl>
-      </Panel>
+        ))}
+      </dl>
     </article>
   );
 }
