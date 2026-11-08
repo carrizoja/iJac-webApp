@@ -37,7 +37,8 @@ import { collectAllPages } from '../../lib/collectAllPages';
 import { readStoredTableSort, storeTableSort } from '../../lib/tableSort';
 import { readViewMode, storeViewMode } from '../../lib/viewMode';
 import { isOverdue, localDateKey } from '../home/todaySummary';
-import { priorityBadgeClass, statusBadgeClass } from './workOrderBadges';
+import { priorityBadgeClass } from './workOrderBadges';
+import { StatusBadge } from './StatusBadge';
 import { matchesOrderSearch } from './workOrderSearch';
 import { ClipboardList, SlidersHorizontal, TriangleAlert } from 'lucide-react';
 
@@ -402,9 +403,9 @@ export function WorkOrderList({ clients, onCreate, onEdit }: WorkOrderListProps)
                       </td>
                       <td className="px-4 py-3.5 text-fg-muted">{wo.clientName}</td>
                       <td className="px-4 py-3.5">
-                        <Badge variant="tone" className={statusBadgeClass(wo.status)}>
+                        <StatusBadge status={wo.status}>
                           {statusLabel(wo.status, language)}
-                        </Badge>
+                        </StatusBadge>
                       </td>
                       <td className="px-4 py-3.5">
                         <Badge variant="tone" className={priorityBadgeClass(wo.priority)}>
@@ -558,9 +559,9 @@ export function WorkOrderList({ clients, onCreate, onEdit }: WorkOrderListProps)
                       </h2>
                       <p className="text-sm text-fg-muted">{wo.clientName}</p>
                       <div className="mt-2 flex flex-wrap gap-2 text-xs">
-                        <Badge variant="tone" className={statusBadgeClass(wo.status)}>
+                        <StatusBadge status={wo.status}>
                           {statusLabel(wo.status, language)}
-                        </Badge>
+                        </StatusBadge>
                         <Badge variant="tone" className={priorityBadgeClass(wo.priority)}>
                           {priorityLabel(wo.priority, language)}
                         </Badge>

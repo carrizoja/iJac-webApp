@@ -23,7 +23,8 @@ import {
   Select,
 } from '../ui';
 import { PaymentsPanel } from '../payments/PaymentsPanel';
-import { priorityBadgeClass, statusBadgeClass } from './workOrderBadges';
+import { priorityBadgeClass } from './workOrderBadges';
+import { StatusBadge } from './StatusBadge';
 import { isOverdue, localDateKey } from '../home/todaySummary';
 import { useLanguage } from '../../hooks/useLanguage';
 import { formatDateOnly, formatDateTime, priorityLabel, statusLabel } from '../../i18n/format';
@@ -268,9 +269,9 @@ export function WorkOrderDetails() {
 
         <div className="mt-4 flex flex-wrap items-end justify-between gap-4">
           <div className="flex flex-wrap items-center gap-2">
-            <Badge variant="tone" className={statusBadgeClass(workOrder.status)}>
+            <StatusBadge status={workOrder.status}>
               {t('workOrders.statusValue', { value: statusLabel(workOrder.status, language) })}
-            </Badge>
+            </StatusBadge>
             <Badge variant="tone" className={priorityBadgeClass(workOrder.priority)}>
               {t('workOrders.priorityValue', {
                 value: priorityLabel(workOrder.priority, language),
