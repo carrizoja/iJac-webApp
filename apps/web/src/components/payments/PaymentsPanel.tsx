@@ -7,6 +7,7 @@ import {
   type Payment,
   type WorkOrderPaymentsResponse,
 } from '@ijac/shared';
+import { Banknote } from 'lucide-react';
 import { ApiRequestError, listPayments, voidPayment } from '../../lib/resources';
 import { useLanguage } from '../../hooks/useLanguage';
 import { formatDateOnly } from '../../i18n/format';
@@ -149,6 +150,7 @@ export function PaymentsPanel({
             variant="primary"
             className="work-order-print-hidden"
             onClick={openRecord}
+            startIcon={<Banknote aria-hidden="true" focusable="false" className="h-4 w-4" />}
           >
             {t('payments.record')}
           </Button>
@@ -284,7 +286,7 @@ export function PaymentsPanel({
                             type="button"
                             variant="ghost"
                             size="sm"
-                            className="ml-2 text-destructive-text"
+                            className="text-destructive-text"
                             aria-label={t('payments.voidNamed', { number })}
                             onClick={() => openVoid(payment)}
                           >

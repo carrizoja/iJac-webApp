@@ -198,6 +198,8 @@ export const es = {
   'workOrders.statusUpdated': 'Estado actualizado: {value}',
   'workOrders.statusError': 'No se pudo cambiar el estado. Probá de nuevo.',
   'workOrders.saveStatus': 'Guardar estado',
+  'workOrders.nextStep.start': 'Iniciar trabajo',
+  'workOrders.nextStep.complete': 'Marcar completada',
   'workOrders.cancelConfirmTitle': '¿Cancelar esta orden?',
   'workOrders.cancelConfirmBody':
     'Mientras esté cancelada no vas a poder registrar pagos. Podés volver a cambiar el estado después.',
@@ -239,7 +241,6 @@ export const es = {
   'workOrders.validation.totalPrice': 'Ingresá un importe válido, por ejemplo 150.000,50',
   'workOrders.validation.currency': 'Elegí la moneda del precio',
   'workOrders.validation.priceForCurrency': 'Ingresá el precio para la moneda elegida',
-  'workOrders.noPrice': 'Sin precio',
   'payments.title': 'Pagos',
   'payments.loading': 'Cargando pagos...',
   'payments.loadError': 'No se pudieron cargar los pagos.',
@@ -549,6 +550,8 @@ export const en = {
   'workOrders.statusUpdated': 'Status updated: {value}',
   'workOrders.statusError': "Couldn't change the status. Try again.",
   'workOrders.saveStatus': 'Save status',
+  'workOrders.nextStep.start': 'Start work',
+  'workOrders.nextStep.complete': 'Mark completed',
   'workOrders.cancelConfirmTitle': 'Cancel this work order?',
   'workOrders.cancelConfirmBody':
     "While it's cancelled, no new payments can be recorded. You can change the status again later.",
@@ -589,7 +592,6 @@ export const en = {
   'workOrders.validation.totalPrice': 'Enter a valid amount, for example 150.000,50',
   'workOrders.validation.currency': 'Choose the price currency',
   'workOrders.validation.priceForCurrency': 'Enter the price for the chosen currency',
-  'workOrders.noPrice': 'No price',
   'payments.title': 'Payments',
   'payments.loading': 'Loading payments...',
   'payments.loadError': 'Payments could not be loaded.',

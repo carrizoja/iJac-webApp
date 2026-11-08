@@ -452,44 +452,110 @@ describe('WorkOrderDetails', () => {
     expect(within(alert).queryByRole('button', { name: 'Reintentar' })).not.toBeInTheDocument();
   });
 
-  it('shows the formatted total price inside the printable document', async () => {
+  it('shows the price once, in the printable payments balance', async () => {
     window.history.replaceState({}, '', '/work-orders/details?id=work-order-1');
     getWorkOrder.mockResolvedValue({
       ...workOrder,
       totalPriceMinor: 15000050,
       currency: Currency.ARS,
     });
-    getClient.mockResolvedValue(client);
-
-    render(<WorkOrderDetails />);
-
-    const price = await screen.findByText('$ 150.000,50');
-    expect(screen.getByText('Precio total')).toBeInTheDocument();
-    expect(price.closest('.work-order-print-document')).not.toBeNull();
-    expect(price.closest('.work-order-print-hidden')).toBeNull();
-  });
-
-  it('formats a USD total price', async () => {
-    window.history.replaceState({}, '', '/work-orders/details?id=work-order-1');
-    getWorkOrder.mockResolvedValue({
-      ...workOrder,
-      totalPriceMinor: 125050,
-      currency: Currency.USD,
+    listPayments.mockResolvedValue({
+      items: [],
+      balance: { currency: Currency.ARS, totalMinor: 15000050, paidMinor: 0, remainingMinor: 15000050 },
+      canManage: false,
     });
     getClient.mockResolvedValue(client);
 
     render(<WorkOrderDetails />);
 
-    expect(await screen.findByText('US$ 1.250,50')).toBeInTheDocument();
+    await screen.findByTestId('payments-remaining');
+    expect(screen.queryByText('Precio total')).not.toBeInTheDocument();
+    const total = screen.getByText('Total').closest('div') as HTMLElement;
+    expect(within(total).getByText('$ 150.000,50')).toBeInTheDocument();
+    expect(total.closest('#payments')).not.toBeNull();
+    expect(total.closest('.work-order-print-document')).not.toBeNull();
+    expect(total.closest('.work-order-print-hidden')).toBeNull();
   });
 
-  it('indicates when the order has no price', async () => {
+  it('points an unpriced order to its price instead of a separate price field', async () => {
     window.history.replaceState({}, '', '/work-orders/details?id=work-order-1');
     getWorkOrder.mockResolvedValue(workOrder);
     getClient.mockResolvedValue(client);
 
     render(<WorkOrderDetails />);
 
-    expect(await screen.findByText('Sin precio')).toBeInTheDocument();
+    expect(
+      await screen.findByText('Definí un precio total en la orden antes de registrar pagos.'),
+    ).toBeInTheDocument();
+    expect(screen.queryByText('Sin precio')).not.toBeInTheDocument();
+  });
+
+  describe('next step', () => {
+    beforeEach(() => {
+      window.history.replaceState({}, '', '/work-orders/details?id=work-order-1');
+      getClient.mockResolvedValue(client);
+    });
+
+    it('completes an in-progress order with one button', async () => {
+      getWorkOrder.mockResolvedValue(workOrder);
+      updateWorkOrder.mockResolvedValue({ ...workOrder, status: WorkOrderStatus.COMPLETED });
+      render(<WorkOrderDetails />);
+
+      const header = (
+        await screen.findByRole('heading', { level: 1, name: 'Revisión remota' })
+      ).closest('header') as HTMLElement;
+      fireEvent.click(within(header).getByRole('button', { name: 'Marcar completada' }));
+
+      await waitFor(() =>
+        expect(updateWorkOrder).toHaveBeenCalledWith('work-order-1', {
+          status: WorkOrderStatus.COMPLETED,
+        }),
+      );
+      expect(updateWorkOrder).toHaveBeenCalledTimes(1);
+      expect(await screen.findByText('Estado: Completada')).toBeInTheDocument();
+      expect(screen.getByTestId('work-order-status-announcement')).toHaveTextContent(
+        'Estado actualizado: Completada',
+      );
+      expect(screen.queryByRole('button', { name: 'Marcar completada' })).not.toBeInTheDocument();
+    });
+
+    it('starts an open order with one button', async () => {
+      getWorkOrder.mockResolvedValue({ ...workOrder, status: WorkOrderStatus.OPEN });
+      updateWorkOrder.mockResolvedValue({ ...workOrder, status: WorkOrderStatus.IN_PROGRESS });
+      render(<WorkOrderDetails />);
+
+      fireEvent.click(await screen.findByRole('button', { name: 'Iniciar trabajo' }));
+
+      await waitFor(() =>
+        expect(updateWorkOrder).toHaveBeenCalledWith('work-order-1', {
+          status: WorkOrderStatus.IN_PROGRESS,
+        }),
+      );
+      expect(await screen.findByRole('button', { name: 'Marcar completada' })).toBeInTheDocument();
+    });
+
+    it.each([WorkOrderStatus.COMPLETED, WorkOrderStatus.CANCELLED])(
+      'offers no shortcut for a %s order',
+      async (status) => {
+        getWorkOrder.mockResolvedValue({ ...workOrder, status });
+        render(<WorkOrderDetails />);
+
+        await screen.findByRole('heading', { level: 1, name: 'Revisión remota' });
+        expect(screen.queryByRole('button', { name: 'Iniciar trabajo' })).not.toBeInTheDocument();
+        expect(
+          screen.queryByRole('button', { name: 'Marcar completada' }),
+        ).not.toBeInTheDocument();
+      },
+    );
+
+    it('does not offer the shortcut while the order is being edited', async () => {
+      getWorkOrder.mockResolvedValue(workOrder);
+      listClients.mockResolvedValue({ items: [client] });
+      render(<WorkOrderDetails />);
+
+      fireEvent.click(await screen.findByRole('button', { name: 'Editar' }));
+
+      expect(screen.getByRole('button', { name: 'Marcar completada' })).toBeDisabled();
+    });
   });
 });
