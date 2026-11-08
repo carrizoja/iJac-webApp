@@ -11,6 +11,7 @@ const mocks = vi.hoisted(() => ({
   listWorkOrders: vi.fn(),
   getCurrentMember: vi.fn(),
   recordPayment: vi.fn(),
+  getOrganizationProfile: vi.fn(),
   getCalendarConnectionStatus: vi.fn(),
   ApiRequestError: class ApiRequestError extends Error {
     constructor(
@@ -25,6 +26,7 @@ const {
   listWorkOrders,
   getCurrentMember,
   recordPayment,
+  getOrganizationProfile,
   getCalendarConnectionStatus,
   ApiRequestError,
 } = mocks;
@@ -33,6 +35,7 @@ vi.mock('../../lib/resources', () => ({
   listWorkOrders: mocks.listWorkOrders,
   getCurrentMember: mocks.getCurrentMember,
   recordPayment: mocks.recordPayment,
+  getOrganizationProfile: mocks.getOrganizationProfile,
   ApiRequestError: mocks.ApiRequestError,
 }));
 vi.mock('../../lib/calendar', () => ({
@@ -63,6 +66,7 @@ describe('TodayDashboard', () => {
     vi.clearAllMocks();
     vi.useFakeTimers({ toFake: ['Date'] });
     vi.setSystemTime(new Date(2026, 10, 6, 9, 0));
+    getOrganizationProfile.mockResolvedValue({ configured: true, canEdit: true, profile: {} });
     listWorkOrders.mockResolvedValue({ items: [] });
     getCurrentMember.mockResolvedValue({ role: 'admin' });
     getCalendarConnectionStatus.mockResolvedValue({ connected: true, status: 'connected' });
@@ -319,7 +323,10 @@ describe('TodayDashboard', () => {
       fireEvent.click(await within(owed).findByRole('button', { name: 'Registrar pago de Chico' }));
       const dialog = await screen.findByRole('dialog');
       expect(within(dialog).getByLabelText(/Importe/)).toHaveValue('500,00');
-      fireEvent.click(within(dialog).getByRole('button', { name: 'Registrar' }));
+      const summary = within(within(dialog).getByTestId('record-payment-summary'));
+      expect(summary.getByText('Chico')).toBeInTheDocument();
+      expect(summary.getByText('Acme')).toBeInTheDocument();
+      fireEvent.click(within(dialog).getByRole('button', { name: /^Registrar( \$|$)/ }));
 
       expect(await screen.findByText('Pago registrado · Recibo 0001-00000042')).toBeInTheDocument();
       expect(screen.getByRole('button', { name: 'Ver recibo' })).toBeInTheDocument();
@@ -346,7 +353,7 @@ describe('TodayDashboard', () => {
       );
       const dialog = await screen.findByRole('dialog');
       fireEvent.change(within(dialog).getByLabelText(/Importe/), { target: { value: '1.000,00' } });
-      fireEvent.click(within(dialog).getByRole('button', { name: 'Registrar' }));
+      fireEvent.click(within(dialog).getByRole('button', { name: /^Registrar( \$|$)/ }));
 
       await screen.findByText(/Pago registrado/);
       const row = within(owed).getByRole('link', { name: 'Grande' }).closest('li') as HTMLElement;
@@ -368,7 +375,7 @@ describe('TodayDashboard', () => {
 
       fireEvent.click(await within(owed).findByRole('button', { name: 'Registrar pago de Chico' }));
       const dialog = await screen.findByRole('dialog');
-      fireEvent.click(within(dialog).getByRole('button', { name: 'Registrar' }));
+      fireEvent.click(within(dialog).getByRole('button', { name: /^Registrar( \$|$)/ }));
 
       expect(
         await within(dialog).findByText('El importe supera el saldo pendiente ($ 200,00)'),
