@@ -391,7 +391,7 @@ export function WorkOrderList({ clients, onCreate, onEdit }: WorkOrderListProps)
               <tbody className="divide-y divide-border-subtle/50 text-fg-primary">
                 {sortedWorkOrders.map((wo) => (
                   <Fragment key={wo.id}>
-                    <tr className={confirmDelete === wo.id ? 'bg-warning/5' : 'table-row'}>
+                    <tr className={confirmDelete === wo.id ? 'bg-danger/5' : 'table-row'}>
                       <td className="px-4 py-3.5 font-medium">
                         <a
                           href={workOrderDetailsHref(wo.id)}
@@ -467,7 +467,7 @@ export function WorkOrderList({ clients, onCreate, onEdit }: WorkOrderListProps)
                       <tr key={`${wo.id}-delete`}>
                         <td
                           colSpan={7}
-                          className="bg-warning/10 px-4 py-3"
+                          className="bg-danger/10 px-4 py-3"
                           data-testid="delete-confirmation"
                         >
                           <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
@@ -509,7 +509,7 @@ export function WorkOrderList({ clients, onCreate, onEdit }: WorkOrderListProps)
               <div key={wo.id}>
                 {confirmDelete === wo.id && (
                   <Panel
-                    className="mb-3 border border-warning bg-warning/10"
+                    className="mb-3 border border-danger bg-danger/10"
                     data-testid="delete-confirmation"
                   >
                     <div className="space-y-3">

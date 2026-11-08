@@ -31,7 +31,7 @@ export default {
         glass: '0 8px 32px 0 rgba(0, 0, 0, 0.3)',
 
         /* Focus shadow */
-        'focus-ring': '0 0 0 2px #020617, 0 0 0 4px #60a5fa',
+        'focus-ring': '0 0 0 2px var(--color-focus-offset), 0 0 0 4px var(--color-focus)',
         'glow-brand': 'var(--shadow-glow-brand)',
 
         /* Inner shadow for inset effects */
@@ -81,6 +81,10 @@ export default {
 
         /* Warning; supports opacity modifiers such as bg-warning/10 */
         warning: 'color-mix(in srgb, var(--color-warning) calc(<alpha-value> * 100%), transparent)',
+
+        /* Danger tint for delete confirmations; supports opacity modifiers such as bg-danger/10 */
+        danger:
+          'color-mix(in srgb, var(--color-destructive) calc(<alpha-value> * 100%), transparent)',
 
         /* Destructive */
         destructive: {
