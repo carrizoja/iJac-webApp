@@ -410,6 +410,8 @@ export function TodayDashboard() {
           isOpen
           onClose={() => setPaying(null)}
           workOrderId={paying.id}
+          orderTitle={paying.title}
+          clientName={paying.clientName}
           remainingMinor={paying.remainingMinor ?? 0}
           currency={paying.currency as Currency}
           initialAmount={formatMoneyInput(paying.remainingMinor ?? 0)}

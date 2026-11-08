@@ -32,6 +32,7 @@ interface DialogProps {
     onClick: () => void | Promise<void>;
     destructive?: boolean;
     isLoading?: boolean;
+    disabled?: boolean;
   };
   /** Secondary action button (usually "Cancel") */
   secondaryAction?: {
@@ -219,6 +220,7 @@ export function Dialog({
               size="base"
               onClick={primaryAction.onClick}
               isLoading={primaryAction.isLoading}
+              disabled={primaryAction.disabled}
             >
               {primaryAction.label}
             </Button>

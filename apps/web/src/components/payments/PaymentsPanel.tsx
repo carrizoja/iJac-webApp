@@ -22,9 +22,16 @@ type LoadState =
 interface PaymentsPanelProps {
   workOrderId: string;
   workOrderStatus: WorkOrderStatus;
+  orderTitle: string;
+  clientName: string;
 }
 
-export function PaymentsPanel({ workOrderId, workOrderStatus }: PaymentsPanelProps) {
+export function PaymentsPanel({
+  workOrderId,
+  workOrderStatus,
+  orderTitle,
+  clientName,
+}: PaymentsPanelProps) {
   const { language, t } = useLanguage();
   const [state, setState] = useState<LoadState>({ status: 'loading' });
   const [recordOpen, setRecordOpen] = useState(false);
@@ -298,6 +305,8 @@ export function PaymentsPanel({ workOrderId, workOrderStatus }: PaymentsPanelPro
           isOpen={recordOpen}
           onClose={() => setRecordOpen(false)}
           workOrderId={workOrderId}
+          orderTitle={orderTitle}
+          clientName={clientName}
           remainingMinor={balance.remainingMinor}
           currency={balance.currency}
           onRecorded={(payment) => {

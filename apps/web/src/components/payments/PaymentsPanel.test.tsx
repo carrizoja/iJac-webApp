@@ -27,7 +27,17 @@ vi.mock('../../lib/resources', () => {
     }
   }
   const getBrandingImage = async () => ({ image: null });
-  const getOrganizationProfile = async () => ({ configured: false, canEdit: false });
+  const getOrganizationProfile = async () => ({
+    configured: true,
+    canEdit: true,
+    profile: {
+      businessName: 'iJac',
+      cuit: '20123456789',
+      address: 'Calle 1',
+      phone: '1',
+      updatedAt: '',
+    },
+  });
   return {
     ApiRequestError,
     listPayments,
@@ -58,7 +68,14 @@ function response(overrides: Partial<WorkOrderPaymentsResponse> = {}): WorkOrder
 }
 
 function renderPanel(status: WorkOrderStatus = WorkOrderStatus.OPEN) {
-  return render(<PaymentsPanel workOrderId="wo-1" workOrderStatus={status} />);
+  return render(
+    <PaymentsPanel
+      workOrderId="wo-1"
+      workOrderStatus={status}
+      orderTitle="Orden"
+      clientName="Acme"
+    />,
+  );
 }
 
 async function openRecordDialog() {
@@ -138,7 +155,7 @@ describe('PaymentsPanel', () => {
       target: { value: PaymentMethod.CASH },
     });
     fireEvent.change(screen.getByLabelText(/Observaciones/), { target: { value: 'Seña' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Registrar' }));
+    fireEvent.click(screen.getByRole('button', { name: /^Registrar( \$|$)/ }));
 
     await waitFor(() =>
       expect(recordPayment).toHaveBeenCalledWith('wo-1', {
@@ -164,7 +181,7 @@ describe('PaymentsPanel', () => {
 
     await openRecordDialog();
     fireEvent.change(screen.getByLabelText(/Importe/), { target: { value: '25.000,00' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Registrar' }));
+    fireEvent.click(screen.getByRole('button', { name: /^Registrar( \$|$)/ }));
 
     const confirmation = await screen.findByTestId('payment-recorded');
     expect(confirmation).toHaveAttribute('role', 'status');
@@ -244,7 +261,7 @@ describe('PaymentsPanel', () => {
 
     await openRecordDialog();
     fireEvent.change(screen.getByLabelText(/Importe/), { target: { value: '100.000,01' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Registrar' }));
+    fireEvent.click(screen.getByRole('button', { name: /^Registrar( \$|$)/ }));
 
     expect(
       await screen.findByText('El importe supera el saldo pendiente ($ 100.000,00)'),
@@ -258,7 +275,7 @@ describe('PaymentsPanel', () => {
 
     await openRecordDialog();
     fireEvent.change(screen.getByLabelText(/Importe/), { target: { value: 'abc' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Registrar' }));
+    fireEvent.click(screen.getByRole('button', { name: /^Registrar( \$|$)/ }));
 
     expect(await screen.findByText('Ingresá un importe válido mayor a cero')).toBeInTheDocument();
     expect(recordPayment).not.toHaveBeenCalled();
@@ -275,7 +292,7 @@ describe('PaymentsPanel', () => {
 
     await openRecordDialog();
     fireEvent.change(screen.getByLabelText(/Importe/), { target: { value: '50.000,00' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Registrar' }));
+    fireEvent.click(screen.getByRole('button', { name: /^Registrar( \$|$)/ }));
 
     expect(
       await screen.findByText('El importe supera el saldo pendiente ($ 100.000,00)'),
@@ -293,7 +310,7 @@ describe('PaymentsPanel', () => {
 
     await openRecordDialog();
     fireEvent.change(screen.getByLabelText(/Importe/), { target: { value: '1.000,00' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Registrar' }));
+    fireEvent.click(screen.getByRole('button', { name: /^Registrar( \$|$)/ }));
 
     expect(
       await screen.findByText('Completá los datos de la organización antes de registrar pagos.'),
@@ -313,7 +330,7 @@ describe('PaymentsPanel', () => {
 
     await openRecordDialog();
     fireEvent.change(screen.getByLabelText(/Importe/), { target: { value: '1.000,00' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Registrar' }));
+    fireEvent.click(screen.getByRole('button', { name: /^Registrar( \$|$)/ }));
 
     expect(await screen.findByText('Ingresá un importe válido mayor a cero')).toBeInTheDocument();
     expect(screen.queryByText(/supera el saldo/)).not.toBeInTheDocument();
@@ -330,7 +347,7 @@ describe('PaymentsPanel', () => {
     fireEvent.click(await screen.findByRole('button', { name: 'Record payment' }));
     await screen.findByRole('dialog');
     fireEvent.change(screen.getByLabelText(/Amount/), { target: { value: '1.000,00' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Record' }));
+    fireEvent.click(screen.getByRole('button', { name: /^Record( \$|$)/ }));
 
     expect(await screen.findByText('Enter a valid amount greater than zero')).toBeInTheDocument();
   });
@@ -344,7 +361,7 @@ describe('PaymentsPanel', () => {
 
     await openRecordDialog();
     fireEvent.change(screen.getByLabelText(/Importe/), { target: { value: '1.000,00' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Registrar' }));
+    fireEvent.click(screen.getByRole('button', { name: /^Registrar( \$|$)/ }));
     expect(
       (await screen.findAllByText('Definí un precio total en la orden antes de registrar pagos.'))
         .length,
@@ -353,7 +370,7 @@ describe('PaymentsPanel', () => {
     recordPayment.mockRejectedValueOnce(
       new ApiRequestError(PAYMENT_ERROR_CODES.WORK_ORDER_CANCELLED),
     );
-    fireEvent.click(screen.getByRole('button', { name: 'Registrar' }));
+    fireEvent.click(screen.getByRole('button', { name: /^Registrar( \$|$)/ }));
     expect(
       (await screen.findAllByText('La orden está cancelada: no se pueden registrar nuevos pagos.'))
         .length,
@@ -367,7 +384,7 @@ describe('PaymentsPanel', () => {
 
     await openRecordDialog();
     fireEvent.change(screen.getByLabelText(/Importe/), { target: { value: '1.000,00' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Registrar' }));
+    fireEvent.click(screen.getByRole('button', { name: /^Registrar( \$|$)/ }));
 
     expect(await screen.findByText('No se pudo registrar el pago.')).toBeInTheDocument();
   });
@@ -381,9 +398,9 @@ describe('PaymentsPanel', () => {
 
     await openRecordDialog();
     fireEvent.change(screen.getByLabelText(/Importe/), { target: { value: '1.000,00' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Registrar' }));
+    fireEvent.click(screen.getByRole('button', { name: /^Registrar( \$|$)/ }));
     await screen.findByText('No se pudo registrar el pago.');
-    fireEvent.click(screen.getByRole('button', { name: 'Registrar' }));
+    fireEvent.click(screen.getByRole('button', { name: /^Registrar( \$|$)/ }));
     await waitFor(() => expect(recordPayment).toHaveBeenCalledTimes(2));
 
     const [first, second] = recordPayment.mock.calls.map(([, body]) => body.idempotencyKey);
@@ -399,7 +416,7 @@ describe('PaymentsPanel', () => {
     for (let attempt = 0; attempt < 2; attempt += 1) {
       await openRecordDialog();
       fireEvent.change(screen.getByLabelText(/Importe/), { target: { value: '1.000,00' } });
-      fireEvent.click(screen.getByRole('button', { name: 'Registrar' }));
+      fireEvent.click(screen.getByRole('button', { name: /^Registrar( \$|$)/ }));
       await waitFor(() => expect(recordPayment).toHaveBeenCalledTimes(attempt + 1));
       await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
     }
@@ -417,9 +434,9 @@ describe('PaymentsPanel', () => {
 
     await openRecordDialog();
     fireEvent.change(screen.getByLabelText(/Importe/), { target: { value: '1.000,00' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Registrar' }));
+    fireEvent.click(screen.getByRole('button', { name: /^Registrar( \$|$)/ }));
     await screen.findByText('No se pudo registrar el pago.');
-    fireEvent.click(screen.getByRole('button', { name: 'Registrar' }));
+    fireEvent.click(screen.getByRole('button', { name: /^Registrar( \$|$)/ }));
     await waitFor(() => expect(recordPayment).toHaveBeenCalledTimes(2));
 
     const [first, second] = recordPayment.mock.calls.map(([, body]) => body.idempotencyKey);
@@ -435,7 +452,7 @@ describe('PaymentsPanel', () => {
 
     await openRecordDialog();
     fireEvent.change(screen.getByLabelText(/Importe/), { target: { value: '1.000,00' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Registrar' }));
+    fireEvent.click(screen.getByRole('button', { name: /^Registrar( \$|$)/ }));
 
     expect(
       await screen.findByText('No se pudo registrar el pago. notes too long'),

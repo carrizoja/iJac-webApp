@@ -373,7 +373,12 @@ export function WorkOrderDetails() {
         </div>
       )}
 
-      <PaymentsPanel workOrderId={workOrder.id} workOrderStatus={workOrder.status} />
+      <PaymentsPanel
+        workOrderId={workOrder.id}
+        workOrderStatus={workOrder.status}
+        orderTitle={workOrder.title}
+        clientName={clientDisplayName}
+      />
 
       <Panel size="lg" className="border border-border-default" data-print-panel>
         <h2 className="text-sm font-semibold uppercase tracking-wider text-fg-muted">

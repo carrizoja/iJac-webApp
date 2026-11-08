@@ -7,7 +7,7 @@ import {
   type Currency,
   type Payment,
 } from '@ijac/shared';
-import { ApiRequestError, recordPayment } from '../../lib/resources';
+import { ApiRequestError, getOrganizationProfile, recordPayment } from '../../lib/resources';
 import { parseMoneyInput } from '../../lib/money';
 import { useLanguage } from '../../hooks/useLanguage';
 import type { TranslationKey } from '../../i18n/translations';
@@ -47,6 +47,9 @@ export interface RecordPaymentDialogProps {
   isOpen: boolean;
   onClose: () => void;
   workOrderId: string;
+  /** Named in the summary, so the payment is recorded against the right order. */
+  orderTitle: string;
+  clientName: string;
   /** What is still owed; the amount may not exceed it. */
   remainingMinor: number;
   currency: Currency;
@@ -63,6 +66,8 @@ export function RecordPaymentDialog({
   isOpen,
   onClose,
   workOrderId,
+  orderTitle,
+  clientName,
   remainingMinor,
   currency,
   initialAmount = '',
@@ -80,6 +85,8 @@ export function RecordPaymentDialog({
   });
   const [errors, setErrors] = useState<RecordErrors>({});
   const [submitting, setSubmitting] = useState(false);
+  /** Checked on opening so a missing profile is reported before the form is filled. */
+  const [profileMissing, setProfileMissing] = useState(false);
 
   // Each opening starts a fresh form with its own idempotency key.
   useEffect(() => {
@@ -87,6 +94,17 @@ export function RecordPaymentDialog({
     idempotencyKey.current = crypto.randomUUID();
     setForm({ amount: initialAmount, paymentDate: today(), method: PaymentMethod.CASH, notes: '' });
     setErrors({});
+    setProfileMissing(false);
+    let cancelled = false;
+    getOrganizationProfile()
+      .then((status) => {
+        if (!cancelled) setProfileMissing(!status.configured);
+      })
+      // The server still refuses an unconfigured profile, so a failed check only skips the early warning.
+      .catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
     // Only a new opening resets the form, not a changed prefill while it is open.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, workOrderId]);
@@ -123,8 +141,15 @@ export function RecordPaymentDialog({
     return next;
   };
 
+  const blocked = profileMissing || Boolean(errors.profileMissing);
+  const typedMinor = parseMoneyInput(form.amount);
+  const submitLabel =
+    typedMinor !== null && typedMinor > 0
+      ? t('payments.submitAmount', { amount: formatMoney(typedMinor, currency) })
+      : t('payments.submit');
+
   const submit = async () => {
-    if (submitting) return;
+    if (submitting || blocked) return;
     const amountMinor = parseMoneyInput(form.amount);
     const next: RecordErrors = {};
     if (amountMinor === null || amountMinor <= 0) next.amount = 'invalid';
@@ -169,9 +194,10 @@ export function RecordPaymentDialog({
       onClose={onClose}
       title={t('payments.recordTitle')}
       primaryAction={{
-        label: submitting ? t('payments.submitting') : t('payments.submit'),
+        label: submitting ? t('payments.submitting') : submitLabel,
         onClick: submit,
         isLoading: submitting,
+        disabled: blocked,
       }}
     >
       <form
@@ -182,7 +208,29 @@ export function RecordPaymentDialog({
           void submit();
         }}
       >
-        {errors.profileMissing && (
+        {/* Recorded payments cannot be edited, so the dialog names what this one is for. */}
+        <dl
+          className="grid grid-cols-2 gap-x-4 gap-y-2 rounded-lg border border-border-default p-3 text-sm"
+          data-testid="record-payment-summary"
+        >
+          {(
+            [
+              ['payments.order', orderTitle],
+              ['payments.client', clientName],
+              ['payments.remaining', remainingText],
+            ] as const
+          ).map(([key, value]) => (
+            <div key={key} className={key === 'payments.order' ? 'col-span-2' : undefined}>
+              <dt className="text-xs font-semibold uppercase tracking-wider text-fg-muted">
+                {t(key)}
+              </dt>
+              <dd className="mt-0.5 break-words font-medium tabular-nums text-fg-primary">
+                {value}
+              </dd>
+            </div>
+          ))}
+        </dl>
+        {blocked && (
           <Alert type="warning" role="alert">
             <p>{t('payments.profileMissing')}</p>
             <a href="/settings" className="font-medium underline">
