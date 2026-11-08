@@ -60,7 +60,8 @@ describe('Badge', () => {
   it('renders with warning variant', () => {
     const { container } = render(<Badge variant="warning">Warning</Badge>);
     const badge = container.firstChild;
-    expect(badge).toBeInTheDocument();
+    // Warnings use their own token, not a priority color.
+    expect(badge).toHaveClass('text-warning');
   });
 
   it('renders with error variant', () => {
@@ -117,7 +118,7 @@ describe('Alert', () => {
   it('renders with warning type', () => {
     render(<Alert type="warning">Warning</Alert>);
     const alert = screen.getByRole('alert');
-    expect(alert).toBeInTheDocument();
+    expect(alert).toHaveClass('text-warning');
   });
 
   it('renders with error type', () => {
@@ -167,7 +168,8 @@ describe('LoadingState', () => {
   it('renders spinner by default', () => {
     render(<LoadingState />);
     const spinner = screen.getByText(/cargando.../i).previousElementSibling;
-    expect(spinner).toHaveClass('animate-spin');
+    // The brand green is the app's one glow accent.
+    expect(spinner).toHaveClass('animate-spin', 'border-t-accent-brand');
   });
 
   it('renders skeleton variant', () => {
@@ -179,7 +181,7 @@ describe('LoadingState', () => {
   it('renders pulse variant', () => {
     render(<LoadingState variant="pulse" />);
     const pulse = screen.getByText(/cargando.../i).previousElementSibling;
-    expect(pulse).toHaveClass('animate-pulse', 'rounded-full');
+    expect(pulse).toHaveClass('animate-pulse', 'rounded-full', 'bg-accent-brand');
   });
 
   it('displays custom message', () => {

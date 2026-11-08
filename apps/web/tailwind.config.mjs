@@ -32,7 +32,7 @@ export default {
 
         /* Focus shadow */
         'focus-ring': '0 0 0 2px #020617, 0 0 0 4px #60a5fa',
-        'glow-cyan': 'var(--shadow-glow-cyan)',
+        'glow-brand': 'var(--shadow-glow-brand)',
 
         /* Inner shadow for inset effects */
         'inset-sm': 'inset 0 1px 2px 0 rgba(0, 0, 0, 0.5)',
@@ -70,13 +70,7 @@ export default {
         'muted-fg': 'var(--color-muted-fg)',
         'bg-accent': 'var(--color-bg-accent)',
 
-        /* Gradients as background colors */
-        'gradient-primary-start': 'var(--color-gradient-start)',
-        'gradient-primary-end': 'var(--color-gradient-end)',
-
         /* Accent */
-        'accent-primary': 'var(--color-accent-primary)',
-        'accent-light': 'var(--color-accent-light)',
         'accent-brand': 'var(--color-accent-brand)',
 
         /* Status */
@@ -85,11 +79,8 @@ export default {
         'status-completed': 'var(--color-status-completed)',
         'status-cancelled': 'var(--color-status-cancelled)',
 
-        /* Priority */
-        'priority-low': 'var(--color-priority-low)',
-        'priority-normal': 'var(--color-priority-normal)',
-        'priority-high': 'var(--color-priority-high)',
-        'priority-urgent': 'var(--color-priority-urgent)',
+        /* Warning; supports opacity modifiers such as bg-warning/10 */
+        warning: 'color-mix(in srgb, var(--color-warning) calc(<alpha-value> * 100%), transparent)',
 
         /* Destructive */
         destructive: {
@@ -108,12 +99,6 @@ export default {
           'in-progress': 'var(--color-status-in-progress)',
           completed: 'var(--color-status-completed)',
           cancelled: 'var(--color-status-cancelled)',
-        },
-        priority: {
-          low: 'var(--color-priority-low)',
-          normal: 'var(--color-priority-normal)',
-          high: 'var(--color-priority-high)',
-          urgent: 'var(--color-priority-urgent)',
         },
         surface: {
           DEFAULT: '#0f172a',

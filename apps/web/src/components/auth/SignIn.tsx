@@ -61,8 +61,8 @@ export function SignIn() {
         className="pointer-events-none absolute inset-0 -z-10 overflow-hidden"
         aria-hidden="true"
       >
-        <div className="login-orb login-orb-cyan" />
-        <div className="login-orb login-orb-purple" />
+        <div className="login-orb login-orb-top" />
+        <div className="login-orb login-orb-bottom" />
       </div>
 
       <section className="mx-auto flex w-full max-w-3xl flex-1 items-center justify-center">
@@ -78,7 +78,7 @@ export function SignIn() {
               className="h-14 w-auto object-contain"
             />
           </a>
-          <p className="mt-6 text-xs font-semibold uppercase tracking-[0.28em] text-accent-light">
+          <p className="mt-6 text-xs font-semibold uppercase tracking-[0.28em] text-accent-brand">
             {t('signin.eyebrow')}
           </p>
           <h1 className="mt-3 font-heading text-3xl font-semibold tracking-tight text-fg-primary sm:text-4xl">
@@ -100,7 +100,7 @@ export function SignIn() {
               isLoading={isSigningIn}
               variant="primary"
               size="xl"
-              className="min-h-12 w-full rounded-xl shadow-glow-cyan"
+              className="min-h-12 w-full rounded-xl shadow-glow-brand"
               startIcon={<GoogleMark />}
             >
               {isSigningIn ? t('signin.connecting') : t('signin.continueGoogle')}

@@ -11,15 +11,20 @@ async function cssFor(className: string): Promise<string> {
 }
 
 describe('tailwind theme colors', () => {
-  it('maps text-accent-light to the themed accent token, not a fixed slate', async () => {
-    const css = await cssFor('text-accent-light');
-    expect(css).toContain('var(--color-accent-light)');
-    expect(css).not.toContain('#334155');
+  it('keeps the brand accent on its themed token', async () => {
+    expect(await cssFor('text-accent-brand')).toContain('var(--color-accent-brand)');
   });
 
-  it('keeps the other accent utilities on their tokens', async () => {
-    expect(await cssFor('text-accent-brand')).toContain('var(--color-accent-brand)');
-    expect(await cssFor('bg-accent-primary')).toContain('var(--color-accent-primary)');
+  it('retires the cyan, purple and priority color utilities', async () => {
+    for (const retired of ['text-accent-light', 'bg-accent-primary', 'text-priority-high']) {
+      expect((await cssFor(retired)).trim(), retired).toBe('');
+    }
+  });
+
+  it('gives warnings their own token, with working opacity modifiers', async () => {
+    expect(await cssFor('text-warning')).toContain('var(--color-warning)');
+    // A plain var() color cannot take /10; the warning tint must actually render.
+    expect(await cssFor('bg-warning/10')).toMatch(/var\(--color-warning\) calc\(0\.1 \* 100%\)/);
   });
 
   it('gives text-fg-muted the themed muted text color', async () => {
