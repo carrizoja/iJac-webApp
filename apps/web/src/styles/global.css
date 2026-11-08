@@ -73,8 +73,8 @@
     --color-status-completed: #22c55e; /* Completed/success */
     --color-status-cancelled: #64748b; /* Cancelled/disabled */
 
-    /* Warning: amber, apart from priority (shown by shape) and status */
-    --color-warning: #f59e0b;
+    /* Warning: orange, its own hue; amber belongs to the in-progress status. */
+    --color-warning: #fb923c;
 
     /* Destructive/danger */
     --color-destructive: #dc2626; /* Destructive actions */
@@ -83,7 +83,7 @@
     --color-destructive-text: #f87171; /* Red text on dark panels (6.4:1 on #111827) */
 
     /* Focus/selection */
-    --color-focus: #60a5fa; /* Focus ring color */
+    --color-focus: #f1f5f9; /* Focus ring: neutral, so it never reads as a status */
     --color-focus-offset: #020617; /* Focus ring offset */
 
     /* Interactive and editorial surfaces */
@@ -125,7 +125,7 @@
     --shadow-glow-brand: 0 0 24px rgb(0 208 132 / 16%);
     --shadow-navbar-inset: inset 0 1px 0 rgb(255 255 255 / 5%);
     --shadow-action-brand: 0 0 0 1px #00c978, 0 10px 28px rgb(0 201 120 / 45%);
-    --shadow-action-delete: 0 0 0 1px #ef4444, 0 10px 28px rgb(239 68 68 / 42%);
+    --shadow-action-delete: 0 0 0 1px #ef4444;
   }
 
   :root.light {
@@ -156,12 +156,12 @@
     --color-status-in-progress: #92400e;
     --color-status-completed: #166534;
     --color-status-cancelled: #475569;
-    --color-warning: #92400e;
+    --color-warning: #c2410c;
     --color-destructive: #b91c1c;
     --color-destructive-hover: #991b1b;
     --color-destructive-active: #7f1d1d;
     --color-destructive-text: #b91c1c;
-    --color-focus: #0369a1;
+    --color-focus: #0f172a;
     --color-focus-offset: #fff;
     --color-navbar: #fff;
     --color-navbar-brand: #f8fafc;
@@ -183,7 +183,7 @@
     --shadow-glow-brand: 0 0 24px rgb(0 122 81 / 12%);
     --shadow-navbar-inset: inset 0 1px 0 rgb(255 255 255 / 90%);
     --shadow-action-brand: 0 0 0 1px #006241, 0 10px 28px rgb(0 98 65 / 24%);
-    --shadow-action-delete: 0 0 0 1px #b91c1c, 0 10px 28px rgb(185 28 28 / 22%);
+    --shadow-action-delete: 0 0 0 1px #b91c1c;
   }
 
   html {
@@ -400,7 +400,7 @@
 
   /*
    * Priority badges stay off the status hues: low and normal are plain,
-   * high is marked by weight and outline, and only urgent is filled.
+   * high is marked by weight and outline, and urgent by a red outline.
    */
   .priority-low-badge,
   .priority-normal-badge {
@@ -422,9 +422,9 @@
   }
 
   .priority-urgent-badge {
-    border: 1px solid var(--color-destructive);
-    background: var(--color-destructive);
-    color: #fff;
+    border: 1px solid var(--color-destructive-text);
+    background: transparent;
+    color: var(--color-destructive-text);
     font-weight: 600;
   }
 

@@ -13,6 +13,15 @@ function sources(dir: string): string[] {
   });
 }
 
+/** A token's value in the dark (`:root`) or light (`:root.light`) theme block. */
+function token(name: string, theme: 'dark' | 'light'): string {
+  const start = css.indexOf(theme === 'dark' ? ':root {' : ':root.light {');
+  const block = css.slice(start, css.indexOf('\n  }', start));
+  const match = block.match(new RegExp(`${name}:\\s*([^;]+);`));
+  expect(match, `${name} in ${theme}`).not.toBeNull();
+  return match![1].trim().toLowerCase();
+}
+
 /** The CSS of one rule, e.g. `.action-brand:hover`. */
 function rule(selector: string): string {
   const start = css.indexOf(`${selector} {`);
@@ -66,5 +75,49 @@ describe('color roles', () => {
   it('fills both sign-in glows with the same brand green', () => {
     expect(rule('.login-orb-top')).toContain('var(--color-action-brand)');
     expect(rule('.login-orb-bottom')).toContain('var(--color-action-brand)');
+  });
+
+  it.each(['dark', 'light'] as const)(
+    'gives warning its own hue, apart from the in-progress status (%s)',
+    (theme) => {
+      expect(token('--color-warning', theme)).not.toBe(token('--color-status-in-progress', theme));
+    },
+  );
+
+  it.each(['dark', 'light'] as const)(
+    'keeps the focus ring off every status and info hue (%s)',
+    (theme) => {
+      const focus = token('--color-focus', theme);
+      for (const status of ['open', 'in-progress', 'completed', 'cancelled']) {
+        expect(focus, status).not.toBe(token(`--color-status-${status}`, theme));
+      }
+      expect(focus).not.toMatch(/^#(3b82f6|60a5fa|1d4ed8|0369a1)$/);
+      expect(token('--color-focus-offset', theme)).not.toBe(focus);
+    },
+  );
+
+  it('draws the Tailwind focus ring from the theme tokens, not a fixed blue', () => {
+    expect(tailwind).not.toContain('#60a5fa');
+  });
+
+  it('outlines urgent priority instead of filling it with the destructive red', () => {
+    const urgent = rule('.priority-urgent-badge');
+    expect(urgent).toContain('background: transparent');
+    expect(urgent).not.toContain('background: var(--color-destructive)');
+  });
+
+  it.each(['dark', 'light'] as const)('drops the glow from destructive hover (%s)', (theme) => {
+    // A blurred shadow is a glow; delete keeps a crisp 1px ring only.
+    expect(token('--shadow-action-delete', theme)).not.toMatch(/\b\d+(px)? \d+px \d+px/);
+  });
+
+  it('tints delete confirmations as danger, not as a warning', () => {
+    for (const file of [
+      'components/work-orders/WorkOrderList.tsx',
+      'components/clients/ClientList.tsx',
+    ]) {
+      const source = readFileSync(resolve(process.cwd(), 'src', file), 'utf8');
+      expect(source, file).not.toMatch(/\b(bg|border)-warning\b/);
+    }
   });
 });

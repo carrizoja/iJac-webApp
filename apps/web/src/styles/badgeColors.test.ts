@@ -30,11 +30,11 @@ describe('priority badge colors', () => {
     expect(declarations('priority-high-badge', 'font-weight')).toContain('600');
   });
 
-  it('fills urgent priority with the destructive color', () => {
-    expect(declarations('priority-urgent-badge', 'background')).toContain(
-      'var(--color-destructive)',
-    );
-    expect(declarations('priority-urgent-badge', 'color')).toEqual(['#fff']);
+  it('outlines urgent priority in the red text color, without a fill', () => {
+    expect(declarations('priority-urgent-badge', 'background')).toEqual(['transparent']);
+    expect(declarations('priority-urgent-badge', 'color')).toEqual([
+      'var(--color-destructive-text)',
+    ]);
   });
 
   it('never uses the status color tokens for a priority badge', () => {
