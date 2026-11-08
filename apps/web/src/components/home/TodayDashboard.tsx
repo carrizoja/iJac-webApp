@@ -17,7 +17,8 @@ import type { TranslationKey } from '../../i18n/translations';
 import { Alert, Badge, Button, LoadingState, Panel } from '../ui';
 import { RecordPaymentDialog } from '../payments/RecordPaymentDialog';
 import { ReceiptPrintView } from '../payments/ReceiptPrintView';
-import { priorityBadgeClass, statusBadgeClass } from '../work-orders/workOrderBadges';
+import { priorityBadgeClass } from '../work-orders/workOrderBadges';
+import { StatusBadge } from '../work-orders/StatusBadge';
 import { localDateKey, summarizeToday } from './todaySummary';
 
 const linkClass =
@@ -98,9 +99,9 @@ function OrderRow({ order, overdue }: { order: WorkOrderClientSummary; overdue?:
         >
           {t('home.dueOn', { date: formatDateOnly(order.dueDate, language) })}
         </span>
-        <Badge variant="tone" size="xs" className={statusBadgeClass(order.status)}>
+        <StatusBadge status={order.status} size="xs">
           {statusLabel(order.status, language)}
-        </Badge>
+        </StatusBadge>
         <Badge variant="tone" size="xs" className={priorityBadgeClass(order.priority)}>
           {priorityLabel(order.priority, language)}
         </Badge>
