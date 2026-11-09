@@ -5,29 +5,26 @@ import { Button, Alert, BrandLogo } from '../ui';
 import { LanguageToggle } from '../layout/LanguageToggle';
 import { useLanguage } from '../../hooks/useLanguage';
 
-/** The Google "G" on its own white tile: its colors are lost on the green primary fill. */
 function GoogleMark() {
   return (
-    <span className="inline-flex h-7 w-7 items-center justify-center rounded-md bg-white">
-      <svg aria-hidden="true" viewBox="0 0 24 24" className="h-[18px] w-[18px]" role="img">
-        <path
-          fill="#4285F4"
-          d="M21.35 12.23c0-.72-.06-1.42-.18-2.09H12v3.96h5.24a4.48 4.48 0 0 1-1.94 2.94v2.45h3.14c1.84-1.7 2.91-4.2 2.91-7.26Z"
-        />
-        <path
-          fill="#34A853"
-          d="M12 21.67c2.63 0 4.84-.87 6.45-2.35l-3.14-2.45c-.87.58-1.98.92-3.31.92-2.54 0-4.69-1.72-5.46-4.03H3.3v2.53A9.74 9.74 0 0 0 12 21.67Z"
-        />
-        <path
-          fill="#FBBC05"
-          d="M6.54 13.76a5.85 5.85 0 0 1 0-3.52V7.71H3.3a9.76 9.76 0 0 0 0 8.58l3.24-2.53Z"
-        />
-        <path
-          fill="#EA4335"
-          d="M12 6.21c1.43 0 2.72.49 3.73 1.45l2.8-2.8C16.84 3.27 14.63 2.33 12 2.33a9.74 9.74 0 0 0-8.7 5.38l3.24 2.53C7.31 7.93 9.46 6.21 12 6.21Z"
-        />
-      </svg>
-    </span>
+    <svg aria-hidden="true" viewBox="0 0 24 24" className="h-5 w-5" role="img">
+      <path
+        fill="#4285F4"
+        d="M21.35 12.23c0-.72-.06-1.42-.18-2.09H12v3.96h5.24a4.48 4.48 0 0 1-1.94 2.94v2.45h3.14c1.84-1.7 2.91-4.2 2.91-7.26Z"
+      />
+      <path
+        fill="#34A853"
+        d="M12 21.67c2.63 0 4.84-.87 6.45-2.35l-3.14-2.45c-.87.58-1.98.92-3.31.92-2.54 0-4.69-1.72-5.46-4.03H3.3v2.53A9.74 9.74 0 0 0 12 21.67Z"
+      />
+      <path
+        fill="#FBBC05"
+        d="M6.54 13.76a5.85 5.85 0 0 1 0-3.52V7.71H3.3a9.76 9.76 0 0 0 0 8.58l3.24-2.53Z"
+      />
+      <path
+        fill="#EA4335"
+        d="M12 6.21c1.43 0 2.72.49 3.73 1.45l2.8-2.8C16.84 3.27 14.63 2.33 12 2.33a9.74 9.74 0 0 0-8.7 5.38l3.24 2.53C7.31 7.93 9.46 6.21 12 6.21Z"
+      />
+    </svg>
   );
 }
 
