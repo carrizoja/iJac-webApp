@@ -13,6 +13,8 @@ export { cn } from './cn';
 export { Button, buttonVariants } from './Button';
 export type { ButtonProps, ButtonVariants } from './Button';
 export { BrandLogo } from './BrandLogo';
+export { MenuButton } from './MenuButton';
+export type { MenuButtonProps, MenuButtonItem } from './MenuButton';
 export { ViewModeToggle } from './ViewModeToggle';
 export type { ViewModeToggleProps, ViewMode } from './ViewModeToggle';
 export { SortableHeader, SortSelect, RowActionButton } from './TableControls';

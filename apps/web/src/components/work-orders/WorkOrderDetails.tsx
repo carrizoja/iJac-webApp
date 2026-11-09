@@ -1,11 +1,6 @@
 import { useEffect, useState } from 'react';
-import {
-  WORK_ORDER_STATUSES,
-  type Client,
-  type WorkOrder,
-  WorkOrderStatus,
-} from '@ijac/shared';
-import { CircleCheck, CirclePlay, FileDown, MessageCircle, Pencil } from 'lucide-react';
+import { WORK_ORDER_STATUSES, type Client, type WorkOrder, WorkOrderStatus } from '@ijac/shared';
+import { CircleCheck, CirclePlay, FileDown, MessageCircle, Pencil, Share2 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import type { TranslationKey } from '../../i18n/translations';
 import { getClient, getWorkOrder, listClients, updateWorkOrder } from '../../lib/resources';
@@ -20,8 +15,8 @@ import {
   cn,
   Dialog,
   LoadingState,
+  MenuButton,
   Panel,
-  Select,
 } from '../ui';
 import { PaymentsPanel } from '../payments/PaymentsPanel';
 import { priorityBadgeClass } from './workOrderBadges';
@@ -73,8 +68,6 @@ export function WorkOrderDetails() {
   const [savingStatus, setSavingStatus] = useState(false);
   const [statusError, setStatusError] = useState(false);
   const [statusAnnouncement, setStatusAnnouncement] = useState('');
-  /** The status picked in the select; it is saved only when the save button is pressed. */
-  const [draftStatus, setDraftStatus] = useState<WorkOrderStatus | null>(null);
   const [confirmingCancel, setConfirmingCancel] = useState(false);
   const [editing, setEditing] = useState(false);
   const [clients, setClients] = useState<Client[]>([]);
@@ -179,9 +172,6 @@ export function WorkOrderDetails() {
 
   const { workOrder, client } = state;
 
-  const selectedStatus = draftStatus ?? workOrder.status;
-  const statusChanged = selectedStatus !== workOrder.status;
-
   const changeStatus = async (next: WorkOrderStatus) => {
     if (next === workOrder.status || savingStatus) return;
     setConfirmingCancel(false);
@@ -197,19 +187,17 @@ export function WorkOrderDetails() {
     } catch {
       setStatusError(true);
     } finally {
-      setDraftStatus(null);
       setSavingStatus(false);
     }
   };
 
-  // Cancelling blocks new payments, so it is confirmed first; other changes save directly.
-  const saveStatus = () => {
-    if (!statusChanged) return;
-    if (selectedStatus === WorkOrderStatus.CANCELLED) {
+  // Cancelling blocks new payments, so it is confirmed first; other picks save at once.
+  const pickStatus = (next: WorkOrderStatus) => {
+    if (next === WorkOrderStatus.CANCELLED) {
       setConfirmingCancel(true);
       return;
     }
-    void changeStatus(selectedStatus);
+    void changeStatus(next);
   };
 
   const nextStep = NEXT_STEP[workOrder.status];
@@ -258,30 +246,28 @@ export function WorkOrderDetails() {
             >
               {t('common.edit')}
             </Button>
-            <div
-              className="flex flex-wrap gap-2"
-              role="group"
-              aria-label={t('workOrders.documentActions')}
-            >
-              <Button
-                type="button"
-                variant="secondary"
-                size="sm"
-                onClick={() => window.print()}
-                startIcon={<FileDown aria-hidden="true" focusable="false" className="h-4 w-4" />}
-              >
-                {t('workOrders.savePdf')}
-              </Button>
-              <a
-                href={whatsAppHref}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex h-9 items-center justify-center rounded-md border border-border-default bg-panel-default px-3 text-sm font-medium text-fg-primary transition-fast hover:bg-panel-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2"
-              >
-                <MessageCircle aria-hidden="true" focusable="false" className="mr-2 h-4 w-4" />
-                {t('workOrders.shareWhatsApp')}
-              </a>
-            </div>
+            <MenuButton
+              id="work-order-share"
+              label={t('workOrders.share')}
+              align="end"
+              icon={<Share2 aria-hidden="true" focusable="false" className="h-4 w-4" />}
+              items={[
+                {
+                  id: 'pdf',
+                  label: t('workOrders.savePdf'),
+                  icon: FileDown,
+                  onSelect: () => window.print(),
+                },
+                {
+                  id: 'whatsapp',
+                  label: t('workOrders.shareWhatsApp'),
+                  icon: MessageCircle,
+                  href: whatsAppHref,
+                  external: true,
+                },
+              ]}
+              footer={t('workOrders.pdfHelper')}
+            />
           </div>
         </div>
 
@@ -304,36 +290,28 @@ export function WorkOrderDetails() {
               {t('workOrders.shareMessageDue', { value: dueDate })}
             </span>
           </div>
-          <div className="work-order-print-hidden flex w-full flex-wrap items-end gap-2 sm:w-auto">
-            <div className="min-w-0 flex-1 sm:w-56 sm:flex-none">
-              <Select
-                id="work-order-status"
-                label={t('workOrders.changeStatus')}
-                value={selectedStatus}
-                // While the form is open it saves the status too, so changing it here would be undone.
-                disabled={savingStatus || editing}
-                onChange={(event) => setDraftStatus(event.target.value as WorkOrderStatus)}
-                options={WORK_ORDER_STATUSES.map((status) => ({
-                  value: status,
-                  label: statusLabel(status, language),
-                }))}
-                error={statusError ? t('workOrders.statusError') : undefined}
-              />
-            </div>
-            <Button
-              type="button"
-              variant="secondary"
-              onClick={saveStatus}
-              disabled={!statusChanged || savingStatus || editing}
+          <div className="work-order-print-hidden flex w-full flex-wrap items-center gap-2 sm:w-auto">
+            <MenuButton
+              id="work-order-status"
+              label={t('workOrders.changeStatus')}
+              className="flex-1 sm:flex-none"
+              align="end"
+              // While the form is open it saves the status too, so changing it here would be undone.
+              disabled={editing}
               isLoading={savingStatus}
-            >
-              {t('workOrders.saveStatus')}
-            </Button>
+              items={WORK_ORDER_STATUSES.filter((status) => status !== workOrder.status).map(
+                (status) => ({
+                  id: status,
+                  label: statusLabel(status, language),
+                  onSelect: () => pickStatus(status),
+                }),
+              )}
+            />
             {nextStep && (
               <Button
                 type="button"
                 variant="primary"
-                className="w-full sm:w-auto"
+                className="flex-1 sm:flex-none"
                 onClick={() => void changeStatus(nextStep.status)}
                 disabled={savingStatus || editing}
                 startIcon={
@@ -345,6 +323,11 @@ export function WorkOrderDetails() {
             )}
           </div>
         </div>
+        {statusError && (
+          <p role="alert" className="work-order-print-hidden mt-3 text-sm text-destructive-text">
+            {t('workOrders.statusError')}
+          </p>
+        )}
         <p
           className="sr-only"
           role="status"
@@ -355,10 +338,7 @@ export function WorkOrderDetails() {
         </p>
         <Dialog
           isOpen={confirmingCancel}
-          onClose={() => {
-            setConfirmingCancel(false);
-            setDraftStatus(null);
-          }}
+          onClose={() => setConfirmingCancel(false)}
           title={t('workOrders.cancelConfirmTitle')}
           primaryAction={{
             label: t('workOrders.cancelConfirmSubmit'),
@@ -370,9 +350,6 @@ export function WorkOrderDetails() {
         >
           <p>{t('workOrders.cancelConfirmBody')}</p>
         </Dialog>
-        <p className="work-order-print-hidden mt-4 text-xs leading-5 text-fg-muted">
-          {t('workOrders.pdfHelper')}
-        </p>
       </header>
 
       {editing && (
