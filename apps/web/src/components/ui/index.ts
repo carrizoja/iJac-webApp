@@ -12,6 +12,7 @@ export { cn } from './cn';
 // Interaction Primitives
 export { Button, buttonVariants } from './Button';
 export type { ButtonProps, ButtonVariants } from './Button';
+export { BrandLogo } from './BrandLogo';
 export { ViewModeToggle } from './ViewModeToggle';
 export type { ViewModeToggleProps, ViewMode } from './ViewModeToggle';
 export { SortableHeader, SortSelect, RowActionButton } from './TableControls';

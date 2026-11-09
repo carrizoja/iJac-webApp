@@ -4,6 +4,7 @@ import { signOut } from 'firebase/auth';
 import { getFirebaseAuth } from '../../lib/firebase';
 import { ThemeToggle } from './ThemeToggle';
 import { LanguageToggle } from './LanguageToggle';
+import { BrandLogo } from '../ui';
 import { useLanguage } from '../../hooks/useLanguage';
 import type { TranslationKey } from '../../i18n/translations';
 
@@ -65,7 +66,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                   className="navbar-brand-control inline-flex h-11 w-11 items-center justify-center rounded-xl border transition-colors"
                   aria-label={t('nav.goHome')}
                 >
-                  <img src="/ijac/logo.png" alt="iJac" className="h-7 w-7 object-contain" />
+                  <BrandLogo alt="iJac" className="h-7 w-7" />
                   <span className="sr-only">iJac</span>
                 </a>
                 <nav
