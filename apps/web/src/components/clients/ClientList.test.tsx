@@ -226,6 +226,27 @@ describe('ClientList', () => {
         expect(deleteClient).toHaveBeenCalledWith('client-1');
       });
 
+      it('moves focus to the client above when the bottom one is deleted', async () => {
+        deleteClient.mockResolvedValue(undefined);
+        listClients.mockResolvedValue({ items: [client, secondClient] });
+        render(<ClientList onCreate={vi.fn()} onEdit={vi.fn()} />);
+        await screen.findByText('Acme Inc');
+        if (view === 'cards') fireEvent.click(screen.getByRole('button', { name: 'Tarjetas' }));
+        const rowDeletes = screen
+          .getAllByRole('button', { name: /^Eliminar / })
+          .map((button) => button.getAttribute('aria-label'));
+        const bottom = rowDeletes[rowDeletes.length - 1]!;
+        const above = rowDeletes[rowDeletes.length - 2]!;
+        fireEvent.click(screen.getByRole('button', { name: bottom }));
+        listClients.mockResolvedValue({
+          items: [client, secondClient].filter((c) => `Eliminar ${c.name}` !== bottom),
+        });
+
+        fireEvent.click(screen.getByRole('button', { name: 'Eliminar' }));
+
+        await waitFor(() => expect(screen.getByRole('button', { name: above })).toHaveFocus());
+      });
+
       it('moves focus to Nuevo cliente when the last client is deleted', async () => {
         deleteClient.mockResolvedValue(undefined);
         await openConfirmation([client]);
