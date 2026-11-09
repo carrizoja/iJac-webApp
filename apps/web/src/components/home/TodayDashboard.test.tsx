@@ -179,7 +179,7 @@ describe('TodayDashboard', () => {
     const big = await within(owed).findByRole('link', { name: 'Grande' });
     expect(big).toHaveAttribute('href', '/work-orders/details?id=b#payments');
     expect(
-      within(owed)
+      within(within(owed).getByRole('list'))
         .getAllByRole('link')
         .map((link) => link.textContent),
     ).toEqual(['Grande', 'Chico', 'Dólares']);
@@ -189,6 +189,26 @@ describe('TodayDashboard', () => {
     expect(within(totals).getByText('$ 9.500,00')).toHaveClass('text-3xl');
     expect(within(totals).getByText('US$ 10,00')).toHaveClass('text-3xl');
     expect(within(big.closest('li') as HTMLElement).getByText('$ 9.000,00')).toBeInTheDocument();
+  });
+
+  it('links the money owed to the order list filtered to balances due', async () => {
+    listWorkOrders.mockResolvedValue({
+      items: [
+        order({
+          id: 'a',
+          title: 'Chico',
+          totalPriceMinor: 100000,
+          paidMinor: 0,
+          remainingMinor: 100000,
+          currency: Currency.ARS,
+        }),
+      ],
+    });
+    render(<TodayDashboard />);
+
+    const owed = section('Cobros pendientes');
+    const link = await within(owed).findByRole('link', { name: 'Ver órdenes con saldo' });
+    expect(link).toHaveAttribute('href', '/work-orders?balance=owed');
   });
 
   it("lists today's orders in the attention block between overdue and the coming days", async () => {

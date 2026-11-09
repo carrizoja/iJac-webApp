@@ -46,7 +46,7 @@ import {
 import { collectAllPages } from '../../lib/collectAllPages';
 import { readStoredTableSort, storeTableSort } from '../../lib/tableSort';
 import { readViewMode, storeViewMode } from '../../lib/viewMode';
-import { isOverdue, localDateKey } from '../home/todaySummary';
+import { isOverdue, isOwed, localDateKey } from '../home/todaySummary';
 import { priorityBadgeClass } from './workOrderBadges';
 import { StatusBadge } from './StatusBadge';
 import { matchesOrderSearch } from './workOrderSearch';
@@ -83,6 +83,13 @@ interface WorkOrderListProps {
   onCreate?: () => void;
   onEdit?: (workOrder: WorkOrderClientSummary) => void;
 }
+
+/** The one balance filter: orders with money still to collect. Applied to the loaded list. */
+const BALANCE_FILTERS = ['owed'] as const;
+
+/** Fully paid: priced, something paid, nothing left. */
+const isPaidUp = (wo: WorkOrderClientSummary) =>
+  wo.currency !== undefined && (wo.paidMinor ?? 0) > 0 && (wo.remainingMinor ?? 0) <= 0;
 
 function workOrderDetailsHref(id: string): string {
   return `/work-orders/details?id=${encodeURIComponent(id)}`;
@@ -138,6 +145,9 @@ export function WorkOrderList({ clients, onCreate, onEdit }: WorkOrderListProps)
   );
   // Client ids are checked once the clients load (see below).
   const [clientFilter, setClientFilter] = useState(() => readUrlParam('client'));
+  const [balanceFilter, setBalanceFilter] = useState(() =>
+    readUrlFilter('balance', BALANCE_FILTERS),
+  );
   const [search, setSearch] = useState(() => readUrlParam('q'));
   const [deleting, setDeleting] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
@@ -163,8 +173,11 @@ export function WorkOrderList({ clients, onCreate, onEdit }: WorkOrderListProps)
     storeTableSort(SORT_STORAGE_KEY, next);
   };
   const sortedWorkOrders = useMemo(
-    () => sortWorkOrders(workOrders, sort).filter((wo) => matchesOrderSearch(wo, search)),
-    [workOrders, sort, search],
+    () =>
+      sortWorkOrders(workOrders, sort).filter(
+        (wo) => matchesOrderSearch(wo, search) && (balanceFilter !== 'owed' || isOwed(wo)),
+      ),
+    [workOrders, sort, search, balanceFilter],
   );
 
   // A client id from the URL that is not in the list (e.g. a deleted client) cannot be shown in
@@ -181,8 +194,9 @@ export function WorkOrderList({ clients, onCreate, onEdit }: WorkOrderListProps)
       status: statusFilter,
       priority: priorityFilter,
       client: clientFilter,
+      balance: balanceFilter,
     });
-  }, [search, statusFilter, priorityFilter, clientFilter]);
+  }, [search, statusFilter, priorityFilter, clientFilter, balanceFilter]);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -232,14 +246,19 @@ export function WorkOrderList({ clients, onCreate, onEdit }: WorkOrderListProps)
     }
   };
 
-  const filtered = Boolean(statusFilter || priorityFilter || clientFilter || search.trim());
+  const filtered = Boolean(
+    statusFilter || priorityFilter || clientFilter || balanceFilter || search.trim(),
+  );
   const clearFilters = () => {
     setSearch('');
     setStatusFilter('');
     setPriorityFilter('');
     setClientFilter('');
+    setBalanceFilter('');
   };
-  const activeFilterCount = [statusFilter, priorityFilter, clientFilter].filter(Boolean).length;
+  const activeFilterCount = [statusFilter, priorityFilter, clientFilter, balanceFilter].filter(
+    Boolean,
+  ).length;
   const todayKey = localDateKey(new Date());
   // Orders with payments (voided ones included) cannot be deleted; the API refuses them.
   const deleteLabel = (wo: WorkOrderClientSummary) =>
@@ -348,6 +367,16 @@ export function WorkOrderList({ clients, onCreate, onEdit }: WorkOrderListProps)
                   {c.name}
                 </option>
               ))}
+            </Select>
+            <Select
+              id="balanceFilter"
+              aria-label={t('workOrders.filterBalance')}
+              value={balanceFilter}
+              onChange={(e) => setBalanceFilter(e.target.value)}
+              className="w-full rounded-xl sm:w-48"
+            >
+              <option value="">{t('workOrders.allBalances')}</option>
+              <option value="owed">{t('workOrders.balanceOwed')}</option>
             </Select>
           </div>
         </div>
@@ -502,9 +531,23 @@ export function WorkOrderList({ clients, onCreate, onEdit }: WorkOrderListProps)
                         )}
                       </td>
                       <td className="px-4 py-3.5 text-fg-muted">
-                        {wo.totalPriceMinor !== undefined && wo.currency
-                          ? formatMoney(wo.totalPriceMinor, wo.currency)
-                          : '—'}
+                        {wo.totalPriceMinor !== undefined && wo.currency ? (
+                          <span className="flex flex-col gap-0.5 tabular-nums">
+                            <span>{formatMoney(wo.totalPriceMinor, wo.currency)}</span>
+                            {isOwed(wo) && (
+                              <span className="text-xs font-semibold text-fg-primary">
+                                {t('workOrders.balanceDue', {
+                                  value: formatMoney(wo.remainingMinor ?? 0, wo.currency),
+                                })}
+                              </span>
+                            )}
+                            {isPaidUp(wo) && (
+                              <span className="text-xs">{t('workOrders.paidUp')}</span>
+                            )}
+                          </span>
+                        ) : (
+                          '—'
+                        )}
                       </td>
                       <td className="px-4 py-3.5 text-right">
                         <div
@@ -585,7 +628,7 @@ export function WorkOrderList({ clients, onCreate, onEdit }: WorkOrderListProps)
         ) : (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3" data-testid="work-order-cards">
             {sortedWorkOrders.map((wo) => (
-              <div key={wo.id}>
+              <div key={wo.id} data-testid="work-order-card">
                 {blockedDelete === wo.id && (
                   <Panel className="mb-3 border border-border-default">
                     {blockedDeleteNote(wo)}
@@ -664,6 +707,14 @@ export function WorkOrderList({ clients, onCreate, onEdit }: WorkOrderListProps)
                             {formatMoney(wo.totalPriceMinor, wo.currency)}
                           </Badge>
                         )}
+                        {isOwed(wo) && wo.currency && (
+                          <Badge variant="warning">
+                            {t('workOrders.balanceDue', {
+                              value: formatMoney(wo.remainingMinor ?? 0, wo.currency),
+                            })}
+                          </Badge>
+                        )}
+                        {isPaidUp(wo) && <Badge variant="neutral">{t('workOrders.paidUp')}</Badge>}
                       </div>
                     </div>
                     <div className="flex gap-2">
