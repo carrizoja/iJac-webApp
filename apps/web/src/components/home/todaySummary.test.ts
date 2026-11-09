@@ -48,6 +48,44 @@ describe('summarizeToday', () => {
     expect(ids(summary.dueToday)).toEqual(['today']);
   });
 
+  it('lists pending urgent orders without a due date, waiting longest first', () => {
+    const items = [
+      order({
+        id: 'urgent-new',
+        priority: WorkOrderPriority.URGENT,
+        createdAt: '2026-11-05T10:00:00.000Z',
+      }),
+      order({
+        id: 'urgent-old',
+        priority: WorkOrderPriority.URGENT,
+        status: WorkOrderStatus.IN_PROGRESS,
+        createdAt: '2026-10-20T10:00:00.000Z',
+      }),
+      // Dated urgent work already sits in its date group.
+      order({
+        id: 'urgent-dated',
+        priority: WorkOrderPriority.URGENT,
+        dueDate: '2026-11-05T00:00:00.000Z',
+      }),
+      order({ id: 'high-undated', priority: WorkOrderPriority.HIGH }),
+      order({
+        id: 'urgent-done',
+        priority: WorkOrderPriority.URGENT,
+        status: WorkOrderStatus.COMPLETED,
+      }),
+      order({
+        id: 'urgent-cancelled',
+        priority: WorkOrderPriority.URGENT,
+        status: WorkOrderStatus.CANCELLED,
+      }),
+    ];
+
+    const summary = summarizeToday(items, TODAY);
+
+    expect(ids(summary.urgentUndated)).toEqual(['urgent-old', 'urgent-new']);
+    expect(ids(summary.overdue)).toEqual(['urgent-dated']);
+  });
+
   it('leaves completed and cancelled orders out of the attention and agenda lists', () => {
     const items = [
       order({ id: 'done', status: WorkOrderStatus.COMPLETED, dueDate: '2026-11-01' }),

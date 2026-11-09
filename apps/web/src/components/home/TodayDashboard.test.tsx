@@ -225,6 +225,28 @@ describe('TodayDashboard', () => {
     expect(screen.queryByRole('region', { name: 'Agenda de hoy' })).not.toBeInTheDocument();
   });
 
+  it('shows urgent orders without a due date in the attention block, after today', async () => {
+    listWorkOrders.mockResolvedValue({
+      items: [
+        order({ id: 'soon', title: 'Instalar red', dueDate: '2026-11-09T00:00:00.000Z' }),
+        order({ id: 'u', title: 'Servidor caído', priority: WorkOrderPriority.URGENT }),
+        order({ id: 't', title: 'Visita hoy', dueDate: '2026-11-06T00:00:00.000Z' }),
+      ],
+    });
+    render(<TodayDashboard />);
+
+    const attention = section('Atención');
+    const urgent = await within(attention).findByRole('link', { name: 'Servidor caído' });
+    expect(urgent).toHaveAttribute('href', '/work-orders/details?id=u');
+    expect(
+      within(attention)
+        .getAllByRole('heading', { level: 3 })
+        .map((heading) => heading.textContent),
+    ).toEqual(['Vencen hoy', 'Urgentes sin fecha', 'Próximos 7 días']);
+    // The row has no date to show, so it does not say "Vence".
+    expect(urgent.closest('li')).not.toHaveTextContent('Vence');
+  });
+
   it('links to the calendar from the attention block when it is connected', async () => {
     render(<TodayDashboard />);
     expect(
@@ -255,7 +277,7 @@ describe('TodayDashboard', () => {
     render(<TodayDashboard />);
     expect(
       await within(section('Atención')).findByText(
-        'No hay órdenes vencidas, para hoy ni para los próximos 7 días',
+        'No hay órdenes vencidas, para hoy, urgentes sin fecha ni para los próximos 7 días',
       ),
     ).toBeInTheDocument();
     expect(

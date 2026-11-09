@@ -90,15 +90,17 @@ function OrderRow({ order, overdue }: { order: WorkOrderClientSummary; overdue?:
       </div>
       <div className="flex flex-wrap items-center gap-2 text-sm">
         {/* Overdue rows sit under the 'Vencidas' heading, so the date alone turns red. */}
-        <span
-          className={
-            overdue
-              ? 'font-medium tabular-nums text-destructive-text'
-              : 'tabular-nums text-fg-secondary'
-          }
-        >
-          {t('home.dueOn', { date: formatDateOnly(order.dueDate, language) })}
-        </span>
+        {order.dueDate && (
+          <span
+            className={
+              overdue
+                ? 'font-medium tabular-nums text-destructive-text'
+                : 'tabular-nums text-fg-secondary'
+            }
+          >
+            {t('home.dueOn', { date: formatDateOnly(order.dueDate, language) })}
+          </span>
+        )}
         <StatusBadge status={order.status} size="xs">
           {statusLabel(order.status, language)}
         </StatusBadge>
@@ -266,7 +268,11 @@ export function TodayDashboard() {
             <OrdersBody state={orders}>
               {() =>
                 summary &&
-                summary.overdue.length + summary.dueToday.length + summary.upcoming.length > 0 ? (
+                summary.overdue.length +
+                  summary.dueToday.length +
+                  summary.urgentUndated.length +
+                  summary.upcoming.length >
+                  0 ? (
                   <div className="space-y-4">
                     {/* Overdue work is the first thing to act on, so its count leads the block. */}
                     {summary.overdue.length > 0 && (
@@ -292,6 +298,10 @@ export function TodayDashboard() {
                       overdue
                     />
                     <OrderGroup title={t('home.attention.today')} orders={summary.dueToday} />
+                    <OrderGroup
+                      title={t('home.attention.urgentUndated')}
+                      orders={summary.urgentUndated}
+                    />
                     <OrderGroup title={t('home.attention.upcoming')} orders={summary.upcoming} />
                   </div>
                 ) : (

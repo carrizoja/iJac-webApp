@@ -1,4 +1,9 @@
-import { WorkOrderStatus, type Currency, type WorkOrderClientSummary } from '@ijac/shared';
+import {
+  WorkOrderPriority,
+  WorkOrderStatus,
+  type Currency,
+  type WorkOrderClientSummary,
+} from '@ijac/shared';
 
 /** Days after today that count as "coming up" in the attention list. */
 export const UPCOMING_DAYS = 7;
@@ -15,6 +20,8 @@ export interface TodaySummary {
   upcoming: WorkOrderClientSummary[];
   /** Pending orders due today. */
   dueToday: WorkOrderClientSummary[];
+  /** Pending urgent orders with no due date, which no date group would show; oldest first. */
+  urgentUndated: WorkOrderClientSummary[];
   /** Non-cancelled orders with money still owed, by currency, then largest balance first. */
   owed: WorkOrderClientSummary[];
   /** Amount owed per currency; currencies are never added together. */
@@ -84,6 +91,12 @@ export function summarizeToday(
       .filter((order) => dueKey(order)! > todayKey && dueKey(order)! <= lastUpcoming)
       .sort(byDueDate),
     dueToday: dated.filter((order) => dueKey(order) === todayKey),
+    urgentUndated: orders
+      .filter(
+        (order) =>
+          isPending(order) && !dueKey(order) && order.priority === WorkOrderPriority.URGENT,
+      )
+      .sort((a, b) => a.createdAt.localeCompare(b.createdAt)),
     owed,
     owedTotals: Array.from(totals, ([currency, remainingMinor]) => ({
       currency,
