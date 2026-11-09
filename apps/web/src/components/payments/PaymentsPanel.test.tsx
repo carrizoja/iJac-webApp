@@ -198,6 +198,51 @@ describe('PaymentsPanel', () => {
     expect(screen.queryByTestId('payment-recorded')).not.toBeInTheDocument();
   });
 
+  it('prefills the remaining balance, as the Hoy dashboard does', async () => {
+    listPayments.mockResolvedValue(
+      response({
+        balance: {
+          currency: Currency.ARS,
+          totalMinor: 10000000,
+          paidMinor: 3000000,
+          remainingMinor: 7000000,
+        },
+      }),
+    );
+    renderPanel();
+
+    await openRecordDialog();
+
+    expect(screen.getByLabelText(/Importe/)).toHaveValue('70.000,00');
+    expect(screen.getByRole('button', { name: 'Registrar $ 70.000,00' })).toBeInTheDocument();
+  });
+
+  it('moves focus to the confirmation when recording settles the balance', async () => {
+    const recorded = makePayment({ id: 'new', receiptNumber: 7, amountMinor: 10000000 });
+    listPayments.mockResolvedValueOnce(response()).mockResolvedValue(
+      response({
+        items: [recorded],
+        balance: {
+          currency: Currency.ARS,
+          totalMinor: 10000000,
+          paidMinor: 10000000,
+          remainingMinor: 0,
+        },
+      }),
+    );
+    recordPayment.mockResolvedValue(recorded);
+    renderPanel();
+
+    await openRecordDialog();
+    fireEvent.click(screen.getByRole('button', { name: SUBMIT_PAYMENT }));
+
+    const confirmation = await screen.findByTestId('payment-recorded');
+    await waitFor(() =>
+      expect(screen.queryByRole('button', { name: 'Registrar pago' })).not.toBeInTheDocument(),
+    );
+    expect(confirmation.parentElement).toHaveFocus();
+  });
+
   it('shows the remaining balance as the main figure', async () => {
     listPayments.mockResolvedValue(
       response({
@@ -559,6 +604,30 @@ describe('PaymentsPanel', () => {
     );
     await waitFor(() => expect(listPayments).toHaveBeenCalledTimes(2));
     expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
+  });
+
+  it('confirms a voided payment and keeps focus on the panel', async () => {
+    const payment = makePayment();
+    listPayments
+      .mockResolvedValueOnce(response({ items: [payment] }))
+      .mockResolvedValue(response({ items: [{ ...payment, status: PaymentStatus.VOIDED }] }));
+    voidPayment.mockResolvedValue({ ...payment, status: PaymentStatus.VOIDED });
+    renderPanel();
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Anular recibo 0001-00000042' }));
+    fireEvent.change(await screen.findByLabelText(/Motivo de la anulación/), {
+      target: { value: 'Duplicado' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Anular pago' }));
+
+    const confirmation = await screen.findByTestId('payment-voided');
+    expect(confirmation).toHaveAttribute('role', 'status');
+    expect(confirmation).toHaveTextContent('Pago anulado · Recibo 0001-00000042');
+    await waitFor(() => expect(confirmation.parentElement).toHaveFocus());
+    expect(screen.queryByRole('button', { name: 'Anular recibo 0001-00000042' })).toBeNull();
+
+    fireEvent.click(within(confirmation).getByRole('button', { name: 'Cerrar alerta' }));
+    expect(screen.queryByTestId('payment-voided')).not.toBeInTheDocument();
   });
 
   it('shows a voided payment with its reason and no void action', async () => {
