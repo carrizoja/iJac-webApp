@@ -1,7 +1,7 @@
 import { getFirebaseAuth } from '../../lib/firebase';
 import { GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
 import { useState } from 'react';
-import { Button, Alert } from '../ui';
+import { Button, Alert, BrandLogo } from '../ui';
 import { LanguageToggle } from '../layout/LanguageToggle';
 import { useLanguage } from '../../hooks/useLanguage';
 
@@ -75,11 +75,7 @@ export function SignIn() {
             className="inline-flex rounded-xl p-2 transition-opacity hover:opacity-80"
             aria-label={t('signin.home')}
           >
-            <img
-              src="/ijac/logo.png"
-              alt="iJac IT Solutions"
-              className="h-14 w-auto object-contain"
-            />
+            <BrandLogo alt="iJac IT Solutions" className="h-14 w-auto" />
           </a>
           <p className="mt-6 text-xs font-semibold uppercase tracking-[0.28em] text-accent-brand">
             {t('signin.eyebrow')}
@@ -122,7 +118,7 @@ export function SignIn() {
             )}
           </div>
 
-          <p className="mt-6 text-xs text-fg-tertiary">{t('signin.authorization')}</p>
+          <p className="mt-6 text-balance text-xs text-fg-tertiary">{t('signin.authorization')}</p>
         </div>
       </section>
 

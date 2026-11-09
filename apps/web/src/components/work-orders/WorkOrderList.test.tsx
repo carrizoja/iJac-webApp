@@ -457,6 +457,28 @@ describe('WorkOrderList', () => {
         expect(deleteWorkOrder).toHaveBeenCalledWith('wo-1');
       });
 
+      it('moves focus to the order above when the bottom one is deleted', async () => {
+        listWorkOrders.mockResolvedValue({ items: [secondWorkOrder, sampleWorkOrder] });
+        render(<WorkOrderList clients={[sampleClient]} onCreate={vi.fn()} onEdit={vi.fn()} />);
+        await screen.findAllByText('Reparación de Servidor');
+        if (view === 'cards') fireEvent.click(screen.getByRole('button', { name: 'Tarjetas' }));
+        const rowDeletes = screen
+          .getAllByRole('button', { name: /^Eliminar / })
+          .map((button) => button.getAttribute('aria-label'));
+        const bottom = rowDeletes[rowDeletes.length - 1]!;
+        const above = rowDeletes[rowDeletes.length - 2]!;
+        fireEvent.click(screen.getByRole('button', { name: bottom }));
+        listWorkOrders.mockResolvedValue({
+          items: [sampleWorkOrder, secondWorkOrder].filter(
+            (wo) => `Eliminar ${wo.title}` !== bottom,
+          ),
+        });
+
+        fireEvent.click(screen.getByRole('button', { name: 'Eliminar' }));
+
+        await waitFor(() => expect(screen.getByRole('button', { name: above })).toHaveFocus());
+      });
+
       it('moves focus to Nueva orden when the last order is deleted', async () => {
         await openConfirmation([sampleWorkOrder]);
         listWorkOrders.mockResolvedValue({ items: [] });

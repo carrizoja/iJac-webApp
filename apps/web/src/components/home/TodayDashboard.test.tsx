@@ -247,6 +247,22 @@ describe('TodayDashboard', () => {
     expect(urgent.closest('li')).not.toHaveTextContent('Vence');
   });
 
+  it('does not call the attention block empty when only an urgent undated order needs it', async () => {
+    listWorkOrders.mockResolvedValue({
+      items: [order({ id: 'u', title: 'Servidor caído', priority: WorkOrderPriority.URGENT })],
+    });
+    render(<TodayDashboard />);
+
+    const attention = section('Atención');
+    expect(await within(attention).findByRole('link', { name: 'Servidor caído' })).toBeVisible();
+    expect(within(attention).getByRole('heading', { name: 'Urgentes sin fecha' })).toBeVisible();
+    expect(
+      within(attention).queryByText(
+        'No hay órdenes vencidas, para hoy, urgentes sin fecha ni para los próximos 7 días',
+      ),
+    ).not.toBeInTheDocument();
+  });
+
   it('links to the calendar from the attention block when it is connected', async () => {
     render(<TodayDashboard />);
     expect(

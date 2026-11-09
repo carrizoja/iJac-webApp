@@ -22,13 +22,13 @@ function token(name: string, theme: 'dark' | 'light'): string {
   return match![1].trim().toLowerCase();
 }
 
-/** The CSS of one rule, e.g. `.action-brand:hover`. */
+/**
+ * The CSS of one rule, found by its exact selector, e.g. `.action-brand:hover`. A trailing
+ * `:not(...)` guard is allowed, so `.action-brand` never matches `.action-brand:hover`.
+ */
 function rule(selector: string): string {
-  const start = css.search(
-    new RegExp(
-      `(^|\\n)\\s*${selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?:[^{,(]|\\([^)]*\\))*{`,
-    ),
-  );
+  const escaped = selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const start = css.search(new RegExp(`(^|\\n)\\s*${escaped}(:not\\([^)]*\\))?\\s*{`));
   expect(start, `${selector} exists`).toBeGreaterThan(-1);
   return css.slice(start, css.indexOf('}', start));
 }
@@ -60,6 +60,10 @@ describe('color roles', () => {
   it('fills the primary action with the brand green at rest, not only on hover', () => {
     expect(rule('.action-brand')).toContain('background: var(--color-action-brand)');
     expect(rule('.action-brand:hover')).toContain('var(--shadow-action-brand)');
+  });
+
+  it('gives a disabled or blocked primary action no hover glow', () => {
+    expect(rule('.action-brand:hover')).toContain(":not(:disabled, [aria-disabled='true'])");
   });
 
   it('keeps text readable on the filled brand green', () => {
