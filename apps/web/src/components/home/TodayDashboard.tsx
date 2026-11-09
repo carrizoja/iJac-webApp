@@ -346,6 +346,11 @@ export function TodayDashboard() {
                         ))}
                       </dd>
                     </dl>
+                    <p className="text-sm">
+                      <a href="/work-orders?balance=owed" className={linkClass}>
+                        {t('home.owed.viewAll')}
+                      </a>
+                    </p>
                     <ul className="divide-y divide-border-subtle">
                       {summary.owed.map((order) => (
                         <li

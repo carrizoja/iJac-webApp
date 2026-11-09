@@ -545,6 +545,99 @@ describe('WorkOrderList', () => {
     expect(screen.getByText('$ 150.000,00')).toBeInTheDocument();
   });
 
+  describe('money owed', () => {
+    const owing = {
+      ...sampleWorkOrder,
+      totalPriceMinor: 15000000,
+      paidMinor: 5000000,
+      remainingMinor: 10000000,
+      currency: 'ARS' as const,
+    };
+    const paid = {
+      ...sampleWorkOrder,
+      id: 'wo-2',
+      title: 'Ya pagada',
+      totalPriceMinor: 2000000,
+      paidMinor: 2000000,
+      remainingMinor: 0,
+      currency: 'ARS' as const,
+    };
+    const cancelled = {
+      ...owing,
+      id: 'wo-3',
+      title: 'Cancelada con saldo',
+      status: WorkOrderStatus.CANCELLED,
+    };
+    const unpriced = { ...sampleWorkOrder, id: 'wo-4', title: 'Sin precio aún' };
+
+    it('shows what is still owed under the total, and Pagada once paid, in table and card views', async () => {
+      listWorkOrders.mockResolvedValue({ items: [owing, paid, cancelled, unpriced] });
+      render(<WorkOrderList clients={[sampleClient]} onCreate={vi.fn()} onEdit={vi.fn()} />);
+
+      const row = (name: string) =>
+        screen
+          .getByRole('link', { name })
+          .closest('tr, [data-testid="work-order-card"]') as HTMLElement;
+      await screen.findByRole('link', { name: 'Reparación de Servidor' });
+      for (const view of ['table', 'cards']) {
+        if (view === 'cards') fireEvent.click(screen.getByRole('button', { name: 'Tarjetas' }));
+        expect(within(row('Reparación de Servidor')).getByText('$ 150.000,00')).toBeInTheDocument();
+        expect(
+          within(row('Reparación de Servidor')).getByText('Saldo $ 100.000,00'),
+        ).toBeInTheDocument();
+        expect(within(row('Ya pagada')).getByText('Pagada')).toBeInTheDocument();
+        // A cancelled order is not collected, so it shows no balance due.
+        expect(within(row('Cancelada con saldo')).queryByText(/^Saldo/)).not.toBeInTheDocument();
+        expect(
+          within(row('Sin precio aún')).queryByText(/^Saldo|^Pagada$/),
+        ).not.toBeInTheDocument();
+      }
+    });
+
+    it('filters to orders with a balance due and keeps it in the URL', async () => {
+      listWorkOrders.mockResolvedValue({ items: [owing, paid, cancelled, unpriced] });
+      render(<WorkOrderList clients={[sampleClient]} onCreate={vi.fn()} onEdit={vi.fn()} />);
+      await screen.findByRole('link', { name: 'Ya pagada' });
+
+      fireEvent.change(screen.getByRole('combobox', { name: 'Filtrar por saldo' }), {
+        target: { value: 'owed' },
+      });
+
+      expect(screen.getByRole('link', { name: 'Reparación de Servidor' })).toBeInTheDocument();
+      for (const name of ['Ya pagada', 'Cancelada con saldo', 'Sin precio aún']) {
+        expect(screen.queryByRole('link', { name })).not.toBeInTheDocument();
+      }
+      await waitFor(() =>
+        expect(new URLSearchParams(window.location.search).get('balance')).toBe('owed'),
+      );
+      // The API has no balance filter; the list narrows what it already loaded.
+      expect(listWorkOrders).toHaveBeenCalledTimes(1);
+      expect(screen.getByRole('button', { name: 'Filtros (1)' })).toBeInTheDocument();
+    });
+
+    it('opens filtered to balances due from the Hoy link, and clears it with the filters', async () => {
+      window.history.replaceState(null, '', '/work-orders?balance=owed');
+      listWorkOrders.mockResolvedValue({ items: [paid] });
+      render(<WorkOrderList clients={[sampleClient]} onCreate={vi.fn()} onEdit={vi.fn()} />);
+
+      expect(screen.getByRole('combobox', { name: 'Filtrar por saldo' })).toHaveValue('owed');
+      fireEvent.click(await screen.findByRole('button', { name: 'Limpiar filtros' }));
+
+      expect(await screen.findByRole('link', { name: 'Ya pagada' })).toBeInTheDocument();
+      expect(screen.getByRole('combobox', { name: 'Filtrar por saldo' })).toHaveValue('');
+      await waitFor(() => expect(window.location.search).toBe(''));
+    });
+
+    it('ignores an unknown balance value in the URL', async () => {
+      window.history.replaceState(null, '', '/work-orders?balance=everything');
+      listWorkOrders.mockResolvedValue({ items: [paid] });
+      render(<WorkOrderList clients={[sampleClient]} onCreate={vi.fn()} onEdit={vi.fn()} />);
+
+      expect(await screen.findByRole('link', { name: 'Ya pagada' })).toBeInTheDocument();
+      expect(screen.getByRole('combobox', { name: 'Filtrar por saldo' })).toHaveValue('');
+    });
+  });
+
   describe('sorting and row actions', () => {
     const orders: WorkOrderClientSummary[] = [
       {

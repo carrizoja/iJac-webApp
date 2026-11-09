@@ -55,6 +55,15 @@ export function isOverdue(order: Dated, todayKey: string): boolean {
   return isPending(order) && due !== undefined && due < todayKey;
 }
 
+/** A non-cancelled priced order with money still to collect. */
+export function isOwed(order: WorkOrderClientSummary): boolean {
+  return (
+    order.status !== WorkOrderStatus.CANCELLED &&
+    order.currency !== undefined &&
+    (order.remainingMinor ?? 0) > 0
+  );
+}
+
 const byDueDate = (a: WorkOrderClientSummary, b: WorkOrderClientSummary) =>
   (dueKey(a) ?? '').localeCompare(dueKey(b) ?? '');
 
@@ -66,12 +75,7 @@ export function summarizeToday(
   const dated = orders.filter((order) => isPending(order) && dueKey(order));
 
   const owed = orders
-    .filter(
-      (order) =>
-        order.status !== WorkOrderStatus.CANCELLED &&
-        order.currency !== undefined &&
-        (order.remainingMinor ?? 0) > 0,
-    )
+    .filter(isOwed)
     // Minor units of different currencies are not comparable, so group by currency first.
     .sort(
       (a, b) =>
