@@ -14,7 +14,7 @@ import { collectAllPages } from '../../lib/collectAllPages';
 import { useLanguage } from '../../hooks/useLanguage';
 import { formatDateOnly, localeFor, priorityLabel, statusLabel } from '../../i18n/format';
 import type { TranslationKey } from '../../i18n/translations';
-import { Alert, Badge, Button, LoadingState, Panel } from '../ui';
+import { Alert, Badge, Button, LoadingState, Panel, cn } from '../ui';
 import { RecordPaymentDialog } from '../payments/RecordPaymentDialog';
 import { ReceiptPrintView } from '../payments/ReceiptPrintView';
 import { priorityBadgeClass } from '../work-orders/workOrderBadges';
@@ -276,20 +276,26 @@ export function TodayDashboard() {
                   <div className="space-y-4">
                     {/* Overdue work is the first thing to act on, so its count leads the block. */}
                     {summary.overdue.length > 0 && (
-                      <p
-                        data-testid="overdue-count"
-                        className="flex items-baseline gap-2 font-semibold"
-                      >
-                        <span className="text-3xl tabular-nums text-destructive-text">
-                          {summary.overdue.length}
-                        </span>{' '}
-                        <span className="text-fg-primary">
-                          {t(
-                            summary.overdue.length === 1
-                              ? 'home.attention.overdueCountOne'
-                              : 'home.attention.overdueCountOther',
+                      <p data-testid="overdue-count">
+                        {/* The count opens the full overdue list, not only the rows shown here. */}
+                        <a
+                          href="/work-orders?due=overdue"
+                          className={cn(
+                            linkClass,
+                            'inline-flex items-baseline gap-2 font-semibold',
                           )}
-                        </span>
+                        >
+                          <span className="text-3xl tabular-nums text-destructive-text">
+                            {summary.overdue.length}
+                          </span>{' '}
+                          <span>
+                            {t(
+                              summary.overdue.length === 1
+                                ? 'home.attention.overdueCountOne'
+                                : 'home.attention.overdueCountOther',
+                            )}
+                          </span>
+                        </a>
                       </p>
                     )}
                     <OrderGroup

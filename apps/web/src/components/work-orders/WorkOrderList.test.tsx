@@ -269,8 +269,71 @@ describe('WorkOrderList', () => {
 
       fireEvent.click(screen.getByRole('button', { name: 'Tarjetas' }));
       // One badge says it is overdue and when it was due, instead of two red badges.
-      expect(screen.getAllByText(/Vencida/)).toHaveLength(1);
+      expect(screen.getAllByText(/^Vencida( ·|$)/)).toHaveLength(1);
       expect(screen.getByText('Vencida · 2 de noviembre de 2026')).toHaveClass('status-error');
+    });
+
+    const late = {
+      ...sampleWorkOrder,
+      id: 'late',
+      title: 'Atrasada',
+      dueDate: '2026-11-02T00:00:00.000Z',
+    };
+    const soon = {
+      ...sampleWorkOrder,
+      id: 'soon',
+      title: 'A tiempo',
+      dueDate: '2026-11-08T00:00:00.000Z',
+    };
+    const undated = { ...sampleWorkOrder, id: 'undated', title: 'Sin fecha', dueDate: undefined };
+    const doneLate = {
+      ...late,
+      id: 'done',
+      title: 'Terminada tarde',
+      status: WorkOrderStatus.COMPLETED,
+    };
+
+    it('filters to overdue orders and keeps it in the URL', async () => {
+      listWorkOrders.mockResolvedValue({ items: [late, soon, undated, doneLate] });
+      render(<WorkOrderList clients={[sampleClient]} onCreate={vi.fn()} onEdit={vi.fn()} />);
+      await screen.findByRole('link', { name: 'A tiempo' });
+
+      fireEvent.change(screen.getByRole('combobox', { name: 'Filtrar por plazo' }), {
+        target: { value: 'overdue' },
+      });
+
+      expect(screen.getByRole('link', { name: 'Atrasada' })).toBeInTheDocument();
+      for (const name of ['A tiempo', 'Sin fecha', 'Terminada tarde']) {
+        expect(screen.queryByRole('link', { name })).not.toBeInTheDocument();
+      }
+      await waitFor(() =>
+        expect(new URLSearchParams(window.location.search).get('due')).toBe('overdue'),
+      );
+      // The API has no overdue filter; the list narrows what it already loaded.
+      expect(listWorkOrders).toHaveBeenCalledTimes(1);
+      expect(screen.getByRole('button', { name: 'Filtros (1)' })).toBeInTheDocument();
+    });
+
+    it('opens filtered to overdue from the Hoy link, and clears it with the filters', async () => {
+      window.history.replaceState(null, '', '/work-orders?due=overdue');
+      listWorkOrders.mockResolvedValue({ items: [soon] });
+      render(<WorkOrderList clients={[sampleClient]} onCreate={vi.fn()} onEdit={vi.fn()} />);
+
+      expect(screen.getByRole('combobox', { name: 'Filtrar por plazo' })).toHaveValue('overdue');
+      fireEvent.click(await screen.findByRole('button', { name: 'Limpiar filtros' }));
+
+      expect(await screen.findByRole('link', { name: 'A tiempo' })).toBeInTheDocument();
+      expect(screen.getByRole('combobox', { name: 'Filtrar por plazo' })).toHaveValue('');
+      await waitFor(() => expect(window.location.search).toBe(''));
+    });
+
+    it('ignores an unknown due value in the URL', async () => {
+      window.history.replaceState(null, '', '/work-orders?due=someday');
+      listWorkOrders.mockResolvedValue({ items: [soon] });
+      render(<WorkOrderList clients={[sampleClient]} onCreate={vi.fn()} onEdit={vi.fn()} />);
+
+      expect(await screen.findByRole('link', { name: 'A tiempo' })).toBeInTheDocument();
+      expect(screen.getByRole('combobox', { name: 'Filtrar por plazo' })).toHaveValue('');
     });
   });
 

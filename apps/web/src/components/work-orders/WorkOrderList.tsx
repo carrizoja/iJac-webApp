@@ -87,6 +87,9 @@ interface WorkOrderListProps {
 /** The one balance filter: orders with money still to collect. Applied to the loaded list. */
 const BALANCE_FILTERS = ['owed'] as const;
 
+/** The one due-date filter: pending orders past their due date. Applied to the loaded list. */
+const DUE_FILTERS = ['overdue'] as const;
+
 /** Fully paid: priced, something paid, nothing left. */
 const isPaidUp = (wo: WorkOrderClientSummary) =>
   wo.currency !== undefined && (wo.paidMinor ?? 0) > 0 && (wo.remainingMinor ?? 0) <= 0;
@@ -148,6 +151,7 @@ export function WorkOrderList({ clients, onCreate, onEdit }: WorkOrderListProps)
   const [balanceFilter, setBalanceFilter] = useState(() =>
     readUrlFilter('balance', BALANCE_FILTERS),
   );
+  const [dueFilter, setDueFilter] = useState(() => readUrlFilter('due', DUE_FILTERS));
   const [search, setSearch] = useState(() => readUrlParam('q'));
   const [deleting, setDeleting] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
@@ -172,13 +176,15 @@ export function WorkOrderList({ clients, onCreate, onEdit }: WorkOrderListProps)
     setSort(next);
     storeTableSort(SORT_STORAGE_KEY, next);
   };
-  const sortedWorkOrders = useMemo(
-    () =>
-      sortWorkOrders(workOrders, sort).filter(
-        (wo) => matchesOrderSearch(wo, search) && (balanceFilter !== 'owed' || isOwed(wo)),
-      ),
-    [workOrders, sort, search, balanceFilter],
-  );
+  const sortedWorkOrders = useMemo(() => {
+    const todayKey = localDateKey(new Date());
+    return sortWorkOrders(workOrders, sort).filter(
+      (wo) =>
+        matchesOrderSearch(wo, search) &&
+        (balanceFilter !== 'owed' || isOwed(wo)) &&
+        (dueFilter !== 'overdue' || isOverdue(wo, todayKey)),
+    );
+  }, [workOrders, sort, search, balanceFilter, dueFilter]);
 
   // A client id from the URL that is not in the list (e.g. a deleted client) cannot be shown in
   // the dropdown, so it must not filter silently. Clients load after the list, so wait for them.
@@ -195,8 +201,9 @@ export function WorkOrderList({ clients, onCreate, onEdit }: WorkOrderListProps)
       priority: priorityFilter,
       client: clientFilter,
       balance: balanceFilter,
+      due: dueFilter,
     });
-  }, [search, statusFilter, priorityFilter, clientFilter, balanceFilter]);
+  }, [search, statusFilter, priorityFilter, clientFilter, balanceFilter, dueFilter]);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -247,7 +254,7 @@ export function WorkOrderList({ clients, onCreate, onEdit }: WorkOrderListProps)
   };
 
   const filtered = Boolean(
-    statusFilter || priorityFilter || clientFilter || balanceFilter || search.trim(),
+    statusFilter || priorityFilter || clientFilter || balanceFilter || dueFilter || search.trim(),
   );
   const clearFilters = () => {
     setSearch('');
@@ -255,10 +262,15 @@ export function WorkOrderList({ clients, onCreate, onEdit }: WorkOrderListProps)
     setPriorityFilter('');
     setClientFilter('');
     setBalanceFilter('');
+    setDueFilter('');
   };
-  const activeFilterCount = [statusFilter, priorityFilter, clientFilter, balanceFilter].filter(
-    Boolean,
-  ).length;
+  const activeFilterCount = [
+    statusFilter,
+    priorityFilter,
+    clientFilter,
+    balanceFilter,
+    dueFilter,
+  ].filter(Boolean).length;
   const todayKey = localDateKey(new Date());
   // Orders with payments (voided ones included) cannot be deleted; the API refuses them.
   const deleteLabel = (wo: WorkOrderClientSummary) =>
@@ -377,6 +389,16 @@ export function WorkOrderList({ clients, onCreate, onEdit }: WorkOrderListProps)
             >
               <option value="">{t('workOrders.allBalances')}</option>
               <option value="owed">{t('workOrders.balanceOwed')}</option>
+            </Select>
+            <Select
+              id="dueFilter"
+              aria-label={t('workOrders.filterDue')}
+              value={dueFilter}
+              onChange={(e) => setDueFilter(e.target.value)}
+              className="w-full rounded-xl sm:w-40"
+            >
+              <option value="">{t('workOrders.allDueDates')}</option>
+              <option value="overdue">{t('workOrders.dueOverdue')}</option>
             </Select>
           </div>
         </div>
