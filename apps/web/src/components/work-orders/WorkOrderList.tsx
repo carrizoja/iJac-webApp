@@ -1,4 +1,12 @@
-import { useState, useEffect, useCallback, useMemo, useRef, Fragment, type MouseEvent } from 'react';
+import {
+  useState,
+  useEffect,
+  useCallback,
+  useMemo,
+  useRef,
+  Fragment,
+  type MouseEvent,
+} from 'react';
 import type { WorkOrderClientSummary, Client } from '@ijac/shared';
 import { ApiRequestError, listWorkOrders, deleteWorkOrder } from '../../lib/resources';
 import {
@@ -24,6 +32,7 @@ import {
   type ViewMode,
 } from '../ui';
 import { useLanguage } from '../../hooks/useLanguage';
+import { useFocusAfterRender } from '../../hooks/useFocusAfterRender';
 import { formatDateOnly, priorityLabel, statusLabel } from '../../i18n/format';
 import type { TranslationKey } from '../../i18n/translations';
 import {
@@ -42,6 +51,11 @@ import { priorityBadgeClass } from './workOrderBadges';
 import { StatusBadge } from './StatusBadge';
 import { matchesOrderSearch } from './workOrderSearch';
 import { ClipboardList, SlidersHorizontal, TriangleAlert } from 'lucide-react';
+
+const NEW_BUTTON_ID = 'work-order-new';
+const deleteButtonId = (id: string) => `work-order-delete-${id}`;
+const deleteCancelId = (id: string) => `work-order-delete-cancel-${id}`;
+const deleteConfirmId = (id: string) => `work-order-delete-confirm-${id}`;
 
 const SORT_STORAGE_KEY = 'ijac.workOrders.sort';
 const VIEW_STORAGE_KEY = 'ijac.workOrders.view';
@@ -127,6 +141,16 @@ export function WorkOrderList({ clients, onCreate, onEdit }: WorkOrderListProps)
   const [search, setSearch] = useState(() => readUrlParam('q'));
   const [deleting, setDeleting] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
+  // The inline confirmation disables the row actions, so focus is moved on purpose at each step.
+  const focusAfterRender = useFocusAfterRender();
+  const openDelete = (id: string) => {
+    setConfirmDelete(id);
+    focusAfterRender(deleteCancelId(id));
+  };
+  const cancelDelete = (id: string) => {
+    setConfirmDelete(null);
+    focusAfterRender(deleteButtonId(id));
+  };
   // Which order's blocked Delete was tapped; its reason shows inline until dismissed.
   const [blockedDelete, setBlockedDelete] = useState<string | null>(null);
   const blockedTrigger = useRef<HTMLButtonElement | null>(null);
@@ -187,12 +211,16 @@ export function WorkOrderList({ clients, onCreate, onEdit }: WorkOrderListProps)
   }, [load]);
 
   const handleDelete = async (id: string) => {
+    const index = sortedWorkOrders.findIndex((wo) => wo.id === id);
+    const neighbour = sortedWorkOrders[index + 1] ?? sortedWorkOrders[index - 1];
     setDeleting(id);
     try {
       await deleteWorkOrder(id);
       await load();
       setConfirmDelete(null);
+      focusAfterRender(...(neighbour ? [deleteButtonId(neighbour.id)] : []), NEW_BUTTON_ID);
     } catch (error) {
+      focusAfterRender(deleteConfirmId(id));
       setErrorKey(
         error instanceof ApiRequestError &&
           error.code === PAYMENT_ERROR_CODES.WORK_ORDER_HAS_PAYMENTS
@@ -340,7 +368,12 @@ export function WorkOrderList({ clients, onCreate, onEdit }: WorkOrderListProps)
             onChange={changeViewMode}
             ariaLabel={t('workOrders.view')}
           />
-          <Button onClick={onCreate} className="min-h-11 rounded-xl px-6" variant="primary">
+          <Button
+            id={NEW_BUTTON_ID}
+            onClick={onCreate}
+            className="min-h-11 rounded-xl px-6"
+            variant="primary"
+          >
             {t('workOrders.new')}
           </Button>
         </div>
@@ -487,9 +520,10 @@ export function WorkOrderList({ clients, onCreate, onEdit }: WorkOrderListProps)
                           />
                           <RowActionButton
                             action="delete"
+                            id={deleteButtonId(wo.id)}
                             label={deleteLabel(wo)}
                             title={t('common.delete')}
-                            onClick={() => setConfirmDelete(wo.id)}
+                            onClick={() => openDelete(wo.id)}
                             disabled={confirmDelete !== null || deleting === wo.id}
                             disabledReason={
                               wo.hasPayments ? t('workOrders.deleteHasPayments') : undefined
@@ -522,7 +556,8 @@ export function WorkOrderList({ clients, onCreate, onEdit }: WorkOrderListProps)
                                 variant="secondary"
                                 size="sm"
                                 className="rounded-lg"
-                                onClick={() => setConfirmDelete(null)}
+                                onClick={() => cancelDelete(wo.id)}
+                                id={deleteCancelId(wo.id)}
                                 disabled={deleting === wo.id}
                               >
                                 {t('common.cancel')}
@@ -532,6 +567,7 @@ export function WorkOrderList({ clients, onCreate, onEdit }: WorkOrderListProps)
                                 size="sm"
                                 className={rowActionButtonClass}
                                 onClick={() => handleDelete(wo.id)}
+                                id={deleteConfirmId(wo.id)}
                                 isLoading={deleting === wo.id}
                               >
                                 {t('common.delete')}
@@ -569,7 +605,8 @@ export function WorkOrderList({ clients, onCreate, onEdit }: WorkOrderListProps)
                           variant="secondary"
                           size="sm"
                           className="rounded-lg"
-                          onClick={() => setConfirmDelete(null)}
+                          onClick={() => cancelDelete(wo.id)}
+                          id={deleteCancelId(wo.id)}
                           disabled={deleting === wo.id}
                         >
                           {t('common.cancel')}
@@ -579,6 +616,7 @@ export function WorkOrderList({ clients, onCreate, onEdit }: WorkOrderListProps)
                           size="sm"
                           className={rowActionButtonClass}
                           onClick={() => handleDelete(wo.id)}
+                          id={deleteConfirmId(wo.id)}
                           isLoading={deleting === wo.id}
                         >
                           {t('common.delete')}
@@ -643,10 +681,11 @@ export function WorkOrderList({ clients, onCreate, onEdit }: WorkOrderListProps)
                         variant="delete"
                         size="sm"
                         className={rowActionButtonClass}
+                        id={deleteButtonId(wo.id)}
                         onClick={
                           wo.hasPayments
                             ? (event) => showBlockedDelete(wo.id, event)
-                            : () => setConfirmDelete(wo.id)
+                            : () => openDelete(wo.id)
                         }
                         disabled={confirmDelete !== null || deleting === wo.id}
                         // A blocked delete stays focusable, so its reason can be reached.

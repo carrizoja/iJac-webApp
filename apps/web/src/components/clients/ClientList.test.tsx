@@ -190,6 +190,70 @@ describe('ClientList', () => {
     expect(screen.getByRole('button', { name: 'Eliminar' })).toBeInTheDocument();
   });
 
+  describe.each(['table', 'cards'] as const)(
+    'keyboard focus through an inline delete (%s)',
+    (view) => {
+      async function openConfirmation(items: Client[]) {
+        listClients.mockResolvedValue({ items });
+        render(<ClientList onCreate={vi.fn()} onEdit={vi.fn()} />);
+        await screen.findByText('Acme Inc');
+        if (view === 'cards') fireEvent.click(screen.getByRole('button', { name: 'Tarjetas' }));
+        fireEvent.click(screen.getByRole('button', { name: 'Eliminar Acme Inc' }));
+      }
+
+      it('moves focus to Cancelar when the confirmation opens, and back to Eliminar on cancel', async () => {
+        await openConfirmation([client]);
+
+        const cancel = within(screen.getByTestId('delete-confirmation')).getByRole('button', {
+          name: 'Cancelar',
+        });
+        expect(cancel).toHaveFocus();
+
+        fireEvent.click(cancel);
+        expect(screen.getByRole('button', { name: 'Eliminar Acme Inc' })).toHaveFocus();
+      });
+
+      it('moves focus to the next client once the delete succeeds', async () => {
+        deleteClient.mockResolvedValue(undefined);
+        await openConfirmation([client, secondClient]);
+        listClients.mockResolvedValue({ items: [secondClient] });
+
+        fireEvent.click(screen.getByRole('button', { name: 'Eliminar' }));
+
+        await waitFor(() =>
+          expect(screen.getByRole('button', { name: 'Eliminar Beta LLC' })).toHaveFocus(),
+        );
+        expect(deleteClient).toHaveBeenCalledWith('client-1');
+      });
+
+      it('moves focus to Nuevo cliente when the last client is deleted', async () => {
+        deleteClient.mockResolvedValue(undefined);
+        await openConfirmation([client]);
+        listClients.mockResolvedValue({ items: [] });
+
+        fireEvent.click(screen.getByRole('button', { name: 'Eliminar' }));
+
+        await waitFor(() =>
+          expect(screen.getByRole('button', { name: 'Nuevo cliente' })).toHaveFocus(),
+        );
+      });
+
+      it('keeps focus on the confirmation when the delete fails', async () => {
+        deleteClient.mockRejectedValue(new Error('network'));
+        await openConfirmation([client]);
+
+        fireEvent.click(screen.getByRole('button', { name: 'Eliminar' }));
+
+        await screen.findByRole('alert');
+        expect(
+          within(screen.getByTestId('delete-confirmation')).getByRole('button', {
+            name: 'Eliminar',
+          }),
+        ).toHaveFocus();
+      });
+    },
+  );
+
   it('loads the clients again when Reintentar is pressed after a failure', async () => {
     listClients.mockRejectedValueOnce(new Error('NETWORK_ERROR'));
     listClients.mockResolvedValue({ items: [client] });

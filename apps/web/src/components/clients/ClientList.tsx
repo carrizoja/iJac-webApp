@@ -15,6 +15,7 @@ import {
   type ViewMode,
 } from '../ui';
 import { useLanguage } from '../../hooks/useLanguage';
+import { useFocusAfterRender } from '../../hooks/useFocusAfterRender';
 import type { TranslationKey } from '../../i18n/translations';
 import { collectAllPages } from '../../lib/collectAllPages';
 import { nextTableSort, readStoredTableSort, storeTableSort } from '../../lib/tableSort';
@@ -31,6 +32,10 @@ import { TriangleAlert, Users } from 'lucide-react';
 const SORT_STORAGE_KEY = 'ijac.clients.sort';
 const VIEW_STORAGE_KEY = 'ijac.clients.view';
 const COLUMN_SORT_KEYS = ['name', 'email', 'phone', 'organization'] as const;
+const NEW_BUTTON_ID = 'client-new';
+const deleteButtonId = (id: string) => `client-delete-${id}`;
+const deleteCancelId = (id: string) => `client-delete-cancel-${id}`;
+const deleteConfirmId = (id: string) => `client-delete-confirm-${id}`;
 
 const SORT_LABEL_KEYS: Record<ClientSortKey, TranslationKey> = {
   createdAt: 'clients.createdAt',
@@ -63,6 +68,16 @@ export function ClientList({ onCreate, onEdit }: ClientListProps) {
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [deleting, setDeleting] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
+  // The inline confirmation disables the row actions, so focus is moved on purpose at each step.
+  const focusAfterRender = useFocusAfterRender();
+  const openDelete = (id: string) => {
+    setConfirmDelete(id);
+    focusAfterRender(deleteCancelId(id));
+  };
+  const cancelDelete = (id: string) => {
+    setConfirmDelete(null);
+    focusAfterRender(deleteButtonId(id));
+  };
   const [sort, setSort] = useState<ClientSort>(() =>
     readStoredTableSort(SORT_STORAGE_KEY, CLIENT_SORT_KEYS, DEFAULT_CLIENT_SORT),
   );
@@ -106,13 +121,17 @@ export function ClientList({ onCreate, onEdit }: ClientListProps) {
   }, [debouncedSearch, load]);
 
   const handleDelete = async (id: string) => {
+    const index = sortedClients.findIndex((client) => client.id === id);
+    const neighbour = sortedClients[index + 1] ?? sortedClients[index - 1];
     setDeleting(id);
     try {
       await deleteClient(id);
       await load(debouncedSearch, true);
       setConfirmDelete(null);
+      focusAfterRender(...(neighbour ? [deleteButtonId(neighbour.id)] : []), NEW_BUTTON_ID);
     } catch {
       setErrorKey('clients.deleteError');
+      focusAfterRender(deleteConfirmId(id));
     } finally {
       setDeleting(null);
     }
@@ -151,6 +170,7 @@ export function ClientList({ onCreate, onEdit }: ClientListProps) {
             ariaLabel={t('clients.view')}
           />
           <Button
+            id={NEW_BUTTON_ID}
             onClick={onCreate}
             className="min-h-11 shrink-0 whitespace-nowrap rounded-xl px-6"
             variant="primary"
@@ -255,9 +275,10 @@ export function ClientList({ onCreate, onEdit }: ClientListProps) {
                           />
                           <RowActionButton
                             action="delete"
+                            id={deleteButtonId(client.id)}
                             label={t('clients.deleteNamed', { name: client.name })}
                             title={t('common.delete')}
-                            onClick={() => setConfirmDelete(client.id)}
+                            onClick={() => openDelete(client.id)}
                             disabled={confirmDelete !== null || deleting === client.id}
                           />
                         </div>
@@ -279,7 +300,8 @@ export function ClientList({ onCreate, onEdit }: ClientListProps) {
                                 variant="secondary"
                                 size="sm"
                                 className="rounded-lg"
-                                onClick={() => setConfirmDelete(null)}
+                                onClick={() => cancelDelete(client.id)}
+                                id={deleteCancelId(client.id)}
                                 disabled={deleting === client.id}
                               >
                                 {t('common.cancel')}
@@ -289,6 +311,7 @@ export function ClientList({ onCreate, onEdit }: ClientListProps) {
                                 size="sm"
                                 className={rowActionButtonClass}
                                 onClick={() => handleDelete(client.id)}
+                                id={deleteConfirmId(client.id)}
                                 isLoading={deleting === client.id}
                               >
                                 {t('common.delete')}
@@ -321,7 +344,8 @@ export function ClientList({ onCreate, onEdit }: ClientListProps) {
                           variant="secondary"
                           size="sm"
                           className="rounded-lg"
-                          onClick={() => setConfirmDelete(null)}
+                          onClick={() => cancelDelete(client.id)}
+                          id={deleteCancelId(client.id)}
                           disabled={deleting === client.id}
                         >
                           {t('common.cancel')}
@@ -331,6 +355,7 @@ export function ClientList({ onCreate, onEdit }: ClientListProps) {
                           size="sm"
                           className={rowActionButtonClass}
                           onClick={() => handleDelete(client.id)}
+                          id={deleteConfirmId(client.id)}
                           isLoading={deleting === client.id}
                         >
                           {t('common.delete')}
@@ -377,7 +402,8 @@ export function ClientList({ onCreate, onEdit }: ClientListProps) {
                         variant="delete"
                         size="sm"
                         className={rowActionButtonClass}
-                        onClick={() => setConfirmDelete(client.id)}
+                        id={deleteButtonId(client.id)}
+                        onClick={() => openDelete(client.id)}
                         disabled={confirmDelete !== null || deleting === client.id}
                         aria-label={t('clients.deleteNamed', { name: client.name })}
                       >
