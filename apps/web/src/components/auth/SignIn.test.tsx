@@ -34,6 +34,13 @@ describe('SignIn', () => {
     expect(screen.getByRole('button', { name: /Cambiar a inglés/ })).toBeInTheDocument();
   });
 
+  it('keeps the Google mark on white, since the sign-in button is filled with the brand green', () => {
+    render(<SignIn />);
+    const button = screen.getByRole('button', { name: /continuar con google/i });
+    const mark = button.querySelector('svg');
+    expect(mark?.parentElement).toHaveClass('bg-white');
+  });
+
   it('switches the complete signed-out experience to English', () => {
     render(<SignIn />);
     fireEvent.click(screen.getByRole('button', { name: /Cambiar a inglés/ }));
