@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import type { MouseEvent, ReactNode } from 'react';
 import { Button } from './Button';
 import { Select } from './Form';
 import { toTableSort, type TableSort } from '../../lib/tableSort';
@@ -130,6 +130,8 @@ export interface RowActionButtonProps {
   disabled?: boolean;
   /** Why the action is unavailable; blocks it, keeps it focusable and shows as its tooltip. */
   disabledReason?: string;
+  /** Runs instead of `onClick` while blocked, so a tap can explain the reason. */
+  onBlockedClick?: (event: MouseEvent<HTMLButtonElement>) => void;
 }
 
 /** Icon-only edit or delete button for a table row. */
@@ -140,13 +142,14 @@ export function RowActionButton({
   onClick,
   disabled,
   disabledReason,
+  onBlockedClick,
 }: RowActionButtonProps) {
   return (
     <Button
       variant={action}
       size="sm"
       className="h-9 w-9 rounded-lg px-0"
-      onClick={disabledReason === undefined ? onClick : undefined}
+      onClick={disabledReason === undefined ? onClick : onBlockedClick}
       disabled={disabled}
       // A blocked action stays focusable, so keyboard and screen-reader users reach its reason.
       aria-disabled={disabledReason === undefined ? undefined : true}

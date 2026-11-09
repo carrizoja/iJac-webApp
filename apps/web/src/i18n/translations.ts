@@ -15,6 +15,7 @@ export const es = {
   'common.retry': 'Reintentar',
   'common.edit': 'Editar',
   'common.delete': 'Eliminar',
+  'common.gotIt': 'Entendido',
   'common.actions': 'Acciones',
   'common.saveChanges': 'Guardar cambios',
   'common.saving': 'Guardando...',
@@ -173,6 +174,7 @@ export const es = {
   'workOrders.saveError': 'No se pudo guardar la orden. Intentá nuevamente.',
   'workOrders.loadError': 'No se pudieron cargar las órdenes.',
   'workOrders.deleteError': 'No se pudo eliminar la orden. Intentá nuevamente.',
+  'workOrders.openOrder': 'Abrir orden',
   'workOrders.deleteHasPayments':
     'No se puede eliminar una orden con pagos registrados. Cancelala en su lugar.',
   'workOrders.allStatuses': 'Todos los estados',
@@ -369,6 +371,7 @@ export const en = {
   'common.retry': 'Retry',
   'common.edit': 'Edit',
   'common.delete': 'Delete',
+  'common.gotIt': 'Got it',
   'common.actions': 'Actions',
   'common.saveChanges': 'Save changes',
   'common.saving': 'Saving...',
@@ -525,6 +528,7 @@ export const en = {
   'workOrders.saveError': 'The order could not be saved. Try again.',
   'workOrders.loadError': 'Work orders could not be loaded.',
   'workOrders.deleteError': 'The order could not be deleted. Try again.',
+  'workOrders.openOrder': 'Open order',
   'workOrders.deleteHasPayments':
     'An order with recorded payments cannot be deleted. Cancel it instead.',
   'workOrders.allStatuses': 'All statuses',

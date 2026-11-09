@@ -352,6 +352,35 @@ describe('WorkOrderList', () => {
     expect(deleteWorkOrder).not.toHaveBeenCalled();
   });
 
+  it('says why on tap when an order with payments cannot be deleted', async () => {
+    listWorkOrders.mockResolvedValue({
+      items: [{ ...sampleWorkOrder, id: 'paid', title: 'Con pagos', hasPayments: true }],
+    });
+    render(<WorkOrderList clients={[sampleClient]} onCreate={vi.fn()} onEdit={vi.fn()} />);
+
+    const blockedName =
+      'No se puede eliminar Con pagos: tiene pagos registrados. Cancelala en su lugar.';
+    const reason = 'No se puede eliminar una orden con pagos registrados. Cancelala en su lugar.';
+    const expectNoteOnTap = (button: HTMLElement) => {
+      expect(screen.queryByTestId('delete-blocked')).not.toBeInTheDocument();
+      fireEvent.click(button);
+      const note = screen.getByTestId('delete-blocked');
+      expect(within(note).getByRole('status')).toHaveTextContent(reason);
+      expect(within(note).getByRole('link', { name: 'Abrir orden' })).toHaveAttribute(
+        'href',
+        '/work-orders/details?id=paid',
+      );
+      fireEvent.click(within(note).getByRole('button', { name: 'Entendido' }));
+      expect(screen.queryByTestId('delete-blocked')).not.toBeInTheDocument();
+      expect(button).toHaveFocus();
+    };
+
+    expectNoteOnTap(await screen.findByRole('button', { name: blockedName }));
+    fireEvent.click(screen.getByRole('button', { name: 'Tarjetas' }));
+    expectNoteOnTap(screen.getByRole('button', { name: blockedName }));
+    expect(deleteWorkOrder).not.toHaveBeenCalled();
+  });
+
   it('explains that an order with payments cannot be deleted', async () => {
     listWorkOrders.mockResolvedValue({ items: [sampleWorkOrder] });
     deleteWorkOrder.mockRejectedValue(new ApiRequestError('WORK_ORDER_HAS_PAYMENTS'));
