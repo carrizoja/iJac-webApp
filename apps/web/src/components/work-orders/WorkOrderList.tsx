@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo, Fragment } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef, Fragment, type MouseEvent } from 'react';
 import type { WorkOrderClientSummary, Client } from '@ijac/shared';
 import { ApiRequestError, listWorkOrders, deleteWorkOrder } from '../../lib/resources';
 import {
@@ -20,6 +20,7 @@ import {
   SortableHeader,
   SortSelect,
   RowActionButton,
+  buttonVariants,
   type ViewMode,
 } from '../ui';
 import { useLanguage } from '../../hooks/useLanguage';
@@ -126,6 +127,9 @@ export function WorkOrderList({ clients, onCreate, onEdit }: WorkOrderListProps)
   const [search, setSearch] = useState(() => readUrlParam('q'));
   const [deleting, setDeleting] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
+  // Which order's blocked Delete was tapped; its reason shows inline until dismissed.
+  const [blockedDelete, setBlockedDelete] = useState<string | null>(null);
+  const blockedTrigger = useRef<HTMLButtonElement | null>(null);
   const [sort, setSort] = useState<WorkOrderSort>(() =>
     readStoredTableSort(SORT_STORAGE_KEY, WORK_ORDER_SORT_KEYS, DEFAULT_WORK_ORDER_SORT),
   );
@@ -214,6 +218,36 @@ export function WorkOrderList({ clients, onCreate, onEdit }: WorkOrderListProps)
     t(wo.hasPayments ? 'workOrders.deleteBlockedNamed' : 'workOrders.deleteNamed', {
       name: wo.title,
     });
+
+  const showBlockedDelete = (id: string, event: MouseEvent<HTMLButtonElement>) => {
+    blockedTrigger.current = event.currentTarget;
+    setBlockedDelete(id);
+  };
+  const dismissBlockedDelete = () => {
+    setBlockedDelete(null);
+    blockedTrigger.current?.focus();
+  };
+  const blockedDeleteNote = (wo: WorkOrderClientSummary) => (
+    <div
+      className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between"
+      data-testid="delete-blocked"
+    >
+      <p role="status" className="text-sm text-fg-primary">
+        {t('workOrders.deleteHasPayments')}
+      </p>
+      <div className="flex shrink-0 justify-end gap-2">
+        <a
+          href={workOrderDetailsHref(wo.id)}
+          className={buttonVariants({ variant: 'secondary', size: 'sm', className: 'rounded-lg' })}
+        >
+          {t('workOrders.openOrder')}
+        </a>
+        <Button variant="secondary" size="sm" className="rounded-lg" onClick={dismissBlockedDelete}>
+          {t('common.gotIt')}
+        </Button>
+      </div>
+    </div>
+  );
 
   return (
     <div className="space-y-5" data-testid="work-order-list">
@@ -460,10 +494,18 @@ export function WorkOrderList({ clients, onCreate, onEdit }: WorkOrderListProps)
                             disabledReason={
                               wo.hasPayments ? t('workOrders.deleteHasPayments') : undefined
                             }
+                            onBlockedClick={(event) => showBlockedDelete(wo.id, event)}
                           />
                         </div>
                       </td>
                     </tr>
+                    {blockedDelete === wo.id && (
+                      <tr key={`${wo.id}-blocked`}>
+                        <td colSpan={7} className="bg-bg-secondary px-4 py-3">
+                          {blockedDeleteNote(wo)}
+                        </td>
+                      </tr>
+                    )}
                     {confirmDelete === wo.id && (
                       <tr key={`${wo.id}-delete`}>
                         <td
@@ -508,6 +550,11 @@ export function WorkOrderList({ clients, onCreate, onEdit }: WorkOrderListProps)
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3" data-testid="work-order-cards">
             {sortedWorkOrders.map((wo) => (
               <div key={wo.id}>
+                {blockedDelete === wo.id && (
+                  <Panel className="mb-3 border border-border-default">
+                    {blockedDeleteNote(wo)}
+                  </Panel>
+                )}
                 {confirmDelete === wo.id && (
                   <Panel
                     className="mb-3 border border-danger bg-danger/10"
@@ -596,7 +643,11 @@ export function WorkOrderList({ clients, onCreate, onEdit }: WorkOrderListProps)
                         variant="delete"
                         size="sm"
                         className={rowActionButtonClass}
-                        onClick={wo.hasPayments ? undefined : () => setConfirmDelete(wo.id)}
+                        onClick={
+                          wo.hasPayments
+                            ? (event) => showBlockedDelete(wo.id, event)
+                            : () => setConfirmDelete(wo.id)
+                        }
                         disabled={confirmDelete !== null || deleting === wo.id}
                         // A blocked delete stays focusable, so its reason can be reached.
                         aria-disabled={wo.hasPayments ? true : undefined}
