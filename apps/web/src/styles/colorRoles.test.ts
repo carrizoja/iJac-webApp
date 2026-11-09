@@ -24,7 +24,11 @@ function token(name: string, theme: 'dark' | 'light'): string {
 
 /** The CSS of one rule, e.g. `.action-brand:hover`. */
 function rule(selector: string): string {
-  const start = css.indexOf(`${selector} {`);
+  const start = css.search(
+    new RegExp(
+      `(^|\\n)\\s*${selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?:[^{,(]|\\([^)]*\\))*{`,
+    ),
+  );
   expect(start, `${selector} exists`).toBeGreaterThan(-1);
   return css.slice(start, css.indexOf('}', start));
 }
@@ -53,14 +57,23 @@ describe('color roles', () => {
     expect(rule('.status-warning')).toContain('var(--color-warning)');
   });
 
-  it('glows edit actions in the brand green instead of a separate cyan', () => {
-    expect(rule('.action-edit:hover')).toContain('var(--shadow-action-brand)');
+  it('fills the primary action with the brand green at rest, not only on hover', () => {
+    expect(rule('.action-brand')).toContain('background: var(--color-action-brand)');
+    expect(rule('.action-brand:hover')).toContain('var(--shadow-action-brand)');
   });
 
-  it('keeps hover text readable on the filled brand green', () => {
-    // White on the bright dark-theme green is about 2:1; the hover text has its own token.
-    expect(rule('.action-brand:hover')).toContain('color: var(--color-action-brand-hover-fg)');
-    expect(rule('.action-edit:hover')).toContain('color: var(--color-action-brand-hover-fg)');
+  it('keeps text readable on the filled brand green', () => {
+    // White on the bright dark-theme green is about 2:1; text on the fill has its own token.
+    expect(rule('.action-brand')).toContain('color: var(--color-action-brand-fg)');
+    expect(token('--color-action-brand-fg', 'dark')).toBe('#020617');
+    expect(token('--color-action-brand-fg', 'light')).toBe('#fff');
+  });
+
+  it('keeps the edit hover neutral, so only primary actions carry the brand green', () => {
+    const hover = rule('.action-edit:hover');
+    expect(hover).toContain('background: var(--color-action-surface-hover)');
+    expect(hover).toContain('border-color: var(--color-action-border-hover)');
+    expect(hover).not.toMatch(/brand/);
   });
 
   it('leaves no component or page on a retired color class', () => {

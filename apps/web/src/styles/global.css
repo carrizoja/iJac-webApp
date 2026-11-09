@@ -98,12 +98,11 @@
     --color-action-brand: #00d084;
     --color-action-brand-hover: #00c978;
 
-    /* White on the bright green is about 2:1; dark text reads at over 10:1. */
-    --color-action-brand-hover-fg: #020617;
+    /* Text on the green fill. White on the bright green is about 2:1; dark text reads at over 10:1. */
+    --color-action-brand-fg: #020617;
 
-    /* Edit is a neutral outline that glows in the brand green on hover. */
+    /* Edit is a neutral outline; only primary actions carry the brand green. */
     --color-action-edit: var(--color-action-border);
-    --color-action-edit-hover: var(--color-action-brand-hover);
     --color-action-delete: #f87171;
     --color-action-delete-hover: #ef4444;
     --color-table-head: rgb(8 8 8 / 80%);
@@ -173,7 +172,7 @@
     --color-action-border-hover: #64748b;
     --color-action-brand: #007a51;
     --color-action-brand-hover: #006241;
-    --color-action-brand-hover-fg: #fff;
+    --color-action-brand-fg: #fff;
     --color-action-delete: #b91c1c;
     --color-action-delete-hover: #b91c1c;
     --color-table-head: rgb(241 245 249 / 90%);
@@ -294,17 +293,17 @@
     border-color: var(--color-action-border-hover);
   }
 
+  /* The primary action is filled at rest, so it reads as the main step before any hover. */
   .action-brand {
-    background: var(--color-action-surface);
+    background: var(--color-action-brand);
     border-color: var(--color-action-brand);
-    color: var(--color-action-fg);
+    color: var(--color-action-brand-fg);
   }
 
-  .action-brand:hover {
+  .action-brand:hover:not(:disabled, [aria-disabled='true']) {
     background: var(--color-action-brand-hover);
     border-color: var(--color-action-brand-hover);
     box-shadow: var(--shadow-action-brand);
-    color: var(--color-action-brand-hover-fg);
   }
 
   .action-edit,
@@ -318,10 +317,8 @@
   }
 
   .action-edit:hover {
-    background: var(--color-action-edit-hover);
-    border-color: var(--color-action-edit-hover);
-    box-shadow: var(--shadow-action-brand);
-    color: var(--color-action-brand-hover-fg);
+    background: var(--color-action-surface-hover);
+    border-color: var(--color-action-border-hover);
   }
 
   .action-delete {

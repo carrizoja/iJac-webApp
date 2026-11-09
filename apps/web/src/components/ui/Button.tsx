@@ -21,7 +21,7 @@ const buttonVariants = cva(
   {
     variants: {
       variant: {
-        /* Primary: brand action with its glow on hover */
+        /* Primary: the brand-green fill for the one main action; it glows on hover */
         primary: [
           'action-brand border-2',
           'transition-all duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] active:translate-y-0',
@@ -35,7 +35,7 @@ const buttonVariants = cva(
           'focus-visible:ring-focus',
         ],
 
-        /* Edit and delete: outlined row actions that glow on hover */
+        /* Edit and delete: outlined row actions; only delete changes color on hover */
         edit: [
           'action-edit border-2',
           'transition-all duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] active:translate-y-0',
