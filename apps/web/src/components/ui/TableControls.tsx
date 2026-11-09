@@ -122,6 +122,8 @@ function TrashIcon() {
 
 export interface RowActionButtonProps {
   action: 'edit' | 'delete';
+  /** Lets a list move keyboard focus back to this button. */
+  id?: string;
   /** Accessible name, e.g. "Editar Acme". */
   label: string;
   /** Tooltip, e.g. "Editar". */
@@ -137,6 +139,7 @@ export interface RowActionButtonProps {
 /** Icon-only edit or delete button for a table row. */
 export function RowActionButton({
   action,
+  id,
   label,
   title,
   onClick,
@@ -146,6 +149,7 @@ export function RowActionButton({
 }: RowActionButtonProps) {
   return (
     <Button
+      id={id}
       variant={action}
       size="sm"
       className="h-9 w-9 rounded-lg px-0"

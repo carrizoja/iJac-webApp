@@ -414,6 +414,76 @@ describe('WorkOrderList', () => {
     ).toBeInTheDocument();
   });
 
+  describe.each(['table', 'cards'] as const)(
+    'keyboard focus through an inline delete (%s)',
+    (view) => {
+      const secondWorkOrder: WorkOrderClientSummary = {
+        ...sampleWorkOrder,
+        id: 'wo-2',
+        title: 'Instalación de Red',
+      };
+
+      async function openConfirmation(items: WorkOrderClientSummary[]) {
+        listWorkOrders.mockResolvedValue({ items });
+        render(<WorkOrderList clients={[sampleClient]} onCreate={vi.fn()} onEdit={vi.fn()} />);
+        await screen.findAllByText('Reparación de Servidor');
+        if (view === 'cards') fireEvent.click(screen.getByRole('button', { name: 'Tarjetas' }));
+        fireEvent.click(screen.getByRole('button', { name: 'Eliminar Reparación de Servidor' }));
+      }
+
+      it('moves focus to Cancelar when the confirmation opens, and back to Eliminar on cancel', async () => {
+        await openConfirmation([sampleWorkOrder]);
+
+        const cancel = within(screen.getByTestId('delete-confirmation')).getByRole('button', {
+          name: 'Cancelar',
+        });
+        expect(cancel).toHaveFocus();
+
+        fireEvent.click(cancel);
+        expect(
+          screen.getByRole('button', { name: 'Eliminar Reparación de Servidor' }),
+        ).toHaveFocus();
+      });
+
+      it('moves focus to the next order once the delete succeeds', async () => {
+        await openConfirmation([sampleWorkOrder, secondWorkOrder]);
+        listWorkOrders.mockResolvedValue({ items: [secondWorkOrder] });
+
+        fireEvent.click(screen.getByRole('button', { name: 'Eliminar' }));
+
+        await waitFor(() =>
+          expect(screen.getByRole('button', { name: 'Eliminar Instalación de Red' })).toHaveFocus(),
+        );
+        expect(deleteWorkOrder).toHaveBeenCalledWith('wo-1');
+      });
+
+      it('moves focus to Nueva orden when the last order is deleted', async () => {
+        await openConfirmation([sampleWorkOrder]);
+        listWorkOrders.mockResolvedValue({ items: [] });
+
+        fireEvent.click(screen.getByRole('button', { name: 'Eliminar' }));
+
+        await waitFor(() =>
+          expect(screen.getByRole('button', { name: 'Nueva orden' })).toHaveFocus(),
+        );
+      });
+
+      it('keeps focus on the confirmation when the delete fails', async () => {
+        deleteWorkOrder.mockRejectedValue(new Error('network'));
+        await openConfirmation([sampleWorkOrder]);
+
+        fireEvent.click(screen.getByRole('button', { name: 'Eliminar' }));
+
+        await screen.findByText('No se pudo eliminar la orden. Intentá nuevamente.');
+        expect(
+          within(screen.getByTestId('delete-confirmation')).getByRole('button', {
+            name: 'Eliminar',
+          }),
+        ).toHaveFocus();
+      });
+    },
+  );
+
   it('shows request error alert when fetch fails', async () => {
     listWorkOrders.mockRejectedValueOnce(new Error('Fallo al conectar'));
     render(<WorkOrderList clients={[sampleClient]} onCreate={vi.fn()} onEdit={vi.fn()} />);
