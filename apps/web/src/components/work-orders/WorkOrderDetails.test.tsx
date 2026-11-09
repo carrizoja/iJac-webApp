@@ -53,6 +53,14 @@ function expectDocumentActionsAbsent() {
   expect(screen.queryByRole('button', { name: 'Imprimir' })).not.toBeInTheDocument();
   expect(screen.queryByRole('button', { name: 'Guardar como PDF' })).not.toBeInTheDocument();
   expect(screen.queryByRole('link', { name: 'Compartir por WhatsApp' })).not.toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: 'Compartir' })).not.toBeInTheDocument();
+}
+
+/** Opens the "Cambiar estado" menu and picks a status from it. */
+async function pickStatus(name: string) {
+  fireEvent.click(await screen.findByRole('button', { name: 'Cambiar estado' }));
+  const menu = screen.getByRole('group', { name: 'Cambiar estado' });
+  fireEvent.click(within(menu).getByRole('button', { name }));
 }
 
 describe('WorkOrderDetails', () => {
@@ -143,7 +151,7 @@ describe('WorkOrderDetails', () => {
 
       const heading = await screen.findByRole('heading', { name: 'Editar orden' });
       await waitFor(() => expect(heading).toHaveFocus());
-      expect(screen.getByRole('combobox', { name: 'Cambiar estado' })).toBeDisabled();
+      expect(screen.getByRole('button', { name: 'Cambiar estado' })).toBeDisabled();
       expect(screen.getByLabelText(/descripción/i)).toHaveValue(
         'Validar la instalación y documentar resultados.',
       );
@@ -222,32 +230,48 @@ describe('WorkOrderDetails', () => {
       ).toBeTruthy();
     });
 
-    it('does not save a status until the save button is pressed', async () => {
-      updateWorkOrder.mockResolvedValue({ ...workOrder, status: WorkOrderStatus.COMPLETED });
+    it('keeps the header to one primary action and three secondary ones', async () => {
       render(<WorkOrderDetails />);
 
-      const select = await screen.findByRole('combobox', { name: 'Cambiar estado' });
-      const save = screen.getByRole('button', { name: 'Guardar estado' });
-      expect(save).toBeDisabled();
+      const header = (await screen.findByRole('heading', { level: 1 })).closest(
+        'header',
+      ) as HTMLElement;
+      const controls = within(header)
+        .getAllByRole('button')
+        .map((button) => button.textContent);
+      expect(controls).toEqual(['Editar', 'Compartir', 'Cambiar estado', 'Marcar completada']);
+      expect(within(header).queryByRole('combobox')).not.toBeInTheDocument();
+      expect(within(header).getByRole('button', { name: 'Marcar completada' })).toHaveClass(
+        'action-brand',
+      );
+    });
 
-      fireEvent.change(select, { target: { value: WorkOrderStatus.OPEN } });
-      fireEvent.change(select, { target: { value: WorkOrderStatus.COMPLETED } });
-      expect(updateWorkOrder).not.toHaveBeenCalled();
-      expect(save).toBeEnabled();
+    it('saves the status picked from the menu, without a separate save step', async () => {
+      updateWorkOrder.mockResolvedValue({ ...workOrder, status: WorkOrderStatus.OPEN });
+      render(<WorkOrderDetails />);
 
-      fireEvent.click(save);
+      fireEvent.click(await screen.findByRole('button', { name: 'Cambiar estado' }));
+      const menu = screen.getByRole('group', { name: 'Cambiar estado' });
+      // The current status is already on the badge, so the menu offers only the others.
+      expect(
+        within(menu)
+          .getAllByRole('button')
+          .map((button) => button.textContent),
+      ).toEqual(['Abierta', 'Completada', 'Cancelada']);
+      fireEvent.click(within(menu).getByRole('button', { name: 'Abierta' }));
 
       await waitFor(() =>
         expect(updateWorkOrder).toHaveBeenCalledWith('work-order-1', {
-          status: WorkOrderStatus.COMPLETED,
+          status: WorkOrderStatus.OPEN,
         }),
       );
       expect(updateWorkOrder).toHaveBeenCalledTimes(1);
-      expect(await screen.findByText('Estado: Completada')).toBeInTheDocument();
+      expect(await screen.findByText('Estado: Abierta')).toBeInTheDocument();
       expect(screen.getByTestId('work-order-status-announcement')).toHaveTextContent(
-        'Estado actualizado: Completada',
+        'Estado actualizado: Abierta',
       );
-      expect(save).toBeDisabled();
+      expect(screen.queryByRole('group', { name: 'Cambiar estado' })).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'Guardar estado' })).not.toBeInTheDocument();
     });
 
     it('asks before cancelling and tells the payments panel once confirmed', async () => {
@@ -259,10 +283,7 @@ describe('WorkOrderDetails', () => {
       updateWorkOrder.mockResolvedValue({ ...workOrder, status: WorkOrderStatus.CANCELLED });
       render(<WorkOrderDetails />);
 
-      const select = await screen.findByRole('combobox', { name: 'Cambiar estado' });
-      expect(select).toHaveValue(WorkOrderStatus.IN_PROGRESS);
-      fireEvent.change(select, { target: { value: WorkOrderStatus.CANCELLED } });
-      fireEvent.click(screen.getByRole('button', { name: 'Guardar estado' }));
+      await pickStatus('Cancelada');
 
       const dialog = await screen.findByRole('alertdialog', { name: '¿Cancelar esta orden?' });
       expect(
@@ -292,16 +313,13 @@ describe('WorkOrderDetails', () => {
     it('keeps the order as it was when the cancellation is not confirmed', async () => {
       render(<WorkOrderDetails />);
 
-      const select = await screen.findByRole('combobox', { name: 'Cambiar estado' });
-      fireEvent.change(select, { target: { value: WorkOrderStatus.CANCELLED } });
-      fireEvent.click(screen.getByRole('button', { name: 'Guardar estado' }));
+      await pickStatus('Cancelada');
       const dialog = await screen.findByRole('alertdialog', { name: '¿Cancelar esta orden?' });
 
       fireEvent.click(within(dialog).getByRole('button', { name: 'Volver' }));
 
       await waitFor(() => expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument());
       expect(updateWorkOrder).not.toHaveBeenCalled();
-      expect(select).toHaveValue(WorkOrderStatus.IN_PROGRESS);
       expect(screen.getByText('Estado: En progreso')).toBeInTheDocument();
     });
 
@@ -309,14 +327,11 @@ describe('WorkOrderDetails', () => {
       updateWorkOrder.mockRejectedValue(new Error('NETWORK_ERROR'));
       render(<WorkOrderDetails />);
 
-      const select = await screen.findByRole('combobox', { name: 'Cambiar estado' });
-      fireEvent.change(select, { target: { value: WorkOrderStatus.COMPLETED } });
-      fireEvent.click(screen.getByRole('button', { name: 'Guardar estado' }));
+      await pickStatus('Completada');
 
       expect(
         await screen.findByText('No se pudo cambiar el estado. Probá de nuevo.'),
       ).toBeInTheDocument();
-      expect(select).toHaveValue(WorkOrderStatus.IN_PROGRESS);
       expect(screen.getByText('Estado: En progreso')).toBeInTheDocument();
     });
 
@@ -345,7 +360,7 @@ describe('WorkOrderDetails', () => {
     });
   });
 
-  it('offers exactly the PDF and WhatsApp actions for a loaded order', async () => {
+  it('offers exactly the PDF and WhatsApp actions under Compartir', async () => {
     window.history.replaceState({}, '', '/work-orders/details?id=work-order-1');
     getWorkOrder.mockResolvedValue(workOrder);
     getClient.mockResolvedValue(client);
@@ -353,16 +368,14 @@ describe('WorkOrderDetails', () => {
 
     render(<WorkOrderDetails />);
 
-    const actionGroup = await screen.findByRole('group', { name: 'Acciones del documento' });
-    const pdfButton = screen.getByRole('button', { name: 'Guardar como PDF' });
-    const whatsAppLink = screen.getByRole('link', { name: 'Compartir por WhatsApp' });
+    fireEvent.click(await screen.findByRole('button', { name: 'Compartir' }));
+    const actionGroup = screen.getByRole('group', { name: 'Compartir' });
+    const whatsAppLink = within(actionGroup).getByRole('link', { name: 'Compartir por WhatsApp' });
 
     expect(actionGroup.querySelectorAll('button, a')).toHaveLength(2);
+    // The PDF hint sits with the PDF choice, not in the header.
+    expect(within(actionGroup).getByText(/elegí “Guardar como PDF”/)).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Imprimir' })).not.toBeInTheDocument();
-    fireEvent.click(pdfButton);
-
-    expect(printSpy).toHaveBeenCalledTimes(1);
-    expect(screen.getByText(/elegí “Guardar como PDF”/)).toBeInTheDocument();
     expect(whatsAppLink).toHaveAttribute('target', '_blank');
     expect(whatsAppLink).toHaveAttribute('rel', 'noopener noreferrer');
 
@@ -382,6 +395,10 @@ describe('WorkOrderDetails', () => {
     expect(decodeURIComponent(whatsAppLink.getAttribute('href') ?? '')).not.toMatch(
       /contacto@acme\.test|555-0100|Validar la instalación/,
     );
+
+    fireEvent.click(within(actionGroup).getByRole('button', { name: 'Guardar como PDF' }));
+    expect(printSpy).toHaveBeenCalledTimes(1);
+    expect(screen.queryByRole('group', { name: 'Compartir' })).not.toBeInTheDocument();
   });
 
   it('localizes the WhatsApp message and missing due date in English', async () => {
@@ -392,7 +409,8 @@ describe('WorkOrderDetails', () => {
 
     render(<WorkOrderDetails />);
 
-    const whatsAppLink = await screen.findByRole('link', { name: 'Share via WhatsApp' });
+    fireEvent.click(await screen.findByRole('button', { name: 'Share' }));
+    const whatsAppLink = screen.getByRole('link', { name: 'Share via WhatsApp' });
     const expectedMessage = [
       'Work order: Revisión remota',
       'Client: Acme Corp',
