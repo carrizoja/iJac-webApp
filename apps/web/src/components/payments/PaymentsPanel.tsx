@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   PaymentStatus,
   WorkOrderStatus,
@@ -8,6 +8,7 @@ import {
   type WorkOrderPaymentsResponse,
 } from '@ijac/shared';
 import { Banknote } from 'lucide-react';
+import { formatMoneyInput } from '../../lib/money';
 import { ApiRequestError, listPayments, voidPayment } from '../../lib/resources';
 import { useLanguage } from '../../hooks/useLanguage';
 import { formatDateOnly } from '../../i18n/format';
@@ -42,8 +43,16 @@ export function PaymentsPanel({
   const [voidError, setVoidError] = useState<string | null>(null);
   const [voiding, setVoiding] = useState(false);
   const [receipt, setReceipt] = useState<Payment | null>(null);
-  /** The payment just recorded, confirmed until dismissed or another action starts. */
-  const [recorded, setRecorded] = useState<Payment | null>(null);
+  /** The payment just recorded or voided, confirmed until dismissed or another action starts. */
+  const [notice, setNotice] = useState<{ kind: 'recorded' | 'voided'; payment: Payment } | null>(
+    null,
+  );
+  // The control that opened the dialog may be gone once it closes (a voided row, a settled
+  // balance), so focus lands on the confirmation instead of falling back to the page.
+  const noticeRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (notice) noticeRef.current?.focus();
+  }, [notice]);
 
   const reload = useCallback(async () => {
     try {
@@ -94,12 +103,12 @@ export function PaymentsPanel({
   const anyVoided = items.some((payment) => payment.status === PaymentStatus.VOIDED);
 
   const openRecord = () => {
-    setRecorded(null);
+    setNotice(null);
     setRecordOpen(true);
   };
 
   const openVoid = (payment: Payment) => {
-    setRecorded(null);
+    setNotice(null);
     setVoidReason('');
     setVoidError(null);
     setVoidTarget(payment);
@@ -117,6 +126,7 @@ export function PaymentsPanel({
     try {
       await voidPayment(workOrderId, voidTarget.id, { reason });
       setVoidTarget(null);
+      setNotice({ kind: 'voided', payment: voidTarget });
       await reload();
     } catch (error) {
       const unmapped = Object.values(
@@ -157,17 +167,28 @@ export function PaymentsPanel({
         )}
       </div>
 
-      {recorded && (
-        <Alert
-          type="success"
-          role="status"
-          data-testid="payment-recorded"
-          className="work-order-print-hidden mt-4"
-          action={{ label: t('payments.viewReceipt'), onClick: () => setReceipt(recorded) }}
-          onClose={() => setRecorded(null)}
+      {notice && (
+        <div
+          ref={noticeRef}
+          tabIndex={-1}
+          className="work-order-print-hidden mt-4 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
         >
-          {t('payments.recorded', { number: formatReceiptNumber(recorded.receiptNumber) })}
-        </Alert>
+          <Alert
+            type="success"
+            role="status"
+            data-testid={notice.kind === 'recorded' ? 'payment-recorded' : 'payment-voided'}
+            action={
+              notice.kind === 'recorded'
+                ? { label: t('payments.viewReceipt'), onClick: () => setReceipt(notice.payment) }
+                : undefined
+            }
+            onClose={() => setNotice(null)}
+          >
+            {t(notice.kind === 'recorded' ? 'payments.recorded' : 'payments.voided', {
+              number: formatReceiptNumber(notice.payment.receiptNumber),
+            })}
+          </Alert>
+        </div>
       )}
 
       {balance ? (
@@ -311,9 +332,10 @@ export function PaymentsPanel({
           orderTitle={orderTitle}
           clientName={clientName}
           remainingMinor={balance.remainingMinor}
+          initialAmount={formatMoneyInput(balance.remainingMinor)}
           currency={balance.currency}
           onRecorded={(payment) => {
-            setRecorded(payment);
+            setNotice({ kind: 'recorded', payment });
             void reload();
           }}
           onFailed={() => void reload()}
