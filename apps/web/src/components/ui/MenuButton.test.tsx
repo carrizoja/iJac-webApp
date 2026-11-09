@@ -75,6 +75,44 @@ describe('MenuButton', () => {
     expect(onPick).not.toHaveBeenCalled();
   });
 
+  it('stays open when focus is lost to a click that does not move it', () => {
+    // Safari does not focus a pressed button, so the blur has no related target.
+    const { trigger, onPick } = renderMenu();
+    fireEvent.click(trigger);
+    const pdf = screen.getByRole('button', { name: 'Guardar como PDF' });
+
+    fireEvent.blur(pdf, { relatedTarget: null });
+    fireEvent.click(pdf);
+
+    expect(onPick).toHaveBeenCalledTimes(1);
+  });
+
+  it('closes when focus tabs out to something else', () => {
+    const { trigger } = renderMenu();
+    fireEvent.click(trigger);
+
+    fireEvent.blur(screen.getByRole('button', { name: 'Guardar como PDF' }), {
+      relatedTarget: screen.getByRole('button', { name: 'Fuera' }),
+    });
+
+    expect(screen.queryByRole('group', { name: 'Compartir' })).not.toBeInTheDocument();
+  });
+
+  it('closes an open panel once a picked choice starts saving', () => {
+    const items = [{ id: 'open', label: 'Abierta', onSelect: vi.fn() }];
+    const { rerender } = render(<MenuButton id="status" label="Cambiar estado" items={items} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Cambiar estado' }));
+    expect(screen.getByRole('group', { name: 'Cambiar estado' })).toBeInTheDocument();
+
+    rerender(<MenuButton id="status" label="Cambiar estado" items={items} isLoading />);
+
+    expect(screen.queryByRole('group', { name: 'Cambiar estado' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Cambiar estado' })).toHaveAttribute(
+      'aria-busy',
+      'true',
+    );
+  });
+
   it('cannot be opened while disabled', () => {
     render(<MenuButton id="status" label="Cambiar estado" disabled items={[]} />);
     expect(screen.getByRole('button', { name: 'Cambiar estado' })).toBeDisabled();

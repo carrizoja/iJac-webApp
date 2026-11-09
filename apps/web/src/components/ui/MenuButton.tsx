@@ -97,11 +97,11 @@ export function MenuButton({
     <div
       ref={rootRef}
       className={cn('relative', className)}
-      // Tabbing out of the panel closes it, so it never lingers behind the focus.
+      // Tabbing out of the panel closes it, so it never lingers behind the focus. A blur with
+      // no new target (Safari pressing a button) keeps it open; outside presses close it above.
       onBlur={(event) => {
-        if (open && !rootRef.current?.contains(event.relatedTarget as Node | null)) {
-          setOpen(false);
-        }
+        const next = event.relatedTarget as Node | null;
+        if (open && next && !rootRef.current?.contains(next)) setOpen(false);
       }}
     >
       <Button
