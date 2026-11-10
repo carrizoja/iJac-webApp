@@ -298,9 +298,7 @@ describe('WorkOrderList', () => {
       render(<WorkOrderList clients={[sampleClient]} onCreate={vi.fn()} onEdit={vi.fn()} />);
       await screen.findByRole('link', { name: 'A tiempo' });
 
-      fireEvent.change(screen.getByRole('combobox', { name: 'Filtrar por plazo' }), {
-        target: { value: 'overdue' },
-      });
+      fireEvent.click(screen.getByRole('button', { name: 'Vencidas' }));
 
       expect(screen.getByRole('link', { name: 'Atrasada' })).toBeInTheDocument();
       for (const name of ['A tiempo', 'Sin fecha', 'Terminada tarde']) {
@@ -319,11 +317,17 @@ describe('WorkOrderList', () => {
       listWorkOrders.mockResolvedValue({ items: [soon] });
       render(<WorkOrderList clients={[sampleClient]} onCreate={vi.fn()} onEdit={vi.fn()} />);
 
-      expect(screen.getByRole('combobox', { name: 'Filtrar por plazo' })).toHaveValue('overdue');
+      expect(screen.getByRole('button', { name: 'Vencidas' })).toHaveAttribute(
+        'aria-pressed',
+        'true',
+      );
       fireEvent.click(await screen.findByRole('button', { name: 'Limpiar filtros' }));
 
       expect(await screen.findByRole('link', { name: 'A tiempo' })).toBeInTheDocument();
-      expect(screen.getByRole('combobox', { name: 'Filtrar por plazo' })).toHaveValue('');
+      expect(screen.getByRole('button', { name: 'Vencidas' })).toHaveAttribute(
+        'aria-pressed',
+        'false',
+      );
       await waitFor(() => expect(window.location.search).toBe(''));
     });
 
@@ -333,7 +337,140 @@ describe('WorkOrderList', () => {
       render(<WorkOrderList clients={[sampleClient]} onCreate={vi.fn()} onEdit={vi.fn()} />);
 
       expect(await screen.findByRole('link', { name: 'A tiempo' })).toBeInTheDocument();
-      expect(screen.getByRole('combobox', { name: 'Filtrar por plazo' })).toHaveValue('');
+      expect(screen.getByRole('button', { name: 'Vencidas' })).toHaveAttribute(
+        'aria-pressed',
+        'false',
+      );
+    });
+  });
+
+  describe('what the filtered list is showing', () => {
+    beforeEach(() => {
+      vi.useFakeTimers({ toFake: ['Date'] });
+      vi.setSystemTime(new Date(2026, 10, 6, 9, 0));
+    });
+    afterEach(() => vi.useRealTimers());
+
+    const late: WorkOrderClientSummary = {
+      ...sampleWorkOrder,
+      id: 'late',
+      title: 'Atrasada',
+      dueDate: '2026-11-02T00:00:00.000Z',
+    };
+    const lateToo: WorkOrderClientSummary = { ...late, id: 'late-2', title: 'También atrasada' };
+    const soon: WorkOrderClientSummary = {
+      ...sampleWorkOrder,
+      id: 'soon',
+      title: 'A tiempo',
+      dueDate: '2026-11-20T00:00:00.000Z',
+    };
+    const summary = () => screen.getByTestId('work-order-filter-summary');
+
+    it('says nothing extra while no filter is active', async () => {
+      listWorkOrders.mockResolvedValue({ items: [late, soon] });
+      render(<WorkOrderList clients={[sampleClient]} onCreate={vi.fn()} onEdit={vi.fn()} />);
+      await screen.findByRole('link', { name: 'A tiempo' });
+
+      expect(screen.queryByTestId('work-order-filter-summary')).not.toBeInTheDocument();
+    });
+
+    it('counts the matching orders and names each active filter', async () => {
+      window.history.replaceState(null, '', '/work-orders?status=open&due=overdue&client=client-1');
+      listWorkOrders.mockResolvedValue({ items: [late, lateToo, soon] });
+      render(<WorkOrderList clients={[sampleClient]} onCreate={vi.fn()} onEdit={vi.fn()} />);
+      await screen.findByRole('link', { name: 'Atrasada' });
+
+      expect(within(summary()).getByRole('status')).toHaveTextContent('2 órdenes');
+      const chips = within(summary())
+        .getAllByRole('button', { name: /^Quitar filtro/ })
+        .map((chip) => chip.getAttribute('aria-label'));
+      expect(chips).toEqual([
+        'Quitar filtro: Abierta',
+        'Quitar filtro: Acme Corp',
+        'Quitar filtro: Vencidas',
+      ]);
+    });
+
+    it('says 1 orden for a single match, and names the search', async () => {
+      listWorkOrders.mockResolvedValue({ items: [late, soon] });
+      render(<WorkOrderList clients={[sampleClient]} onCreate={vi.fn()} onEdit={vi.fn()} />);
+      await screen.findByRole('link', { name: 'A tiempo' });
+
+      fireEvent.change(screen.getByLabelText('Buscar órdenes'), { target: { value: 'tiempo' } });
+
+      expect(within(summary()).getByRole('status')).toHaveTextContent('1 orden');
+      expect(
+        within(summary()).getByRole('button', { name: 'Quitar filtro: “tiempo”' }),
+      ).toBeInTheDocument();
+    });
+
+    it('removes only the filter whose chip is pressed, and keeps focus in the summary', async () => {
+      window.history.replaceState(null, '', '/work-orders?due=overdue&balance=owed');
+      listWorkOrders.mockResolvedValue({
+        items: [
+          { ...late, totalPriceMinor: 1000, currency: 'ARS', remainingMinor: 1000 },
+          { ...lateToo, totalPriceMinor: 1000, currency: 'ARS', remainingMinor: 0 },
+          soon,
+        ],
+      });
+      render(<WorkOrderList clients={[sampleClient]} onCreate={vi.fn()} onEdit={vi.fn()} />);
+      await screen.findByRole('link', { name: 'Atrasada' });
+      expect(within(summary()).getByRole('status')).toHaveTextContent('1 orden');
+
+      fireEvent.click(
+        within(summary()).getByRole('button', { name: 'Quitar filtro: Con saldo pendiente' }),
+      );
+
+      expect(within(summary()).getByRole('status')).toHaveTextContent('2 órdenes');
+      expect(screen.getByRole('button', { name: 'Con saldo pendiente' })).toHaveAttribute(
+        'aria-pressed',
+        'false',
+      );
+      expect(screen.getByRole('button', { name: 'Vencidas' })).toHaveAttribute(
+        'aria-pressed',
+        'true',
+      );
+      await waitFor(() =>
+        expect(document.activeElement).toBe(
+          within(summary()).getByRole('button', { name: 'Quitar filtro: Vencidas' }),
+        ),
+      );
+      await waitFor(() => expect(window.location.search).toBe('?due=overdue'));
+
+      // Removing the last filter hides the summary and returns focus to the search box.
+      fireEvent.click(within(summary()).getByRole('button', { name: 'Quitar filtro: Vencidas' }));
+      expect(screen.queryByTestId('work-order-filter-summary')).not.toBeInTheDocument();
+      await waitFor(() =>
+        expect(document.activeElement).toBe(screen.getByLabelText('Buscar órdenes')),
+      );
+    });
+
+    it('clears every filter from the summary', async () => {
+      window.history.replaceState(null, '', '/work-orders?due=overdue&priority=high');
+      listWorkOrders.mockResolvedValue({ items: [late, soon] });
+      render(<WorkOrderList clients={[sampleClient]} onCreate={vi.fn()} onEdit={vi.fn()} />);
+      await screen.findByRole('link', { name: 'Atrasada' });
+
+      fireEvent.click(within(summary()).getByRole('button', { name: 'Limpiar filtros' }));
+
+      expect(await screen.findByRole('link', { name: 'A tiempo' })).toBeInTheDocument();
+      expect(screen.queryByTestId('work-order-filter-summary')).not.toBeInTheDocument();
+      await waitFor(() => expect(window.location.search).toBe(''));
+    });
+
+    it('turns Vencidas and Con saldo pendiente on and off with one press', async () => {
+      listWorkOrders.mockResolvedValue({ items: [late, soon] });
+      render(<WorkOrderList clients={[sampleClient]} onCreate={vi.fn()} onEdit={vi.fn()} />);
+      await screen.findByRole('link', { name: 'A tiempo' });
+      const overdue = screen.getByRole('button', { name: 'Vencidas' });
+
+      fireEvent.click(overdue);
+      expect(overdue).toHaveAttribute('aria-pressed', 'true');
+      expect(screen.queryByRole('link', { name: 'A tiempo' })).not.toBeInTheDocument();
+
+      fireEvent.click(overdue);
+      expect(overdue).toHaveAttribute('aria-pressed', 'false');
+      expect(screen.getByRole('link', { name: 'A tiempo' })).toBeInTheDocument();
     });
   });
 
@@ -662,9 +799,7 @@ describe('WorkOrderList', () => {
       render(<WorkOrderList clients={[sampleClient]} onCreate={vi.fn()} onEdit={vi.fn()} />);
       await screen.findByRole('link', { name: 'Ya pagada' });
 
-      fireEvent.change(screen.getByRole('combobox', { name: 'Filtrar por saldo' }), {
-        target: { value: 'owed' },
-      });
+      fireEvent.click(screen.getByRole('button', { name: 'Con saldo pendiente' }));
 
       expect(screen.getByRole('link', { name: 'Reparación de Servidor' })).toBeInTheDocument();
       for (const name of ['Ya pagada', 'Cancelada con saldo', 'Sin precio aún']) {
@@ -683,11 +818,17 @@ describe('WorkOrderList', () => {
       listWorkOrders.mockResolvedValue({ items: [paid] });
       render(<WorkOrderList clients={[sampleClient]} onCreate={vi.fn()} onEdit={vi.fn()} />);
 
-      expect(screen.getByRole('combobox', { name: 'Filtrar por saldo' })).toHaveValue('owed');
+      expect(screen.getByRole('button', { name: 'Con saldo pendiente' })).toHaveAttribute(
+        'aria-pressed',
+        'true',
+      );
       fireEvent.click(await screen.findByRole('button', { name: 'Limpiar filtros' }));
 
       expect(await screen.findByRole('link', { name: 'Ya pagada' })).toBeInTheDocument();
-      expect(screen.getByRole('combobox', { name: 'Filtrar por saldo' })).toHaveValue('');
+      expect(screen.getByRole('button', { name: 'Con saldo pendiente' })).toHaveAttribute(
+        'aria-pressed',
+        'false',
+      );
       await waitFor(() => expect(window.location.search).toBe(''));
     });
 
@@ -697,7 +838,10 @@ describe('WorkOrderList', () => {
       render(<WorkOrderList clients={[sampleClient]} onCreate={vi.fn()} onEdit={vi.fn()} />);
 
       expect(await screen.findByRole('link', { name: 'Ya pagada' })).toBeInTheDocument();
-      expect(screen.getByRole('combobox', { name: 'Filtrar por saldo' })).toHaveValue('');
+      expect(screen.getByRole('button', { name: 'Con saldo pendiente' })).toHaveAttribute(
+        'aria-pressed',
+        'false',
+      );
     });
   });
 

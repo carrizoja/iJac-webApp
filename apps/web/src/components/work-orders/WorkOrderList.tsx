@@ -6,6 +6,7 @@ import {
   useRef,
   Fragment,
   type MouseEvent,
+  type ReactNode,
 } from 'react';
 import type { WorkOrderClientSummary, Client } from '@ijac/shared';
 import { ApiRequestError, listWorkOrders, deleteWorkOrder } from '../../lib/resources';
@@ -50,9 +51,11 @@ import { isOverdue, isOwed, localDateKey } from '../home/todaySummary';
 import { priorityBadgeClass } from './workOrderBadges';
 import { StatusBadge } from './StatusBadge';
 import { matchesOrderSearch } from './workOrderSearch';
-import { ClipboardList, SlidersHorizontal, TriangleAlert } from 'lucide-react';
+import { Check, ClipboardList, SlidersHorizontal, TriangleAlert, X } from 'lucide-react';
 
 const NEW_BUTTON_ID = 'work-order-new';
+const SEARCH_ID = 'workOrderSearch';
+const filterChipId = (key: string) => `work-order-filter-chip-${key}`;
 const deleteButtonId = (id: string) => `work-order-delete-${id}`;
 const deleteCancelId = (id: string) => `work-order-delete-cancel-${id}`;
 const deleteConfirmId = (id: string) => `work-order-delete-confirm-${id}`;
@@ -271,6 +274,43 @@ export function WorkOrderList({ clients, onCreate, onEdit }: WorkOrderListProps)
     balanceFilter,
     dueFilter,
   ].filter(Boolean).length;
+  const clientName = clients.find((c) => c.id === clientFilter)?.name;
+  /** The filters in force, in toolbar order, each with a way to drop just that one. */
+  const activeFilters: { key: string; label: string; clear: () => void }[] = [];
+  if (search.trim())
+    activeFilters.push({ key: 'q', label: `“${search.trim()}”`, clear: () => setSearch('') });
+  if (statusFilter)
+    activeFilters.push({
+      key: 'status',
+      label: statusLabel(statusFilter as WorkOrderClientSummary['status'], language),
+      clear: () => setStatusFilter(''),
+    });
+  if (priorityFilter)
+    activeFilters.push({
+      key: 'priority',
+      label: priorityLabel(priorityFilter as WorkOrderClientSummary['priority'], language),
+      clear: () => setPriorityFilter(''),
+    });
+  if (clientFilter && clientName)
+    activeFilters.push({ key: 'client', label: clientName, clear: () => setClientFilter('') });
+  if (balanceFilter)
+    activeFilters.push({
+      key: 'balance',
+      label: t('workOrders.balanceOwed'),
+      clear: () => setBalanceFilter(''),
+    });
+  if (dueFilter)
+    activeFilters.push({
+      key: 'due',
+      label: t('workOrders.dueOverdue'),
+      clear: () => setDueFilter(''),
+    });
+  /** Drops one filter; focus moves to the next chip, the previous one, or the search box. */
+  const removeFilter = (index: number) => {
+    const neighbours = [activeFilters[index + 1], activeFilters[index - 1]].filter(Boolean);
+    activeFilters[index].clear();
+    focusAfterRender(...neighbours.map((f) => filterChipId(f.key)), SEARCH_ID);
+  };
   const todayKey = localDateKey(new Date());
   // Orders with payments (voided ones included) cannot be deleted; the API refuses them.
   const deleteLabel = (wo: WorkOrderClientSummary) =>
@@ -313,7 +353,7 @@ export function WorkOrderList({ clients, onCreate, onEdit }: WorkOrderListProps)
       <div className="flex flex-col gap-3 rounded-xl border border-border-subtle bg-bg-primary/60 p-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex flex-wrap gap-2">
           <Input
-            id="workOrderSearch"
+            id={SEARCH_ID}
             type="search"
             aria-label={t('workOrders.search')}
             placeholder={t('workOrders.searchPlaceholder')}
@@ -380,26 +420,18 @@ export function WorkOrderList({ clients, onCreate, onEdit }: WorkOrderListProps)
                 </option>
               ))}
             </Select>
-            <Select
-              id="balanceFilter"
-              aria-label={t('workOrders.filterBalance')}
-              value={balanceFilter}
-              onChange={(e) => setBalanceFilter(e.target.value)}
-              className="w-full rounded-xl sm:w-48"
+            <FilterToggle
+              pressed={balanceFilter === 'owed'}
+              onClick={() => setBalanceFilter((value) => (value ? '' : 'owed'))}
             >
-              <option value="">{t('workOrders.allBalances')}</option>
-              <option value="owed">{t('workOrders.balanceOwed')}</option>
-            </Select>
-            <Select
-              id="dueFilter"
-              aria-label={t('workOrders.filterDue')}
-              value={dueFilter}
-              onChange={(e) => setDueFilter(e.target.value)}
-              className="w-full rounded-xl sm:w-40"
+              {t('workOrders.balanceOwed')}
+            </FilterToggle>
+            <FilterToggle
+              pressed={dueFilter === 'overdue'}
+              onClick={() => setDueFilter((value) => (value ? '' : 'overdue'))}
             >
-              <option value="">{t('workOrders.allDueDates')}</option>
-              <option value="overdue">{t('workOrders.dueOverdue')}</option>
-            </Select>
+              {t('workOrders.dueOverdue')}
+            </FilterToggle>
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-3">
@@ -429,6 +461,45 @@ export function WorkOrderList({ clients, onCreate, onEdit }: WorkOrderListProps)
           </Button>
         </div>
       </div>
+
+      {loaded && filtered && sortedWorkOrders.length > 0 && (
+        <div
+          className="flex flex-wrap items-center gap-x-3 gap-y-2 text-sm"
+          data-testid="work-order-filter-summary"
+        >
+          <p role="status" className="font-semibold text-fg-primary">
+            {sortedWorkOrders.length === 1
+              ? t('workOrders.resultCountOne')
+              : t('workOrders.resultCount', { count: sortedWorkOrders.length })}
+          </p>
+          <ul className="flex flex-wrap gap-2" aria-label={t('workOrders.activeFilters')}>
+            {activeFilters.map((f, index) => (
+              <li key={f.key}>
+                <button
+                  id={filterChipId(f.key)}
+                  type="button"
+                  onClick={() => removeFilter(index)}
+                  aria-label={t('workOrders.removeFilter', { name: f.label })}
+                  className="inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-border-default bg-panel-default px-3 text-fg-primary transition-colors hover:border-border-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
+                >
+                  {f.label}
+                  <X aria-hidden="true" className="h-3.5 w-3.5 text-fg-muted" />
+                </button>
+              </li>
+            ))}
+          </ul>
+          <button
+            type="button"
+            onClick={() => {
+              clearFilters();
+              focusAfterRender(SEARCH_ID);
+            }}
+            className="min-h-9 rounded px-1 font-medium text-fg-secondary underline underline-offset-2 hover:text-fg-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
+          >
+            {t('workOrders.clearFilters')}
+          </button>
+        </div>
+      )}
 
       {errorKey && (
         <Alert
@@ -777,5 +848,35 @@ export function WorkOrderList({ clients, onCreate, onEdit }: WorkOrderListProps)
         )}
       </div>
     </div>
+  );
+}
+
+/**
+ * An on/off filter with a single value (Con saldo pendiente, Vencidas): one press turns it on,
+ * the next turns it off. The check mark says it is on without relying on color.
+ */
+function FilterToggle({
+  pressed,
+  onClick,
+  children,
+}: {
+  pressed: boolean;
+  onClick: () => void;
+  children: ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      aria-pressed={pressed}
+      onClick={onClick}
+      className={`view-mode-option inline-flex min-h-11 w-full items-center justify-center gap-1.5 whitespace-nowrap rounded-xl border px-4 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus sm:w-auto ${
+        pressed
+          ? 'view-mode-option-active'
+          : 'border-border-default text-fg-secondary hover:text-fg-primary'
+      }`}
+    >
+      {pressed && <Check aria-hidden="true" className="h-4 w-4" />}
+      {children}
+    </button>
   );
 }
