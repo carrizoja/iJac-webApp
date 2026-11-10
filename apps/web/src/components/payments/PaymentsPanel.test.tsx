@@ -578,6 +578,11 @@ describe('PaymentsPanel', () => {
     expect(within(summary).getByText('$ 150.000,00')).toBeInTheDocument();
     expect(within(summary).getByText('5 de agosto de 2026')).toBeInTheDocument();
     expect(within(summary).getByText('Transferencia bancaria')).toBeInTheDocument();
+    expect(
+      within(dialog).getByText(
+        'El pago deja de contar en el saldo y la anulación no se puede deshacer. El recibo se conserva marcado como anulado.',
+      ),
+    ).toBeInTheDocument();
   });
 
   it('requires a reason to void and sends the trimmed reason', async () => {

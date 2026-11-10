@@ -63,6 +63,15 @@ describe('RecordPaymentDialog', () => {
     expect(summary.getByText('$ 45.000,00')).toBeInTheDocument();
   });
 
+  it('says before saving that a recorded payment can only be voided', async () => {
+    renderDialog();
+    expect(
+      await screen.findByText(
+        'Un pago registrado no se puede editar ni borrar: si hay un error, se anula.',
+      ),
+    ).toBeInTheDocument();
+  });
+
   it('puts the amount being recorded on the submit button', async () => {
     renderDialog('45.000');
     const dialog = await screen.findByRole('dialog');
