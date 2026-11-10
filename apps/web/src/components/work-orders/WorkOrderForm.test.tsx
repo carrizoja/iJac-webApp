@@ -13,10 +13,20 @@ vi.mock('../../lib/resources', () => {
       super(code);
     }
   }
-  return { ApiRequestError, createWorkOrder: vi.fn(), updateWorkOrder: vi.fn() };
+  return {
+    ApiRequestError,
+    createWorkOrder: vi.fn(),
+    updateWorkOrder: vi.fn(),
+    listPayments: vi.fn(),
+  };
 });
 
-import { ApiRequestError, createWorkOrder, updateWorkOrder } from '../../lib/resources';
+import {
+  ApiRequestError,
+  createWorkOrder,
+  listPayments,
+  updateWorkOrder,
+} from '../../lib/resources';
 
 describe('WorkOrderForm', () => {
   const now = new Date().toISOString();
@@ -36,6 +46,12 @@ describe('WorkOrderForm', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    // By default the order being edited has no payments.
+    (listPayments as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({
+      items: [],
+      balance: null,
+      canManage: true,
+    });
   });
 
   it('shows validation errors for empty required fields', async () => {
@@ -389,6 +405,144 @@ describe('WorkOrderForm', () => {
       submitCreate();
       expect(await screen.findByText(/elegí la moneda/i)).toBeInTheDocument();
       expect(screen.queryByText(/no se pudo guardar/i)).not.toBeInTheDocument();
+    });
+  });
+  describe('an order with payments', () => {
+    const paidOrder: WorkOrder = {
+      id: 'wo1',
+      clientId: 'c1',
+      title: 'Fix',
+      status: WorkOrderStatus.OPEN,
+      priority: WorkOrderPriority.HIGH,
+      totalPriceMinor: 100000,
+      currency: Currency.USD,
+      createdAt: now,
+      updatedAt: now,
+    };
+    const payments = listPayments as unknown as ReturnType<typeof vi.fn>;
+    const updated = updateWorkOrder as unknown as ReturnType<typeof vi.fn>;
+    const price = () => screen.getByLabelText(/precio total/i) as HTMLInputElement;
+    const currency = () => screen.getByLabelText(/moneda/i) as HTMLSelectElement;
+    const save = () => fireEvent.click(screen.getByRole('button', { name: /guardar/i }));
+
+    beforeEach(() => {
+      updated.mockReset();
+      payments.mockResolvedValue({
+        items: [],
+        balance: {
+          currency: Currency.USD,
+          totalMinor: 100000,
+          paidMinor: 50000,
+          remainingMinor: 50000,
+        },
+        canManage: true,
+      });
+    });
+
+    function renderPaid() {
+      render(
+        <WorkOrderForm
+          clients={clients}
+          workOrder={paidOrder}
+          onSaved={() => {}}
+          onCancel={() => {}}
+        />,
+      );
+    }
+
+    it('locks the currency and says why', async () => {
+      renderPaid();
+      await waitFor(() => expect(currency()).toBeDisabled());
+      expect(payments).toHaveBeenCalledWith('wo1');
+      expect(currency().value).toBe('USD');
+      expect(currency()).toHaveAccessibleDescription(
+        'Ya hay pagos registrados: la moneda no se puede cambiar.',
+      );
+      expect(price()).toHaveAccessibleDescription(
+        'Ya se pagaron US$ 500,00: el precio no puede ser menor.',
+      );
+    });
+
+    it('refuses a price below the amount paid without calling the API', async () => {
+      renderPaid();
+      await waitFor(() => expect(currency()).toBeDisabled());
+      fireEvent.change(price(), { target: { value: '400' } });
+      save();
+      expect(
+        await screen.findByText('El precio no puede ser menor a lo ya pagado (US$ 500,00).'),
+      ).toBeInTheDocument();
+      expect(updated).not.toHaveBeenCalled();
+    });
+
+    it('refuses an empty price without calling the API', async () => {
+      renderPaid();
+      await waitFor(() => expect(currency()).toBeDisabled());
+      fireEvent.change(price(), { target: { value: '' } });
+      save();
+      expect(
+        await screen.findByText('El precio no puede ser menor a lo ya pagado (US$ 500,00).'),
+      ).toBeInTheDocument();
+      expect(updated).not.toHaveBeenCalled();
+    });
+
+    it('saves a price equal to the amount paid, keeping the currency', async () => {
+      updated.mockResolvedValueOnce({ id: 'wo1' });
+      const onSaved = vi.fn();
+      render(
+        <WorkOrderForm
+          clients={clients}
+          workOrder={paidOrder}
+          onSaved={onSaved}
+          onCancel={() => {}}
+        />,
+      );
+      await waitFor(() => expect(currency()).toBeDisabled());
+      fireEvent.change(price(), { target: { value: '500' } });
+      save();
+      await waitFor(() => expect(onSaved).toHaveBeenCalled());
+      expect(updated).toHaveBeenCalledWith(
+        'wo1',
+        expect.objectContaining({ totalPriceMinor: 50000, currency: Currency.USD }),
+      );
+    });
+
+    it('explains a refusal from the server instead of asking to retry', async () => {
+      // The payments could not be read, so the form lets the change through and the server refuses it.
+      payments.mockRejectedValue(new Error('network'));
+      updated.mockRejectedValueOnce(new ApiRequestError('CONFLICT'));
+      renderPaid();
+      fireEvent.change(currency(), { target: { value: 'ARS' } });
+      save();
+      expect(
+        await screen.findByText(
+          'Esta orden ya tiene pagos: la moneda no se puede cambiar y el precio no puede ser menor a lo pagado.',
+        ),
+      ).toBeInTheDocument();
+      expect(screen.queryByText(/intentá nuevamente/i)).not.toBeInTheDocument();
+    });
+
+    it('leaves the currency editable when nothing has been paid', async () => {
+      payments.mockResolvedValue({
+        items: [],
+        balance: {
+          currency: Currency.USD,
+          totalMinor: 100000,
+          paidMinor: 0,
+          remainingMinor: 100000,
+        },
+        canManage: true,
+      });
+      renderPaid();
+      await waitFor(() => expect(payments).toHaveBeenCalled());
+      expect(currency()).not.toBeDisabled();
+      expect(price()).toHaveAccessibleDescription(
+        'Opcional. Usá coma para los centavos, por ejemplo 150.000,50.',
+      );
+    });
+
+    it('does not load payments for a new order or an unpriced one', () => {
+      render(<WorkOrderForm clients={clients} onSaved={() => {}} onCancel={() => {}} />);
+      expect(payments).not.toHaveBeenCalled();
     });
   });
 });

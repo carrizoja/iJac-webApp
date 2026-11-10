@@ -253,6 +253,11 @@ export const es = {
   'workOrders.currencyUsd': 'USD (dólares)',
   'workOrders.validation.totalPrice': 'Ingresá un importe válido, por ejemplo 150.000,50',
   'workOrders.validation.currency': 'Elegí la moneda del precio',
+  'workOrders.validation.belowPaid': 'El precio no puede ser menor a lo ya pagado ({amount}).',
+  'workOrders.paidFloorHelp': 'Ya se pagaron {amount}: el precio no puede ser menor.',
+  'workOrders.currencyLockedHelp': 'Ya hay pagos registrados: la moneda no se puede cambiar.',
+  'workOrders.paidPricingConflict':
+    'Esta orden ya tiene pagos: la moneda no se puede cambiar y el precio no puede ser menor a lo pagado.',
   'workOrders.validation.priceForCurrency': 'Ingresá el precio para la moneda elegida',
   'payments.title': 'Pagos',
   'payments.loading': 'Cargando pagos...',
@@ -617,6 +622,12 @@ export const en = {
   'workOrders.currencyUsd': 'USD (dollars)',
   'workOrders.validation.totalPrice': 'Enter a valid amount, for example 150.000,50',
   'workOrders.validation.currency': 'Choose the price currency',
+  'workOrders.validation.belowPaid':
+    'The price cannot be lower than what has been paid ({amount}).',
+  'workOrders.paidFloorHelp': '{amount} has been paid: the price cannot be lower.',
+  'workOrders.currencyLockedHelp': 'Payments have been recorded: the currency cannot be changed.',
+  'workOrders.paidPricingConflict':
+    'This order has payments: the currency cannot be changed and the price cannot be lower than what was paid.',
   'workOrders.validation.priceForCurrency': 'Enter the price for the chosen currency',
   'payments.title': 'Payments',
   'payments.loading': 'Loading payments...',
