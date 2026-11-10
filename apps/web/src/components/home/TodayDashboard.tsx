@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useEffect, useId, useMemo, useState, type ReactNode } from 'react';
 import {
   OrganizationMemberRole,
   formatMoney,
@@ -112,6 +112,9 @@ function OrderRow({ order, overdue }: { order: WorkOrderClientSummary; overdue?:
   );
 }
 
+/** Hoy shows this many rows per list; the rest wait behind "Ver todas" so Cobros stays in view. */
+const LIST_LIMIT = 5;
+
 function OrderGroup({
   title,
   orders,
@@ -121,15 +124,31 @@ function OrderGroup({
   orders: WorkOrderClientSummary[];
   overdue?: boolean;
 }) {
+  const { t } = useLanguage();
+  const [expanded, setExpanded] = useState(false);
+  const listId = useId();
   if (orders.length === 0) return null;
+  const capped = orders.length > LIST_LIMIT;
+  const shown = capped && !expanded ? orders.slice(0, LIST_LIMIT) : orders;
   return (
     <div>
       <h3 className="text-sm font-semibold text-fg-primary">{title}</h3>
-      <ul className="divide-y divide-border-subtle">
-        {orders.map((order) => (
+      <ul id={listId} className="divide-y divide-border-subtle">
+        {shown.map((order) => (
           <OrderRow key={order.id} order={order} overdue={overdue} />
         ))}
       </ul>
+      {capped && (
+        <button
+          type="button"
+          aria-expanded={expanded}
+          aria-controls={listId}
+          onClick={() => setExpanded((open) => !open)}
+          className={cn(linkClass, 'mt-1 min-h-9 text-sm')}
+        >
+          {expanded ? t('home.showLess') : t('home.showAll', { count: orders.length })}
+        </button>
+      )}
     </div>
   );
 }
@@ -280,7 +299,7 @@ export function TodayDashboard() {
       )}
 
       <div className="grid gap-6 lg:grid-cols-3">
-        <div className="space-y-6 lg:col-span-2">
+        <div className="space-y-6 lg:col-span-2" data-testid="home-column-main">
           <Block id="home-attention" title={t('home.attention.title')}>
             <OrdersBody state={orders}>
               {() =>
@@ -348,7 +367,9 @@ export function TodayDashboard() {
               </p>
             )}
           </Block>
+        </div>
 
+        <div className="space-y-6" data-testid="home-column-side">
           <Block id="home-owed" title={t('home.owed.title')}>
             {canRecord && profileMissing && (
               <Alert type="warning" role="status">
@@ -379,11 +400,13 @@ export function TodayDashboard() {
                     </dl>
                     <p className="text-sm">
                       <a href="/work-orders?balance=owed" className={linkClass}>
-                        {t('home.owed.viewAll')}
+                        {summary.owed.length > LIST_LIMIT
+                          ? t('home.owed.viewAllCount', { count: summary.owed.length })
+                          : t('home.owed.viewAll')}
                       </a>
                     </p>
                     <ul className="divide-y divide-border-subtle">
-                      {summary.owed.map((order) => (
+                      {summary.owed.slice(0, LIST_LIMIT).map((order) => (
                         <li
                           key={order.id}
                           className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 py-3"
@@ -425,9 +448,6 @@ export function TodayDashboard() {
               }
             </OrdersBody>
           </Block>
-        </div>
-
-        <div className="space-y-6">
           <Block id="home-open" title={t('home.open.title')}>
             <OrdersBody state={orders}>
               {() =>
