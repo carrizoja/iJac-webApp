@@ -91,10 +91,10 @@ describe('RecordPaymentDialog', () => {
         'Completá los datos de la organización antes de registrar pagos.',
       ),
     ).toBeInTheDocument();
-    expect(within(dialog).getByRole('link', { name: 'Ir a Configuración' })).toHaveAttribute(
-      'href',
-      '/settings',
-    );
+    const settings = within(dialog).getByRole('link', { name: 'Ir a Configuración' });
+    expect(settings).toHaveAttribute('href', '/settings');
+    // Same weight as the matching link on Hoy, so the warning reads the same in both places.
+    expect(settings).toHaveClass('font-semibold', 'underline');
     const submit = within(dialog).getByRole('button', { name: 'Registrar $ 45.000,00' });
     expect(submit).toBeDisabled();
     fireEvent.click(submit);
