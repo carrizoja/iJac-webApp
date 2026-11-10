@@ -74,10 +74,7 @@ export function SignIn() {
           >
             <BrandLogo alt="iJac IT Solutions" className="h-14 w-auto" />
           </a>
-          <p className="mt-6 text-xs font-semibold uppercase tracking-[0.28em] text-accent-brand">
-            {t('signin.eyebrow')}
-          </p>
-          <h1 className="mt-3 font-heading text-3xl font-semibold tracking-tight text-fg-primary sm:text-4xl">
+          <h1 className="mt-6 font-heading text-3xl font-semibold tracking-tight text-fg-primary sm:text-4xl">
             {t('signin.title')}
           </h1>
           <p className="mt-3 text-sm leading-6 text-fg-secondary">{t('signin.description')}</p>

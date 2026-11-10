@@ -201,6 +201,91 @@ describe('TodayDashboard', () => {
     expect(within(big.closest('li') as HTMLElement).getByText('$ 9.000,00')).toBeInTheDocument();
   });
 
+  describe('long lists', () => {
+    const overdueOrders = Array.from({ length: 7 }, (_, i) =>
+      order({
+        id: `late-${i}`,
+        title: `Vencida ${i + 1}`,
+        dueDate: `2026-10-${String(10 + i).padStart(2, '0')}T00:00:00.000Z`,
+      }),
+    );
+    const orderLinks = (within: ReturnType<typeof screen.getByRole>) =>
+      Array.from(within.querySelectorAll('a[href^="/work-orders/details"]')).map(
+        (link) => link.textContent,
+      );
+
+    it('shows five orders per group, and the rest on Ver todas', async () => {
+      listWorkOrders.mockResolvedValue({ items: overdueOrders });
+      render(<TodayDashboard />);
+
+      const attention = section('Atención');
+      await within(attention).findByRole('link', { name: 'Vencida 1' });
+      expect(orderLinks(attention)).toEqual([
+        'Vencida 1',
+        'Vencida 2',
+        'Vencida 3',
+        'Vencida 4',
+        'Vencida 5',
+      ]);
+      const more = within(attention).getByRole('button', { name: 'Ver todas (7)' });
+      expect(more).toHaveAttribute('aria-expanded', 'false');
+
+      fireEvent.click(more);
+      expect(orderLinks(attention)).toHaveLength(7);
+      expect(more).toHaveAttribute('aria-expanded', 'true');
+      expect(more).toHaveTextContent('Ver menos');
+
+      fireEvent.click(more);
+      expect(orderLinks(attention)).toHaveLength(5);
+    });
+
+    it('offers no Ver todas when a group fits', async () => {
+      listWorkOrders.mockResolvedValue({ items: overdueOrders.slice(0, 5) });
+      render(<TodayDashboard />);
+
+      const attention = section('Atención');
+      await within(attention).findByRole('link', { name: 'Vencida 5' });
+      expect(within(attention).queryByRole('button', { name: /^Ver todas/ })).toBeNull();
+    });
+
+    it('shows the five largest balances, with the total and a link to all of them', async () => {
+      listWorkOrders.mockResolvedValue({
+        items: Array.from({ length: 7 }, (_, i) =>
+          order({
+            id: `owed-${i}`,
+            title: `Saldo ${i + 1}`,
+            totalPriceMinor: (7 - i) * 10000,
+            paidMinor: 0,
+            remainingMinor: (7 - i) * 10000,
+            currency: Currency.ARS,
+          }),
+        ),
+      });
+      render(<TodayDashboard />);
+
+      const owed = section('Cobros pendientes');
+      await within(owed).findByRole('link', { name: 'Saldo 1' });
+      expect(orderLinks(owed)).toEqual(['Saldo 1', 'Saldo 2', 'Saldo 3', 'Saldo 4', 'Saldo 5']);
+      // The total still counts every order, not only the five shown.
+      expect(within(owed).getByTestId('owed-totals')).toHaveTextContent('$ 2.800,00');
+      expect(
+        within(owed).getByRole('link', { name: 'Ver las 7 órdenes con saldo' }),
+      ).toHaveAttribute('href', '/work-orders?balance=owed');
+    });
+  });
+
+  it('puts Cobros pendientes beside the open-work counts, not under the attention list', async () => {
+    render(<TodayDashboard />);
+    const owed = await screen.findByRole('region', { name: 'Cobros pendientes' });
+    const open = screen.getByRole('region', { name: 'Trabajo abierto' });
+    const attention = screen.getByRole('region', { name: 'Atención' });
+    const column = (el: HTMLElement) => el.closest('[data-testid^="home-column"]');
+    expect(column(owed)).toBe(column(open));
+    expect(column(attention)).not.toBe(column(owed));
+    // Money comes first in that column, so it shows on phones right after Atención.
+    expect(owed.compareDocumentPosition(open) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
   it('links the money owed to the order list filtered to balances due', async () => {
     listWorkOrders.mockResolvedValue({
       items: [
@@ -248,7 +333,11 @@ describe('TodayDashboard', () => {
     });
 
     it('does not warn members, who cannot record payments', async () => {
-      getOrganizationProfile.mockResolvedValue({ configured: false, canEdit: false, profile: null });
+      getOrganizationProfile.mockResolvedValue({
+        configured: false,
+        canEdit: false,
+        profile: null,
+      });
       getCurrentMember.mockResolvedValue({ role: 'member' });
       render(<TodayDashboard />);
 
