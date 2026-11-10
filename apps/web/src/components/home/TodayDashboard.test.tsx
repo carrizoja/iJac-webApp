@@ -221,6 +221,50 @@ describe('TodayDashboard', () => {
     expect(link).toHaveAttribute('href', '/work-orders?balance=owed');
   });
 
+  describe('missing organization profile', () => {
+    it('warns admins in Cobros pendientes, linking to Settings', async () => {
+      getOrganizationProfile.mockResolvedValue({ configured: false, canEdit: true, profile: null });
+      render(<TodayDashboard />);
+
+      const owed = section('Cobros pendientes');
+      const warning = await within(owed).findByRole('status');
+      expect(warning).toHaveTextContent(
+        'Completá los datos de la organización antes de registrar pagos.',
+      );
+      expect(within(warning).getByRole('link', { name: 'Ir a Configuración' })).toHaveAttribute(
+        'href',
+        '/settings',
+      );
+      // The warning comes first in the block, before the balances it affects.
+      expect(owed.querySelector('h2')?.nextElementSibling).toBe(warning);
+    });
+
+    it('shows no warning once the profile is complete', async () => {
+      render(<TodayDashboard />);
+
+      await within(section('Cobros pendientes')).findByText('No hay saldos pendientes');
+      expect(getOrganizationProfile).toHaveBeenCalled();
+      expect(screen.queryByText(/Completá los datos de la organización/)).not.toBeInTheDocument();
+    });
+
+    it('does not warn members, who cannot record payments', async () => {
+      getOrganizationProfile.mockResolvedValue({ configured: false, canEdit: false, profile: null });
+      getCurrentMember.mockResolvedValue({ role: 'member' });
+      render(<TodayDashboard />);
+
+      await within(section('Cobros pendientes')).findByText('No hay saldos pendientes');
+      expect(screen.queryByText(/Completá los datos de la organización/)).not.toBeInTheDocument();
+    });
+
+    it('shows no warning when the profile cannot be read', async () => {
+      getOrganizationProfile.mockRejectedValue(new Error('network'));
+      render(<TodayDashboard />);
+
+      await within(section('Cobros pendientes')).findByText('No hay saldos pendientes');
+      expect(screen.queryByText(/Completá los datos de la organización/)).not.toBeInTheDocument();
+    });
+  });
+
   it("lists today's orders in the attention block between overdue and the coming days", async () => {
     getCalendarConnectionStatus.mockResolvedValue({ connected: false, status: 'disconnected' });
     listWorkOrders.mockResolvedValue({

@@ -7,7 +7,7 @@ import {
   type Payment,
   type WorkOrderClientSummary,
 } from '@ijac/shared';
-import { getCurrentMember, listWorkOrders } from '../../lib/resources';
+import { getCurrentMember, getOrganizationProfile, listWorkOrders } from '../../lib/resources';
 import { formatMoneyInput } from '../../lib/money';
 import { getCalendarConnectionStatus } from '../../lib/calendar';
 import { collectAllPages } from '../../lib/collectAllPages';
@@ -214,6 +214,23 @@ export function TodayDashboard() {
     );
   };
 
+  /**
+   * Payments need the organization profile for their receipts. Checked here so an admin learns
+   * it is missing before opening a payment form; a failed check shows nothing, since the form
+   * and the server still refuse an incomplete profile.
+   */
+  const [profileMissing, setProfileMissing] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+    getOrganizationProfile()
+      .then((status) => active && setProfileMissing(!status.configured))
+      .catch(() => active && setProfileMissing(false));
+    return () => {
+      active = false;
+    };
+  }, []);
+
   useEffect(() => {
     let active = true;
     getCalendarConnectionStatus()
@@ -333,6 +350,14 @@ export function TodayDashboard() {
           </Block>
 
           <Block id="home-owed" title={t('home.owed.title')}>
+            {canRecord && profileMissing && (
+              <Alert type="warning" role="status">
+                {t('payments.profileMissing')}{' '}
+                <a href="/settings" className="font-semibold underline">
+                  {t('payments.profileLink')}
+                </a>
+              </Alert>
+            )}
             <OrdersBody state={orders}>
               {() =>
                 summary && summary.owed.length > 0 ? (
