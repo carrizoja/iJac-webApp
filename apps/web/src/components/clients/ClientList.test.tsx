@@ -1,13 +1,15 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
-import type { Client } from '@ijac/shared';
+import type { Client, WorkOrderClientSummary } from '@ijac/shared';
+import { Currency, WorkOrderPriority, WorkOrderStatus, formatMoney } from '@ijac/shared';
 
-const { listClients, deleteClient } = vi.hoisted(() => ({
+const { listClients, deleteClient, listWorkOrders } = vi.hoisted(() => ({
   listClients: vi.fn(),
   deleteClient: vi.fn(),
+  listWorkOrders: vi.fn(),
 }));
 
-vi.mock('../../lib/resources', () => ({ listClients, deleteClient }));
+vi.mock('../../lib/resources', () => ({ listClients, deleteClient, listWorkOrders }));
 
 import { ClientList } from './ClientList';
 
@@ -46,6 +48,7 @@ describe('ClientList', () => {
     vi.clearAllMocks();
     window.localStorage.clear();
     listClients.mockResolvedValue({ items: [] });
+    listWorkOrders.mockResolvedValue({ items: [] });
     deleteClient.mockResolvedValue(undefined);
   });
 
@@ -442,6 +445,91 @@ describe('ClientList', () => {
       expect(edit).toHaveAttribute('title', 'Editar');
       expect(remove).toHaveAttribute('title', 'Eliminar');
       expect(screen.getByTestId('client-row-actions')).toHaveClass('row-actions');
+    });
+  });
+
+  describe("a client's orders and balance", () => {
+    const owing: WorkOrderClientSummary = {
+      id: 'wo-1',
+      title: 'Reparación',
+      clientId: 'client-1',
+      clientName: 'Acme Inc',
+      status: WorkOrderStatus.OPEN,
+      priority: WorkOrderPriority.NORMAL,
+      currency: Currency.ARS,
+      totalPriceMinor: 150000,
+      remainingMinor: 100000,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+    const withOrders: Client = { ...client, workOrderCount: 3 };
+    const oneOrder: Client = { ...secondClient, workOrderCount: 1 };
+    const balance = formatMoney(100000, Currency.ARS);
+
+    it('links each client to its orders, and to what it owes, in table and card views', async () => {
+      listClients.mockResolvedValue({ items: [withOrders, oneOrder] });
+      listWorkOrders.mockResolvedValue({ items: [owing] });
+      render(<ClientList onCreate={vi.fn()} onEdit={vi.fn()} />);
+
+      for (const view of ['table', 'cards']) {
+        if (view === 'cards') fireEvent.click(screen.getByRole('button', { name: 'Tarjetas' }));
+        const orders = await screen.findByRole('link', { name: '3 órdenes de Acme Inc' });
+        expect(orders).toHaveTextContent('3 órdenes');
+        expect(orders).toHaveAttribute('href', '/work-orders?client=client-1');
+        const owed = await screen.findByRole('link', { name: `Saldo ${balance} de Acme Inc` });
+        expect(owed).toHaveTextContent(`Saldo ${balance}`);
+        expect(owed).toHaveAttribute('href', '/work-orders?client=client-1&balance=owed');
+        expect(screen.getByRole('link', { name: '1 orden de Beta LLC' })).toHaveAttribute(
+          'href',
+          '/work-orders?client=client-2',
+        );
+        expect(screen.queryByRole('link', { name: /^Saldo .* de Beta LLC$/ })).toBeNull();
+      }
+      // One load of every order, for all clients.
+      expect(listWorkOrders).toHaveBeenCalledTimes(1);
+    });
+
+    it('says Sin órdenes, without a link, for a client with none', async () => {
+      listClients.mockResolvedValue({ items: [client] });
+      render(<ClientList onCreate={vi.fn()} onEdit={vi.fn()} />);
+
+      const row = (await screen.findByText('Acme Inc')).closest('tr')!;
+      expect(within(row).getByText('Sin órdenes')).toBeInTheDocument();
+      expect(within(row).queryByRole('link')).toBeNull();
+    });
+
+    it('adds up a balance owed in two currencies', async () => {
+      listClients.mockResolvedValue({ items: [withOrders] });
+      listWorkOrders.mockResolvedValue({
+        items: [
+          owing,
+          {
+            ...owing,
+            id: 'wo-2',
+            currency: Currency.USD,
+            totalPriceMinor: 5000,
+            remainingMinor: 2000,
+          },
+        ],
+      });
+      render(<ClientList onCreate={vi.fn()} onEdit={vi.fn()} />);
+
+      const both = `Saldo ${balance} · ${formatMoney(2000, Currency.USD)}`;
+      expect(await screen.findByRole('link', { name: `${both} de Acme Inc` })).toHaveTextContent(
+        both,
+      );
+    });
+
+    it('still links to the orders when the balances cannot be loaded', async () => {
+      listClients.mockResolvedValue({ items: [withOrders] });
+      listWorkOrders.mockRejectedValue(new Error('offline'));
+      render(<ClientList onCreate={vi.fn()} onEdit={vi.fn()} />);
+
+      expect(
+        await screen.findByRole('link', { name: '3 órdenes de Acme Inc' }),
+      ).toBeInTheDocument();
+      await waitFor(() => expect(listWorkOrders).toHaveBeenCalled());
+      expect(screen.queryByRole('link', { name: /^Saldo/ })).toBeNull();
     });
   });
 

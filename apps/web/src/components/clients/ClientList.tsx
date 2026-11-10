@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useMemo, useRef, Fragment } from 'react';
 import type { Client } from '@ijac/shared';
-import { listClients, deleteClient } from '../../lib/resources';
+import { formatMoney } from '@ijac/shared';
+import { listClients, deleteClient, listWorkOrders } from '../../lib/resources';
 import {
   Input,
   Button,
@@ -27,6 +28,7 @@ import {
   type ClientSort,
   type ClientSortKey,
 } from './clientSort';
+import { owedByClient, type OwedAmount } from './clientBalance';
 import { TriangleAlert, Users } from 'lucide-react';
 
 const SORT_STORAGE_KEY = 'ijac.clients.sort';
@@ -86,6 +88,17 @@ export function ClientList({ onCreate, onEdit }: ClientListProps) {
     storeTableSort(SORT_STORAGE_KEY, next);
   };
   const sortedClients = useMemo(() => sortClients(clients, sort), [clients, sort]);
+  const [owed, setOwed] = useState<Map<string, OwedAmount[]>>(() => new Map());
+  // Balances come from the orders, loaded once. Without them the list still links to the orders.
+  useEffect(() => {
+    let active = true;
+    collectAllPages((cursor) => listWorkOrders({ cursor }))
+      .then((orders) => active && setOwed(owedByClient(orders)))
+      .catch(() => undefined);
+    return () => {
+      active = false;
+    };
+  }, []);
   const latestRequestId = useRef(0);
   const hasRequested = useRef(false);
 
@@ -227,7 +240,7 @@ export function ClientList({ onCreate, onEdit }: ClientListProps) {
             aria-label={t('clients.listCaption')}
             tabIndex={0}
           >
-            <table className="w-full min-w-[640px] text-left text-sm" data-testid="client-table">
+            <table className="w-full min-w-[760px] text-left text-sm" data-testid="client-table">
               <caption className="sr-only">{t('clients.listCaption')}</caption>
               <thead className="table-head border-b border-border-subtle text-xs font-semibold uppercase tracking-wider text-fg-muted">
                 <tr>
@@ -241,6 +254,9 @@ export function ClientList({ onCreate, onEdit }: ClientListProps) {
                       {t(SORT_LABEL_KEYS[key])}
                     </SortableHeader>
                   ))}
+                  <th scope="col" className="px-4 py-3">
+                    {t('clients.orders')}
+                  </th>
                   <th scope="col" className="px-4 py-3 text-right">
                     {t('common.actions')}
                   </th>
@@ -261,6 +277,9 @@ export function ClientList({ onCreate, onEdit }: ClientListProps) {
                       <td className="px-4 py-3.5 text-fg-muted">{client.email}</td>
                       <td className="px-4 py-3.5 text-fg-muted">{client.phone}</td>
                       <td className="px-4 py-3.5 text-fg-muted">{client.organization || '—'}</td>
+                      <td className="px-4 py-3.5">
+                        <ClientOrders client={client} owed={owed.get(client.id)} />
+                      </td>
                       <td className="px-4 py-3.5 text-right">
                         <div
                           className="row-actions inline-flex gap-2 justify-end"
@@ -287,7 +306,7 @@ export function ClientList({ onCreate, onEdit }: ClientListProps) {
                     {confirmDelete === client.id && (
                       <tr key={`${client.id}-delete`}>
                         <td
-                          colSpan={5}
+                          colSpan={6}
                           className="bg-danger/10 px-4 py-3"
                           data-testid="delete-confirmation"
                         >
@@ -386,6 +405,9 @@ export function ClientList({ onCreate, onEdit }: ClientListProps) {
                           {t('clients.taxId')}: {client.taxId}
                         </p>
                       )}
+                      <div className="mt-3 text-sm">
+                        <ClientOrders client={client} owed={owed.get(client.id)} />
+                      </div>
                     </div>
                     <div className="flex flex-wrap gap-2">
                       <Button
@@ -418,5 +440,47 @@ export function ClientList({ onCreate, onEdit }: ClientListProps) {
         )}
       </div>
     </div>
+  );
+}
+
+const clientLinkClass =
+  'rounded font-medium underline underline-offset-2 hover:text-fg-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus';
+
+/** How many orders a client has and what it still owes, each linking to those orders. */
+function ClientOrders({ client, owed }: { client: Client; owed?: OwedAmount[] }) {
+  const { t } = useLanguage();
+  if (client.workOrderCount === 0) {
+    return <span className="text-fg-muted">{t('clients.noOrders')}</span>;
+  }
+  const ordersHref = `/work-orders?client=${encodeURIComponent(client.id)}`;
+  const orders =
+    client.workOrderCount === 1
+      ? t('workOrders.resultCountOne')
+      : t('workOrders.resultCount', { count: client.workOrderCount });
+  const balance =
+    owed && owed.length > 0
+      ? t('workOrders.balanceDue', {
+          value: owed.map((amount) => formatMoney(amount.minor, amount.currency)).join(' · '),
+        })
+      : null;
+  return (
+    <span className="flex flex-col items-start gap-0.5 tabular-nums">
+      <a
+        href={ordersHref}
+        aria-label={t('clients.linkFor', { link: orders, name: client.name })}
+        className={`${clientLinkClass} text-fg-secondary`}
+      >
+        {orders}
+      </a>
+      {balance && (
+        <a
+          href={`${ordersHref}&balance=owed`}
+          aria-label={t('clients.linkFor', { link: balance, name: client.name })}
+          className={`${clientLinkClass} text-xs font-semibold text-fg-primary`}
+        >
+          {balance}
+        </a>
+      )}
+    </span>
   );
 }
