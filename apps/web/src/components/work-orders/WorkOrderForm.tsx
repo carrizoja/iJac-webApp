@@ -1,14 +1,20 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { Client, WorkOrder } from '@ijac/shared';
 import {
   WORK_ORDER_STATUSES,
   WORK_ORDER_PRIORITIES,
   CURRENCIES,
   Currency,
+  formatMoney,
   WorkOrderStatus,
   WorkOrderPriority,
 } from '@ijac/shared';
-import { ApiRequestError, createWorkOrder, updateWorkOrder } from '../../lib/resources';
+import {
+  ApiRequestError,
+  createWorkOrder,
+  listPayments,
+  updateWorkOrder,
+} from '../../lib/resources';
 import { formatMoneyInput, parseMoneyInput } from '../../lib/money';
 import { Input, Textarea, Select, Button, Alert } from '../ui';
 import { useLanguage } from '../../hooks/useLanguage';
@@ -50,6 +56,28 @@ export function WorkOrderForm({ clients, workOrder, onSaved, onCancel }: WorkOrd
   const [submitting, setSubmitting] = useState(false);
   const dueDateRef = useRef<HTMLInputElement>(null);
 
+  /**
+   * What has been paid on the order being edited. Once money is paid the server refuses a new
+   * currency and a price below it, so the form says so up front. A failed load leaves both
+   * editable; the server still refuses and the error explains why.
+   */
+  const [paidMinor, setPaidMinor] = useState(0);
+  const pricedOrderId = workOrder?.totalPriceMinor !== undefined ? workOrder.id : undefined;
+
+  useEffect(() => {
+    if (!pricedOrderId) return;
+    let active = true;
+    listPayments(pricedOrderId)
+      .then((response) => active && setPaidMinor(response.balance?.paidMinor ?? 0))
+      .catch(() => undefined);
+    return () => {
+      active = false;
+    };
+  }, [pricedOrderId]);
+
+  const hasPaid = paidMinor > 0 && workOrder?.currency !== undefined;
+  const paidText = hasPaid ? formatMoney(paidMinor, workOrder.currency as Currency) : '';
+
   const validate = (): boolean => {
     const next: FormErrors = {};
     if (!form.title.trim()) next.title = t('workOrders.validation.title');
@@ -57,8 +85,11 @@ export function WorkOrderForm({ clients, workOrder, onSaved, onCancel }: WorkOrd
     if (!form.status) next.status = t('workOrders.validation.status');
     if (!form.priority) next.priority = t('workOrders.validation.priority');
     const hasPrice = form.totalPrice.trim() !== '';
-    if (hasPrice && parseMoneyInput(form.totalPrice) === null) {
+    const priceMinor = parseMoneyInput(form.totalPrice);
+    if (hasPrice && priceMinor === null) {
       next.totalPrice = t('workOrders.validation.totalPrice');
+    } else if (hasPaid && (priceMinor === null || priceMinor < paidMinor)) {
+      next.totalPrice = t('workOrders.validation.belowPaid', { amount: paidText });
     } else if (!hasPrice && form.currency) {
       next.totalPrice = t('workOrders.validation.priceForCurrency');
     }
@@ -110,6 +141,9 @@ export function WorkOrderForm({ clients, workOrder, onSaved, onCancel }: WorkOrd
           }),
           ...(serverErrors.currency && { currency: t('workOrders.validation.currency') }),
         });
+      } else if (error instanceof ApiRequestError && error.code === 'CONFLICT') {
+        // On an update the server only refuses pricing that its payments no longer allow.
+        setErrors({ general: t('workOrders.paidPricingConflict') });
       } else {
         setErrors({ general: t('workOrders.saveError') });
       }
@@ -198,7 +232,11 @@ export function WorkOrderForm({ clients, workOrder, onSaved, onCancel }: WorkOrd
           id="totalPrice"
           inputMode="decimal"
           label={t('workOrders.totalPrice')}
-          helpText={t('workOrders.totalPriceHelp')}
+          helpText={
+            hasPaid
+              ? t('workOrders.paidFloorHelp', { amount: paidText })
+              : t('workOrders.totalPriceHelp')
+          }
           value={form.totalPrice}
           onChange={(e) => setForm({ ...form, totalPrice: e.target.value })}
           error={errors.totalPrice}
@@ -209,6 +247,8 @@ export function WorkOrderForm({ clients, workOrder, onSaved, onCancel }: WorkOrd
           value={form.currency}
           onChange={(e) => setForm({ ...form, currency: e.target.value })}
           error={errors.currency}
+          disabled={hasPaid}
+          helpText={hasPaid ? t('workOrders.currencyLockedHelp') : undefined}
         >
           <option value="">{t('workOrders.selectCurrency')}</option>
           {CURRENCIES.map((c) => (
