@@ -133,6 +133,16 @@ describe('TodayDashboard', () => {
     expect(within(count).getByText('2')).toHaveClass('text-3xl', 'text-destructive-text');
   });
 
+  it('links the overdue count to the overdue orders', async () => {
+    listWorkOrders.mockResolvedValue({
+      items: [order({ id: 'a', title: 'Uno', dueDate: '2026-11-02T00:00:00.000Z' })],
+    });
+    render(<TodayDashboard />);
+
+    const link = await within(section('Atención')).findByRole('link', { name: '1 vencida' });
+    expect(link).toHaveAttribute('href', '/work-orders?due=overdue');
+  });
+
   it('shows no overdue count when nothing is overdue', async () => {
     listWorkOrders.mockResolvedValue({
       items: [order({ id: 'soon', title: 'Instalar red', dueDate: '2026-11-09T00:00:00.000Z' })],
