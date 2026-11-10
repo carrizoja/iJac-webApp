@@ -7,7 +7,7 @@ import { TriangleAlert } from 'lucide-react';
 
 interface ClientFormProps {
   client?: Client;
-  onSaved: () => void;
+  onSaved: (saved: Client) => void;
   onCancel: () => void;
 }
 
@@ -58,12 +58,8 @@ export function ClientForm({ client, onSaved, onCancel }: ClientFormProps) {
     setSubmitting(true);
     setErrors({});
     try {
-      if (client) {
-        await updateClient(client.id, form);
-      } else {
-        await createClient(form);
-      }
-      onSaved();
+      const saved = client ? await updateClient(client.id, form) : await createClient(form);
+      onSaved(saved);
     } catch (error) {
       const serverErrors = error instanceof ApiRequestError ? error.fieldErrors : undefined;
       if (serverErrors?.taxId) {

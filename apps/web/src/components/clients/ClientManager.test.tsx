@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import type { Client } from '@ijac/shared';
 
 vi.mock('./ClientList', () => ({
@@ -34,12 +34,30 @@ vi.mock('./ClientList', () => ({
 vi.mock('./ClientForm', async () => {
   const { useState } = await import('react');
   return {
-    ClientForm: ({ client, onCancel }: { client?: Client; onCancel: () => void }) => {
+    ClientForm: ({
+      client,
+      onSaved,
+      onCancel,
+    }: {
+      client?: Client;
+      onSaved: (saved: Client) => void;
+      onCancel: () => void;
+    }) => {
       const [name] = useState(client?.name ?? '');
       return (
         <div>
           <p data-testid="form-client-name">{name}</p>
           <button onClick={onCancel}>Cancelar formulario</button>
+          <button
+            onClick={() =>
+              onSaved({
+                ...(client ?? { id: 'client-new' }),
+                name: client?.name ?? 'Nuevo SA',
+              } as Client)
+            }
+          >
+            Guardar formulario
+          </button>
         </div>
       );
     },
@@ -49,6 +67,29 @@ vi.mock('./ClientForm', async () => {
 import { ClientManager } from './ClientManager';
 
 describe('ClientManager', () => {
+  it('confirms a new client by name and puts focus on the confirmation', async () => {
+    render(<ClientManager />);
+    fireEvent.click(screen.getByRole('button', { name: 'Nuevo cliente' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Guardar formulario' }));
+
+    const notice = screen.getByTestId('client-saved');
+    expect(within(notice).getByRole('status')).toHaveTextContent('Cliente creado · Nuevo SA');
+    expect(screen.queryByTestId('client-form-panel')).not.toBeInTheDocument();
+    await waitFor(() => expect(notice).toHaveFocus());
+  });
+
+  it('confirms an edit, and clears the confirmation when another form opens', () => {
+    render(<ClientManager />);
+    fireEvent.click(screen.getByRole('button', { name: 'Editar Acme' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Guardar formulario' }));
+
+    expect(within(screen.getByTestId('client-saved')).getByRole('status')).toHaveTextContent(
+      'Cliente guardado · Acme',
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Editar Beta' }));
+    expect(screen.queryByTestId('client-saved')).not.toBeInTheDocument();
+  });
+
   it('shows the editorial form panel for create and edit flows', () => {
     render(<ClientManager />);
 

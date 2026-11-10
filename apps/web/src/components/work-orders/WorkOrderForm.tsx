@@ -25,7 +25,7 @@ interface WorkOrderFormProps {
   clients: Client[];
   /** The full order being edited; list summaries lack the description, which saving would erase. */
   workOrder?: WorkOrder;
-  onSaved: () => void;
+  onSaved: (saved: WorkOrder) => void;
   onCancel: () => void;
 }
 
@@ -104,6 +104,7 @@ export function WorkOrderForm({ clients, workOrder, onSaved, onCancel }: WorkOrd
     setSubmitting(true);
     setErrors({});
     try {
+      let saved: WorkOrder;
       const payload = {
         title: form.title,
         description: form.description,
@@ -117,7 +118,7 @@ export function WorkOrderForm({ clients, workOrder, onSaved, onCancel }: WorkOrd
           ? { totalPriceMinor, currency: form.currency as Currency }
           : undefined;
       if (workOrder) {
-        await updateWorkOrder(workOrder.id, {
+        saved = await updateWorkOrder(workOrder.id, {
           ...payload,
           dueDate: form.dueDate || null,
           // `null` clears both price and currency on the server.
@@ -125,13 +126,13 @@ export function WorkOrderForm({ clients, workOrder, onSaved, onCancel }: WorkOrd
             (workOrder.totalPriceMinor !== undefined ? { totalPriceMinor: null } : {})),
         });
       } else {
-        await createWorkOrder({
+        saved = await createWorkOrder({
           ...payload,
           ...(form.dueDate ? { dueDate: form.dueDate } : {}),
           ...pricing,
         });
       }
-      onSaved();
+      onSaved(saved);
     } catch (error) {
       const serverErrors = error instanceof ApiRequestError ? error.fieldErrors : undefined;
       if (serverErrors?.totalPriceMinor || serverErrors?.currency) {

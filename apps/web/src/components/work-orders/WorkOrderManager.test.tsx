@@ -2,15 +2,21 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import type { Client } from '@ijac/shared';
 
-const { listClients, listWorkOrders, deleteWorkOrder, getWorkOrder, updateWorkOrder } = vi.hoisted(
-  () => ({
-    listClients: vi.fn(),
-    listWorkOrders: vi.fn(),
-    deleteWorkOrder: vi.fn(),
-    getWorkOrder: vi.fn(),
-    updateWorkOrder: vi.fn(),
-  }),
-);
+const {
+  listClients,
+  listWorkOrders,
+  deleteWorkOrder,
+  getWorkOrder,
+  updateWorkOrder,
+  createWorkOrder,
+} = vi.hoisted(() => ({
+  listClients: vi.fn(),
+  listWorkOrders: vi.fn(),
+  deleteWorkOrder: vi.fn(),
+  getWorkOrder: vi.fn(),
+  updateWorkOrder: vi.fn(),
+  createWorkOrder: vi.fn(),
+}));
 
 vi.mock('../../lib/resources', () => ({
   listClients,
@@ -18,7 +24,7 @@ vi.mock('../../lib/resources', () => ({
   deleteWorkOrder,
   getWorkOrder,
   updateWorkOrder,
-  createWorkOrder: vi.fn(),
+  createWorkOrder,
   ApiRequestError: class ApiRequestError extends Error {},
 }));
 
@@ -212,6 +218,55 @@ describe('WorkOrderManager', () => {
       fireEvent.click(screen.getByRole('button', { name: 'Editar Beta' }));
 
       await waitFor(() => expect(screen.getByLabelText(/título/i)).toHaveValue('Beta'));
+    });
+  });
+
+  describe('after saving', () => {
+    beforeEach(() => {
+      listClients.mockResolvedValue({ items: [client('c1', 'Acme')] });
+      listWorkOrders.mockResolvedValue({ items: [summary] });
+    });
+
+    it('confirms a new order by name, links to it, and puts focus on the confirmation', async () => {
+      createWorkOrder.mockResolvedValue({ ...fullOrder, id: 'wo-new', title: 'Cambio de disco' });
+      render(<WorkOrderManager />);
+
+      fireEvent.click(await screen.findByRole('button', { name: 'Nueva orden' }));
+      const form = within(screen.getByTestId('work-order-form-panel'));
+      fireEvent.change(form.getByLabelText(/título/i), { target: { value: 'Cambio de disco' } });
+      await waitFor(() => expect(form.getByRole('option', { name: 'Acme' })).toBeInTheDocument());
+      fireEvent.change(form.getByLabelText(/^cliente/i), { target: { value: 'c1' } });
+      fireEvent.change(form.getByLabelText(/estado/i), { target: { value: 'open' } });
+      fireEvent.change(form.getByLabelText(/prioridad/i), { target: { value: 'normal' } });
+      fireEvent.click(form.getByRole('button', { name: 'Crear orden' }));
+
+      const notice = await screen.findByTestId('work-order-saved');
+      expect(within(notice).getByRole('status')).toHaveTextContent(
+        'Orden creada · Cambio de disco',
+      );
+      expect(within(notice).getByRole('link', { name: 'Abrir orden' })).toHaveAttribute(
+        'href',
+        '/work-orders/details?id=wo-new',
+      );
+      expect(screen.queryByTestId('work-order-form-panel')).not.toBeInTheDocument();
+      await waitFor(() => expect(notice).toHaveFocus());
+    });
+
+    it('confirms an edit, and clears the confirmation when another form opens', async () => {
+      getWorkOrder.mockResolvedValue(fullOrder);
+      updateWorkOrder.mockResolvedValue({ ...fullOrder, title: 'Revisión anual' });
+      render(<WorkOrderManager />);
+
+      fireEvent.click(await screen.findByRole('button', { name: 'Editar Revisión' }));
+      fireEvent.click(await screen.findByRole('button', { name: /guardar cambios/i }));
+
+      const notice = await screen.findByTestId('work-order-saved');
+      expect(within(notice).getByRole('status')).toHaveTextContent(
+        'Orden guardada · Revisión anual',
+      );
+
+      fireEvent.click(await screen.findByRole('button', { name: 'Nueva orden' }));
+      expect(screen.queryByTestId('work-order-saved')).not.toBeInTheDocument();
     });
   });
 

@@ -35,4 +35,5 @@ export type {
 
 // Dialog/Modal
 export { Dialog, useDialog } from './Dialog';
+export { SavedNotice } from './SavedNotice';
 export type { DialogProps } from './Dialog';
