@@ -209,8 +209,8 @@ describe('TodayDashboard', () => {
         dueDate: `2026-10-${String(10 + i).padStart(2, '0')}T00:00:00.000Z`,
       }),
     );
-    const orderLinks = (within: ReturnType<typeof screen.getByRole>) =>
-      Array.from(within.querySelectorAll('a[href^="/work-orders/details"]')).map(
+    const orderLinks = (container: HTMLElement) =>
+      Array.from(container.querySelectorAll('a[href^="/work-orders/details"]')).map(
         (link) => link.textContent,
       );
 
@@ -250,13 +250,14 @@ describe('TodayDashboard', () => {
 
     it('shows the five largest balances, with the total and a link to all of them', async () => {
       listWorkOrders.mockResolvedValue({
+        // Loaded smallest first, so the five shown must come from sorting by balance.
         items: Array.from({ length: 7 }, (_, i) =>
           order({
             id: `owed-${i}`,
-            title: `Saldo ${i + 1}`,
-            totalPriceMinor: (7 - i) * 10000,
+            title: `Saldo ${7 - i}`,
+            totalPriceMinor: (i + 1) * 10000,
             paidMinor: 0,
-            remainingMinor: (7 - i) * 10000,
+            remainingMinor: (i + 1) * 10000,
             currency: Currency.ARS,
           }),
         ),
