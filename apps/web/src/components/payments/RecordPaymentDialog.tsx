@@ -269,6 +269,8 @@ export function RecordPaymentDialog({
           onChange={(event) => setForm({ ...form, notes: event.target.value })}
           rows={2}
         />
+        {/* Said before saving: the API has no edit or delete for payments, only void. */}
+        <p className="text-sm text-fg-muted">{t('payments.recordPermanent')}</p>
       </form>
     </Dialog>
   );
