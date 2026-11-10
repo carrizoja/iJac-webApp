@@ -302,13 +302,13 @@ export const es = {
   'payments.validation.date': 'Ingresá una fecha válida',
   'payments.validation.method': 'Elegí una forma de pago',
   'payments.recordError': 'No se pudo registrar el pago.',
+  'payments.recordPermanent':
+    'Un pago registrado no se puede editar ni borrar: si hay un error, se anula.',
   'payments.void': 'Anular',
   'payments.voidNamed': 'Anular recibo {number}',
   'payments.voidTitle': 'Anular recibo {number}',
   'payments.voidWarning':
     'El pago deja de contar en el saldo y la anulación no se puede deshacer. El recibo se conserva marcado como anulado.',
-  'payments.recordPermanent':
-    'Un pago registrado no se puede editar ni borrar: si hay un error, se anula.',
   'payments.voidReasonLabel': 'Motivo de la anulación',
   'payments.voidReasonRequired': 'Ingresá el motivo de la anulación',
   'payments.voidSubmit': 'Anular pago',
@@ -679,13 +679,13 @@ export const en = {
   'payments.validation.date': 'Enter a valid date',
   'payments.validation.method': 'Choose a payment method',
   'payments.recordError': 'The payment could not be recorded.',
+  'payments.recordPermanent':
+    'A recorded payment cannot be edited or deleted: if it is wrong, void it.',
   'payments.void': 'Void',
   'payments.voidNamed': 'Void receipt {number}',
   'payments.voidTitle': 'Void receipt {number}',
   'payments.voidWarning':
     'The payment stops counting toward the balance, and voiding cannot be undone. The receipt is kept, marked as voided.',
-  'payments.recordPermanent':
-    'A recorded payment cannot be edited or deleted: if it is wrong, void it.',
   'payments.voidReasonLabel': 'Reason for voiding',
   'payments.voidReasonRequired': 'Enter the reason for voiding',
   'payments.voidSubmit': 'Void payment',

@@ -220,7 +220,7 @@ export function RecordPaymentDialog({
         {blocked && (
           <Alert type="warning" role="alert">
             <p>{t('payments.profileMissing')}</p>
-            <a href="/settings" className="font-medium underline">
+            <a href="/settings" className="font-semibold underline">
               {t('payments.profileLink')}
             </a>
           </Alert>
