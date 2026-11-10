@@ -3,13 +3,23 @@ import { act, fireEvent, render, screen, waitFor, within } from '@testing-librar
 import type { Client, WorkOrderClientSummary } from '@ijac/shared';
 import { Currency, WorkOrderPriority, WorkOrderStatus, formatMoney } from '@ijac/shared';
 
-const { listClients, deleteClient, listWorkOrders } = vi.hoisted(() => ({
+const { listClients, deleteClient, listWorkOrders, ApiRequestError } = vi.hoisted(() => ({
   listClients: vi.fn(),
   deleteClient: vi.fn(),
   listWorkOrders: vi.fn(),
+  ApiRequestError: class ApiRequestError extends Error {
+    constructor(readonly code: string) {
+      super(code);
+    }
+  },
 }));
 
-vi.mock('../../lib/resources', () => ({ listClients, deleteClient, listWorkOrders }));
+vi.mock('../../lib/resources', () => ({
+  listClients,
+  deleteClient,
+  listWorkOrders,
+  ApiRequestError,
+}));
 
 import { ClientList } from './ClientList';
 
@@ -530,6 +540,86 @@ describe('ClientList', () => {
       ).toBeInTheDocument();
       await waitFor(() => expect(listWorkOrders).toHaveBeenCalled());
       expect(screen.queryByRole('link', { name: /^Saldo/ })).toBeNull();
+    });
+  });
+
+  describe('a client that has orders', () => {
+    const busy: Client = { ...client, id: 'busy', name: 'Con órdenes', workOrderCount: 2 };
+    const free: Client = { ...secondClient, id: 'free', name: 'Sin órdenes aún' };
+    const blockedName = 'No se puede eliminar Con órdenes: tiene órdenes de trabajo.';
+    const reason = 'No se puede eliminar un cliente que tiene órdenes de trabajo.';
+
+    it('does not offer to delete it, in table and card views, but keeps the button reachable', async () => {
+      listClients.mockResolvedValue({ items: [busy, free] });
+      render(<ClientList onCreate={vi.fn()} onEdit={vi.fn()} />);
+
+      const expectBlocked = (button: HTMLElement) => {
+        expect(button).toHaveAttribute('aria-disabled', 'true');
+        expect(button).not.toBeDisabled();
+        expect(button).toHaveAttribute('title', reason);
+        button.focus();
+        expect(button).toHaveFocus();
+      };
+      expectBlocked(await screen.findByRole('button', { name: blockedName }));
+      expect(screen.getByRole('button', { name: 'Eliminar Sin órdenes aún' })).toBeEnabled();
+
+      fireEvent.click(screen.getByRole('button', { name: 'Tarjetas' }));
+      expectBlocked(screen.getByRole('button', { name: blockedName }));
+      expect(screen.getByRole('button', { name: 'Eliminar Sin órdenes aún' })).toBeEnabled();
+    });
+
+    it('says why on tap and links to its orders, in table and card views', async () => {
+      listClients.mockResolvedValue({ items: [busy] });
+      render(<ClientList onCreate={vi.fn()} onEdit={vi.fn()} />);
+
+      const expectNoteOnTap = (button: HTMLElement) => {
+        expect(screen.queryByTestId('client-delete-blocked')).not.toBeInTheDocument();
+        fireEvent.click(button);
+        // No delete confirmation opens.
+        expect(screen.queryByRole('button', { name: 'Eliminar' })).not.toBeInTheDocument();
+        const note = screen.getByTestId('client-delete-blocked');
+        expect(within(note).getByRole('status')).toHaveTextContent(reason);
+        expect(within(note).getByRole('link', { name: 'Ver sus órdenes' })).toHaveAttribute(
+          'href',
+          '/work-orders?client=busy',
+        );
+        fireEvent.click(within(note).getByRole('button', { name: 'Entendido' }));
+        expect(screen.queryByTestId('client-delete-blocked')).not.toBeInTheDocument();
+        expect(button).toHaveFocus();
+      };
+
+      expectNoteOnTap(await screen.findByRole('button', { name: blockedName }));
+      fireEvent.click(screen.getByRole('button', { name: 'Tarjetas' }));
+      expectNoteOnTap(screen.getByRole('button', { name: blockedName }));
+      expect(deleteClient).not.toHaveBeenCalled();
+    });
+
+    it('explains a refusal from the server instead of asking to try again', async () => {
+      // The list said no orders, but one was added since: the API refuses with a conflict.
+      listClients.mockResolvedValue({ items: [client] });
+      deleteClient.mockRejectedValue(new ApiRequestError('CONFLICT'));
+      render(<ClientList onCreate={vi.fn()} onEdit={vi.fn()} />);
+
+      fireEvent.click(await screen.findByRole('button', { name: 'Eliminar Acme Inc' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Eliminar' }));
+
+      expect(await screen.findByText(reason)).toBeInTheDocument();
+      expect(
+        screen.queryByText('No se pudo eliminar el cliente. Intentá nuevamente.'),
+      ).not.toBeInTheDocument();
+    });
+
+    it('keeps the generic error for other failures', async () => {
+      listClients.mockResolvedValue({ items: [client] });
+      deleteClient.mockRejectedValue(new Error('offline'));
+      render(<ClientList onCreate={vi.fn()} onEdit={vi.fn()} />);
+
+      fireEvent.click(await screen.findByRole('button', { name: 'Eliminar Acme Inc' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Eliminar' }));
+
+      expect(
+        await screen.findByText('No se pudo eliminar el cliente. Intentá nuevamente.'),
+      ).toBeInTheDocument();
     });
   });
 
