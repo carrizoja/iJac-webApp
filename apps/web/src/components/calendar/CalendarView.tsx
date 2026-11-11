@@ -236,7 +236,8 @@ export function CalendarView() {
                 dayEvents.length === 0 ? 'hidden sm:block' : ''
               } ${
                 isToday
-                  ? 'border-focus bg-bg-secondary ring-1 ring-focus'
+                  ? // Today takes the brand accent; the focus color is kept for keyboard focus.
+                    'border-accent-brand bg-bg-secondary ring-1 ring-accent-brand'
                   : isCurrentMonth
                     ? 'border-border-primary bg-bg-secondary'
                     : 'border-border-muted bg-bg-tertiary'
@@ -245,7 +246,7 @@ export function CalendarView() {
               <div
                 className={`hidden text-right text-sm sm:block ${
                   isToday
-                    ? 'font-semibold text-focus'
+                    ? 'font-semibold text-accent-brand'
                     : isCurrentMonth
                       ? 'text-fg-primary'
                       : 'text-fg-muted'
@@ -255,7 +256,7 @@ export function CalendarView() {
               </div>
               <div
                 className={`text-sm font-medium first-letter:uppercase sm:hidden ${
-                  isToday ? 'text-focus' : 'text-fg-primary'
+                  isToday ? 'text-accent-brand' : 'text-fg-primary'
                 }`}
               >
                 {formatWeekdayDate(day, language)}

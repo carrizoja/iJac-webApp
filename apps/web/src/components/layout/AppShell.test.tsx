@@ -233,6 +233,25 @@ describe('AppShell', () => {
     expect(email).toBeInTheDocument();
   });
 
+  it('offers a skip link to the main content as the first thing to tab to', () => {
+    render(
+      <AppShell>
+        <div>Content</div>
+      </AppShell>,
+    );
+
+    const skip = screen.getByRole('link', { name: 'Saltar al contenido' });
+    expect(skip).toHaveAttribute('href', '#main-content');
+    // Hidden until it receives keyboard focus.
+    expect(skip).toHaveClass('sr-only', 'focus:not-sr-only');
+    const firstFocusable = document.querySelector('a[href], button');
+    expect(firstFocusable).toBe(skip);
+    const main = screen.getByRole('main');
+    expect(main).toHaveAttribute('id', 'main-content');
+    // Focusable by script, so following the link moves keyboard focus into the content.
+    expect(main).toHaveAttribute('tabindex', '-1');
+  });
+
   it('renders children content in main area', () => {
     render(
       <AppShell>

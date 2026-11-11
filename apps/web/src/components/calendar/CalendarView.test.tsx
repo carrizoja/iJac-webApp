@@ -187,6 +187,21 @@ describe('CalendarView', () => {
       expect(current[0]).toHaveAttribute('data-date', '2026-11-20');
     });
 
+    it('marks today with the brand accent, not the focus ring color', async () => {
+      render(<CalendarView />);
+      await screen.findByTestId('calendar-view');
+
+      const today = screen
+        .getAllByTestId('calendar-day')
+        .find((cell) => cell.getAttribute('aria-current') === 'date') as HTMLElement;
+      // The focus color is kept for keyboard focus, so a marked day never looks focused.
+      const classes = [today, ...today.querySelectorAll('*')].map(
+        (el) => el.getAttribute('class') ?? '',
+      );
+      expect(classes.join(' ')).not.toMatch(/\b(?:border|ring|text)-focus\b/);
+      expect(today).toHaveClass('border-accent-brand');
+    });
+
     it('marks pending orders past their due date as overdue, and nothing else', async () => {
       render(<CalendarView />);
 
