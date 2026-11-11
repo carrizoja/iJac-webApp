@@ -269,6 +269,10 @@ describe('TodayDashboard', () => {
       expect(orderLinks(owed)).toEqual(['Saldo 1', 'Saldo 2', 'Saldo 3', 'Saldo 4', 'Saldo 5']);
       // The total still counts every order, not only the five shown.
       expect(within(owed).getByTestId('owed-totals')).toHaveTextContent('$ 2.800,00');
+      expect(within(within(owed).getByTestId('owed-totals')).getByText('$ 2.800,00')).toHaveClass(
+        'font-heading',
+        'tabular-nums',
+      );
       expect(
         within(owed).getByRole('link', { name: 'Ver las 7 órdenes con saldo' }),
       ).toHaveAttribute('href', '/work-orders?balance=owed');

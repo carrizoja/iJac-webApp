@@ -258,7 +258,7 @@ describe('PaymentsPanel', () => {
 
     const remaining = await screen.findByTestId('payments-remaining');
     expect(remaining).toHaveTextContent('Saldo$ 70.000,00');
-    expect(remaining.querySelector('dd')).toHaveClass('text-3xl');
+    expect(remaining.querySelector('dd')).toHaveClass('text-3xl', 'font-heading', 'tabular-nums');
     expect(screen.queryByText('Saldada')).not.toBeInTheDocument();
   });
 

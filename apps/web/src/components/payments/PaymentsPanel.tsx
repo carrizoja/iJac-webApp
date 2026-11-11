@@ -12,7 +12,18 @@ import { formatMoneyInput } from '../../lib/money';
 import { ApiRequestError, listPayments, voidPayment } from '../../lib/resources';
 import { useLanguage } from '../../hooks/useLanguage';
 import { formatDateOnly } from '../../i18n/format';
-import { Alert, Badge, Button, Dialog, LoadingState, Panel, Textarea } from '../ui';
+import {
+  Alert,
+  Badge,
+  Button,
+  Dialog,
+  LoadingState,
+  Panel,
+  Textarea,
+  cn,
+  figureClass,
+  sectionHeadingClass,
+} from '../ui';
 import { PaymentSummary } from './PaymentSummary';
 import { ReceiptPrintView } from './ReceiptPrintView';
 import { RecordPaymentDialog, paymentMethodKey as methodKey } from './RecordPaymentDialog';
@@ -148,10 +159,7 @@ export function PaymentsPanel({
       aria-labelledby="payments-title"
     >
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h2
-          id="payments-title"
-          className="text-sm font-semibold uppercase tracking-wider text-fg-muted"
-        >
+        <h2 id="payments-title" className={sectionHeadingClass}>
           {t('payments.title')}
         </h2>
         {canRecord && (
@@ -197,7 +205,7 @@ export function PaymentsPanel({
             <dt className="text-xs font-semibold uppercase tracking-wider text-fg-muted">
               {t('payments.remaining')}
             </dt>
-            <dd className="mt-1 flex flex-wrap items-center gap-3 text-3xl font-semibold tabular-nums text-fg-primary">
+            <dd className={cn(figureClass, 'mt-1 flex flex-wrap items-center gap-3 text-3xl')}>
               {money(balance.remainingMinor)}
               {settled && <Badge variant="success">{t('payments.settled')}</Badge>}
             </dd>

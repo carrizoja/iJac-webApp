@@ -8,6 +8,7 @@
 
 // Utilities
 export { cn } from './cn';
+export { figureClass, sectionHeadingClass } from './typography';
 
 // Interaction Primitives
 export { Button, buttonVariants } from './Button';
