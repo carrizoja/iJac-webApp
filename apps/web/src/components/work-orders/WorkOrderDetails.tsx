@@ -13,11 +13,11 @@ import {
   Button,
   buttonVariants,
   cn,
-  sectionHeadingClass,
   Dialog,
   LoadingState,
   MenuButton,
   Panel,
+  sectionHeadingClass,
 } from '../ui';
 import { PaymentsPanel } from '../payments/PaymentsPanel';
 import { priorityBadgeClass } from './workOrderBadges';

@@ -1,9 +1,11 @@
 import { readdirSync, readFileSync, statSync } from 'node:fs';
-import { join, resolve } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import { figureClass, sectionHeadingClass } from './typography';
 
-const root = resolve(process.cwd(), 'src/components');
+// Anchored to this file, so the scan works whatever directory the tests run from.
+const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 
 function componentSources(dir: string): string[] {
   return readdirSync(dir).flatMap((name) => {
@@ -17,8 +19,9 @@ describe('typography', () => {
   it('names sections with real headings, not small uppercase labels', () => {
     // Table headers and field labels may stay uppercase; section headings may not.
     const offenders = componentSources(root).flatMap((path) =>
-      [...readFileSync(path, 'utf8').matchAll(/<h[1-3]\b[^>]*?className="([^"]*)"/gs)]
-        .filter(([, classes]) => /\buppercase\b/.test(classes))
+      // The whole opening tag, so quoted, template and cn(...) class names are all checked.
+      [...readFileSync(path, 'utf8').matchAll(/<h[1-3]\b[^>]*>/gs)]
+        .filter(([tag]) => /\buppercase\b/.test(tag))
         .map(() => path.slice(root.length + 1)),
     );
     expect(offenders).toEqual([]);
