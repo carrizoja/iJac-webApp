@@ -213,6 +213,7 @@ export function ClientList({ onCreate, onEdit, onDeleted }: ClientListProps) {
       <div className="flex flex-col gap-3 rounded-xl border border-border-subtle bg-bg-primary/60 p-3 sm:flex-row sm:items-center sm:justify-between">
         <Input
           id="search"
+          data-shortcut="search"
           type="search"
           value={search}
           onChange={(e) => {

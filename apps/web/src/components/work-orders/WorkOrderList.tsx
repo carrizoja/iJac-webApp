@@ -358,6 +358,7 @@ export function WorkOrderList({ clients, onCreate, onEdit, onDeleted }: WorkOrde
           <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
             <Input
               id={SEARCH_ID}
+              data-shortcut="search"
               type="search"
               aria-label={t('workOrders.search')}
               placeholder={t('workOrders.searchPlaceholder')}

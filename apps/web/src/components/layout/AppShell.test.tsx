@@ -252,6 +252,16 @@ describe('AppShell', () => {
     expect(main).toHaveAttribute('tabindex', '-1');
   });
 
+  it('turns on the keyboard shortcuts: / moves focus to the page search box', () => {
+    render(
+      <AppShell>
+        <input type="search" aria-label="Buscar órdenes" data-shortcut="search" />
+      </AppShell>,
+    );
+    fireEvent.keyDown(document.body, { key: '/' });
+    expect(screen.getByRole('searchbox', { name: 'Buscar órdenes' })).toHaveFocus();
+  });
+
   it('renders children content in main area', () => {
     render(
       <AppShell>

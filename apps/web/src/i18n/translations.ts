@@ -88,6 +88,12 @@ export const es = {
   'home.open.open': 'Abiertas',
   'home.open.inProgress': 'En progreso',
   'settings.pageHeading': 'Configuración',
+  'settings.shortcuts.heading': 'Atajos de teclado',
+  'settings.shortcuts.toggle': 'Activar atajos de teclado',
+  'settings.shortcuts.list': 'Atajos disponibles',
+  'settings.shortcuts.search': 'Buscar en la página',
+  'settings.shortcuts.hint':
+    'Una tecla abre lo más común. No funcionan mientras escribís en un campo ni con un diálogo abierto. Se recuerda en este navegador.',
   'settings.pageDescription':
     'Datos de la organización que se muestran como emisor en los recibos.',
   'settings.profileHeading': 'Perfil de la organización',
@@ -493,6 +499,12 @@ export const en = {
   'home.open.open': 'Open',
   'home.open.inProgress': 'In progress',
   'settings.pageHeading': 'Settings',
+  'settings.shortcuts.heading': 'Keyboard shortcuts',
+  'settings.shortcuts.toggle': 'Turn on keyboard shortcuts',
+  'settings.shortcuts.list': 'Available shortcuts',
+  'settings.shortcuts.search': 'Search this page',
+  'settings.shortcuts.hint':
+    'One key opens the most common tasks. They do not work while you type in a field or with a dialog open. Remembered in this browser.',
   'settings.pageDescription': 'Organization details shown as the issuer on receipts.',
   'settings.profileHeading': 'Organization profile',
   'settings.loading': 'Loading profile...',

@@ -17,6 +17,8 @@ import {
 import { formatMoneyInput } from '../../lib/money';
 import { getCalendarConnectionStatus } from '../../lib/calendar';
 import { collectAllPages } from '../../lib/collectAllPages';
+import { newFormHref } from '../../lib/newFormLink';
+import { readShortcutsEnabled } from '../../lib/shortcutsPreference';
 import { useLanguage } from '../../hooks/useLanguage';
 import { formatDateOnly, localeFor, priorityLabel, statusLabel } from '../../i18n/format';
 import type { TranslationKey } from '../../i18n/translations';
@@ -24,6 +26,7 @@ import {
   Alert,
   Badge,
   Button,
+  buttonVariants,
   LoadingState,
   Panel,
   cn,
@@ -223,6 +226,15 @@ function CollectedBody({ state }: { state: CollectedState }) {
   );
 }
 
+/** The keyboard key that does the same as a button. */
+function KeyHint({ children }: { children: ReactNode }) {
+  return (
+    <kbd className="rounded border border-border-default px-1.5 font-mono text-xs text-fg-muted">
+      {children}
+    </kbd>
+  );
+}
+
 /**
  * The home page: what needs attention today. Every block links to the records behind it;
  * the order blocks share one load, and the calendar line loads on its own.
@@ -372,9 +384,33 @@ export function TodayDashboard() {
 
   const money = (minor: number, currency: Currency) => formatMoney(minor, currency);
 
+  // Key hints show only while the shortcuts are on; read after mount (the server cannot see it).
+  const [shortcutsOn, setShortcutsOn] = useState(false);
+  useEffect(() => setShortcutsOn(readShortcutsEnabled()), []);
+
   return (
     <div className="space-y-6">
-      <p className="text-fg-secondary first-letter:uppercase">{dateLine}</p>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <p className="text-fg-secondary first-letter:uppercase">{dateLine}</p>
+        <div className="flex flex-wrap gap-2">
+          <a
+            href={newFormHref('/work-orders')}
+            aria-keyshortcuts={shortcutsOn ? 'N' : undefined}
+            className={cn(buttonVariants({ variant: 'secondary', size: 'sm' }), 'gap-2 rounded-lg')}
+          >
+            {t('workOrders.new')}
+            {shortcutsOn && <KeyHint>N</KeyHint>}
+          </a>
+          <a
+            href={newFormHref('/clients')}
+            aria-keyshortcuts={shortcutsOn ? 'C' : undefined}
+            className={cn(buttonVariants({ variant: 'secondary', size: 'sm' }), 'gap-2 rounded-lg')}
+          >
+            {t('clients.new')}
+            {shortcutsOn && <KeyHint>C</KeyHint>}
+          </a>
+        </div>
+      </div>
 
       {orders.kind === 'error' && (
         <Alert

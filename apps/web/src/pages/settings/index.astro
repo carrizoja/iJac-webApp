@@ -3,6 +3,7 @@ import Layout from '../../layouts/Layout.astro';
 import { Protected } from '../../components/layout/Protected';
 import { AppShell } from '../../components/layout/AppShell';
 import { OrganizationSettings } from '../../components/settings/OrganizationSettings';
+import { ShortcutSettings } from '../../components/settings/ShortcutSettings';
 ---
 
 <Layout titleKey="title.settings">
@@ -13,6 +14,10 @@ import { OrganizationSettings } from '../../components/settings/OrganizationSett
       <section class="mt-6 rounded-2xl border border-border-default bg-bg-secondary/80 p-4 sm:p-6" aria-labelledby="settings-profile-heading">
         <h2 id="settings-profile-heading" class="mb-5 font-heading text-xl font-semibold text-fg-primary" data-i18n="settings.profileHeading">Perfil de la organización</h2>
         <OrganizationSettings client:load />
+      </section>
+      <section class="mt-6 rounded-2xl border border-border-default bg-bg-secondary/80 p-4 sm:p-6" aria-labelledby="settings-shortcuts-heading">
+        <h2 id="settings-shortcuts-heading" class="mb-5 font-heading text-xl font-semibold text-fg-primary" data-i18n="settings.shortcuts.heading">Atajos de teclado</h2>
+        <ShortcutSettings client:load />
       </section>
     </AppShell>
   </Protected>
