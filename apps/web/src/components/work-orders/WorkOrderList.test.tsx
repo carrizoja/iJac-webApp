@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import type { WorkOrderClientSummary, Client } from '@ijac/shared';
-import { WorkOrderStatus, WorkOrderPriority } from '@ijac/shared';
+import { Currency, WorkOrderStatus, WorkOrderPriority } from '@ijac/shared';
 
 const { listWorkOrders, deleteWorkOrder, ApiRequestError } = vi.hoisted(() => ({
   listWorkOrders: vi.fn(),
@@ -309,7 +309,8 @@ describe('WorkOrderList', () => {
       );
       // The API has no overdue filter; the list narrows what it already loaded.
       expect(listWorkOrders).toHaveBeenCalledTimes(1);
-      expect(screen.getByRole('button', { name: 'Filtros (1)' })).toBeInTheDocument();
+      // Toggles show their own state, so they do not add to the Filtros count.
+      expect(screen.getByRole('button', { name: 'Filtros' })).toBeInTheDocument();
     });
 
     it('opens filtered to overdue from the Hoy link, and clears it with the filters', async () => {
@@ -471,6 +472,113 @@ describe('WorkOrderList', () => {
       fireEvent.click(overdue);
       expect(overdue).toHaveAttribute('aria-pressed', 'false');
       expect(screen.getByRole('link', { name: 'A tiempo' })).toBeInTheDocument();
+    });
+  });
+
+  describe('a lighter card and toolbar', () => {
+    beforeEach(() => {
+      vi.useFakeTimers({ toFake: ['Date'] });
+      vi.setSystemTime(new Date(2026, 10, 6, 9, 0));
+    });
+    afterEach(() => vi.useRealTimers());
+
+    const owing: WorkOrderClientSummary = {
+      ...sampleWorkOrder,
+      id: 'owing',
+      title: 'Con saldo',
+      priority: WorkOrderPriority.URGENT,
+      dueDate: '2026-11-20T00:00:00.000Z',
+      totalPriceMinor: 15000000,
+      paidMinor: 5000000,
+      remainingMinor: 10000000,
+      currency: Currency.ARS,
+    };
+    const paid: WorkOrderClientSummary = {
+      ...sampleWorkOrder,
+      id: 'paid',
+      title: 'Ya pagada',
+      priority: WorkOrderPriority.NORMAL,
+      dueDate: undefined,
+      totalPriceMinor: 5000000,
+      paidMinor: 5000000,
+      remainingMinor: 0,
+      currency: Currency.ARS,
+      hasPayments: true,
+    };
+    const card = (title: string) =>
+      screen
+        .getByRole('link', { name: title })
+        .closest('[data-testid="work-order-card"]') as HTMLElement;
+
+    async function renderCards(items: WorkOrderClientSummary[]) {
+      listWorkOrders.mockResolvedValue({ items });
+      render(<WorkOrderList clients={[sampleClient]} onCreate={vi.fn()} onEdit={vi.fn()} />);
+      await screen.findByRole('link', { name: items[0].title });
+      fireEvent.click(screen.getByRole('button', { name: 'Tarjetas' }));
+    }
+
+    it('shows the money on a card as one line of text', async () => {
+      await renderCards([owing, paid]);
+      expect(within(card('Con saldo')).getByTestId('card-money')).toHaveTextContent(
+        '$ 150.000,00 · Saldo $ 100.000,00',
+      );
+      expect(within(card('Ya pagada')).getByTestId('card-money')).toHaveTextContent(
+        '$ 50.000,00 · Pagada',
+      );
+    });
+
+    it('shows priority on a card only when it is high or urgent', async () => {
+      await renderCards([owing, paid]);
+      expect(within(card('Con saldo')).getByText('Urgente')).toBeInTheDocument();
+      expect(within(card('Ya pagada')).queryByText('Normal')).not.toBeInTheDocument();
+    });
+
+    it('shows a due date on a card as text, and keeps overdue as a badge', async () => {
+      const late = { ...owing, id: 'late', title: 'Atrasada', dueDate: '2026-11-02T00:00:00.000Z' };
+      await renderCards([owing, late]);
+      expect(within(card('Con saldo')).getByText('Vence 20 de noviembre de 2026')).not.toHaveClass(
+        'rounded-md',
+      );
+      expect(within(card('Atrasada')).getByText(/^Vencida · 2 de noviembre/)).toBeInTheDocument();
+    });
+
+    it('gives cards the same icon actions as the table', async () => {
+      await renderCards([owing, paid]);
+      const edit = within(card('Con saldo')).getByRole('button', { name: 'Editar Con saldo' });
+      expect(edit).toHaveAttribute('title', 'Editar');
+      expect(
+        within(card('Con saldo')).getByRole('button', { name: 'Eliminar Con saldo' }),
+      ).toHaveAttribute('title', 'Eliminar');
+      // A blocked delete still says why.
+      expect(
+        within(card('Ya pagada')).getByRole('button', {
+          name: 'No se puede eliminar Ya pagada: tiene pagos registrados. Cancelala en su lugar.',
+        }),
+      ).toHaveAttribute('aria-disabled', 'true');
+    });
+
+    it('keeps Vencidas and Con saldo pendiente in view, and folds status, priority and client on every screen', async () => {
+      listWorkOrders.mockResolvedValue({ items: [owing] });
+      render(<WorkOrderList clients={[sampleClient]} onCreate={vi.fn()} onEdit={vi.fn()} />);
+      const toggle = await screen.findByRole('button', { name: 'Filtros' });
+      const panel = document.getElementById(toggle.getAttribute('aria-controls') ?? '')!;
+
+      expect(toggle).not.toHaveClass('sm:hidden');
+      expect(panel).toHaveClass('hidden');
+      expect(panel).not.toHaveClass('sm:contents');
+      for (const name of ['Filtrar por estado', 'Filtrar por prioridad', 'Filtrar por cliente']) {
+        expect(within(panel).getByLabelText(name)).toBeInTheDocument();
+      }
+      expect(within(panel).queryByRole('button', { name: 'Vencidas' })).toBeNull();
+      expect(within(panel).queryByRole('button', { name: 'Con saldo pendiente' })).toBeNull();
+
+      // The count is for what is folded away; the toggles show their own state.
+      fireEvent.click(screen.getByRole('button', { name: 'Vencidas' }));
+      expect(toggle).toHaveTextContent(/^Filtros$/);
+      fireEvent.change(screen.getByLabelText('Filtrar por estado'), {
+        target: { value: WorkOrderStatus.OPEN },
+      });
+      expect(toggle).toHaveTextContent('Filtros (1)');
     });
   });
 
@@ -781,11 +889,12 @@ describe('WorkOrderList', () => {
       await screen.findByRole('link', { name: 'Reparación de Servidor' });
       for (const view of ['table', 'cards']) {
         if (view === 'cards') fireEvent.click(screen.getByRole('button', { name: 'Tarjetas' }));
-        expect(within(row('Reparación de Servidor')).getByText('$ 150.000,00')).toBeInTheDocument();
-        expect(
-          within(row('Reparación de Servidor')).getByText('Saldo $ 100.000,00'),
-        ).toBeInTheDocument();
-        expect(within(row('Ya pagada')).getByText('Pagada')).toBeInTheDocument();
+        // The table stacks the total over the balance; a card puts them on one line.
+        const money = (name: string) =>
+          view === 'table' ? row(name) : within(row(name)).getByTestId('card-money');
+        expect(money('Reparación de Servidor')).toHaveTextContent('$ 150.000,00');
+        expect(money('Reparación de Servidor')).toHaveTextContent('Saldo $ 100.000,00');
+        expect(money('Ya pagada')).toHaveTextContent('Pagada');
         // A cancelled order is not collected, so it shows no balance due.
         expect(within(row('Cancelada con saldo')).queryByText(/^Saldo/)).not.toBeInTheDocument();
         expect(
@@ -810,7 +919,8 @@ describe('WorkOrderList', () => {
       );
       // The API has no balance filter; the list narrows what it already loaded.
       expect(listWorkOrders).toHaveBeenCalledTimes(1);
-      expect(screen.getByRole('button', { name: 'Filtros (1)' })).toBeInTheDocument();
+      // Toggles show their own state, so they do not add to the Filtros count.
+      expect(screen.getByRole('button', { name: 'Filtros' })).toBeInTheDocument();
     });
 
     it('opens filtered to balances due from the Hoy link, and clears it with the filters', async () => {
@@ -1090,7 +1200,7 @@ describe('WorkOrderList', () => {
       const toggle = await screen.findByRole('button', { name: 'Filtros' });
       const panel = document.getElementById(toggle.getAttribute('aria-controls') ?? '');
       expect(toggle).toHaveAttribute('aria-expanded', 'false');
-      expect(panel).toHaveClass('hidden', 'sm:contents');
+      expect(panel).toHaveClass('hidden');
       expect(within(panel as HTMLElement).getByLabelText('Filtrar por estado')).toBeInTheDocument();
       // Search stays outside, always visible.
       expect(within(panel as HTMLElement).queryByLabelText('Buscar órdenes')).toBeNull();
