@@ -1,3 +1,11 @@
+/**
+ * A theme color read from a CSS variable that still takes opacity modifiers such as
+ * `bg-bg-primary/60`. A plain `var(--color-x)` makes Tailwind skip those classes silently;
+ * without a modifier, `<alpha-value>` is 1 and the color is unchanged.
+ */
+const token = (name) =>
+  `color-mix(in srgb, var(--color-${name}) calc(<alpha-value> * 100%), transparent)`;
+
 /** @type {import('tailwindcss').Config} */
 export default {
   darkMode: 'class',
@@ -40,69 +48,68 @@ export default {
       },
       colors: {
         /* Semantic backgrounds */
-        'bg-primary': 'var(--color-bg-primary)',
-        'bg-secondary': 'var(--color-bg-secondary)',
-        'bg-tertiary': 'var(--color-bg-tertiary)',
+        'bg-primary': token('bg-primary'),
+        'bg-secondary': token('bg-secondary'),
+        'bg-tertiary': token('bg-tertiary'),
 
         /* Panels */
-        'panel-default': 'var(--color-panel-default)',
-        'panel-hover': 'var(--color-panel-hover)',
-        'panel-active': 'var(--color-panel-active)',
-        'panel-elevated': 'var(--color-panel-elevated)',
+        'panel-default': token('panel-default'),
+        'panel-hover': token('panel-hover'),
+        'panel-active': token('panel-active'),
+        'panel-elevated': token('panel-elevated'),
 
         /* Borders */
-        'border-default': 'var(--color-border-default)',
-        'border-subtle': 'var(--color-border-subtle)',
-        'border-strong': 'var(--color-border-strong)',
-        'border-active': 'var(--color-border-active)',
-        'border-primary': 'var(--color-border-primary)',
-        'border-muted': 'var(--color-border-muted)',
+        'border-default': token('border-default'),
+        'border-subtle': token('border-subtle'),
+        'border-strong': token('border-strong'),
+        'border-active': token('border-active'),
+        'border-primary': token('border-primary'),
+        'border-muted': token('border-muted'),
 
         /* Foreground */
-        'fg-primary': 'var(--color-fg-primary)',
-        'fg-secondary': 'var(--color-fg-secondary)',
-        'fg-tertiary': 'var(--color-fg-tertiary)',
+        'fg-primary': token('fg-primary'),
+        'fg-secondary': token('fg-secondary'),
+        'fg-tertiary': token('fg-tertiary'),
         /* Labels and secondary details; same tone as tertiary text. */
-        'fg-muted': 'var(--color-fg-tertiary)',
+        'fg-muted': token('fg-tertiary'),
 
         /* Muted */
-        'muted-bg': 'var(--color-muted-bg)',
-        'muted-fg': 'var(--color-muted-fg)',
-        'bg-accent': 'var(--color-bg-accent)',
+        'muted-bg': token('muted-bg'),
+        'muted-fg': token('muted-fg'),
+        'bg-accent': token('bg-accent'),
 
         /* Accent */
-        'accent-brand': 'var(--color-accent-brand)',
+        'accent-brand': token('accent-brand'),
 
         /* Status */
-        'status-open': 'var(--color-status-open)',
-        'status-in-progress': 'var(--color-status-in-progress)',
-        'status-completed': 'var(--color-status-completed)',
-        'status-cancelled': 'var(--color-status-cancelled)',
+        'status-open': token('status-open'),
+        'status-in-progress': token('status-in-progress'),
+        'status-completed': token('status-completed'),
+        'status-cancelled': token('status-cancelled'),
 
         /* Warning; supports opacity modifiers such as bg-warning/10 */
-        warning: 'color-mix(in srgb, var(--color-warning) calc(<alpha-value> * 100%), transparent)',
+        warning: token('warning'),
 
         /* Danger tint for delete confirmations; supports opacity modifiers such as bg-danger/10 */
-        danger:
-          'color-mix(in srgb, var(--color-destructive) calc(<alpha-value> * 100%), transparent)',
+        danger: token('destructive'),
 
         /* Destructive */
         destructive: {
-          DEFAULT: 'var(--color-destructive)',
-          hover: 'var(--color-destructive-hover)',
-          active: 'var(--color-destructive-active)',
-          text: 'var(--color-destructive-text)',
+          DEFAULT: token('destructive'),
+          hover: token('destructive-hover'),
+          active: token('destructive-active'),
+          text: token('destructive-text'),
         },
 
         /* Focus */
-        focus: 'var(--color-focus)',
+        focus: token('focus'),
 
         /* Legacy status for compatibility */
         status: {
-          open: 'var(--color-status-open)',
-          'in-progress': 'var(--color-status-in-progress)',
-          completed: 'var(--color-status-completed)',
-          cancelled: 'var(--color-status-cancelled)',
+          open: token('status-open'),
+          'in-progress': token('status-in-progress'),
+          completed: token('status-completed'),
+          cancelled: token('status-cancelled'),
         },
         surface: {
           DEFAULT: '#0f172a',
