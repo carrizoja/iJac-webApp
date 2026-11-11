@@ -32,6 +32,7 @@ export type {
   LoadingStateProps,
   EmptyStateProps,
 } from './States';
+export { SavedNotice } from './SavedNotice';
 
 // Dialog/Modal
 export { Dialog, useDialog } from './Dialog';

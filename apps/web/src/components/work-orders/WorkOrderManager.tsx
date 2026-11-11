@@ -6,7 +6,7 @@ import { getWorkOrder, listClients } from '../../lib/resources';
 import { collectAllPages } from '../../lib/collectAllPages';
 import { useLanguage } from '../../hooks/useLanguage';
 import { useRevealOnOpen } from '../../hooks/useRevealOnOpen';
-import { Alert } from '../ui';
+import { Alert, SavedNotice } from '../ui';
 
 export function WorkOrderManager() {
   const { t } = useLanguage();
@@ -16,6 +16,8 @@ export function WorkOrderManager() {
   const [clients, setClients] = useState<Client[]>([]);
   const [refreshKey, setRefreshKey] = useState(0);
   const [clientsError, setClientsError] = useState(false);
+  /** The order just saved, confirmed until dismissed or another form opens. */
+  const [saved, setSaved] = useState<{ order: WorkOrder; created: boolean } | null>(null);
 
   useEffect(() => {
     setClientsError(false);
@@ -34,6 +36,7 @@ export function WorkOrderManager() {
   const latestEdit = useRef(0);
   const startEditing = async (summary: WorkOrderClientSummary) => {
     const request = ++latestEdit.current;
+    setSaved(null);
     setEditLoadError(false);
     try {
       const order = await getWorkOrder(summary.id);
@@ -51,7 +54,8 @@ export function WorkOrderManager() {
     setCreating(false);
   };
 
-  const handleSaved = () => {
+  const handleSaved = (order: WorkOrder) => {
+    setSaved({ order, created: editing === null });
     closeForm();
     setRefreshKey((k) => k + 1);
   };
@@ -69,6 +73,21 @@ export function WorkOrderManager() {
           {t('workOrders.editLoadError')}
         </Alert>
       ) : null}
+
+      {saved && (
+        <SavedNotice
+          data-testid="work-order-saved"
+          link={{
+            href: `/work-orders/details?id=${encodeURIComponent(saved.order.id)}`,
+            label: t('workOrders.openOrder'),
+          }}
+          onClose={() => setSaved(null)}
+        >
+          {t(saved.created ? 'workOrders.savedNew' : 'workOrders.savedEdit', {
+            title: saved.order.title,
+          })}
+        </SavedNotice>
+      )}
 
       {(creating || editing) && (
         <div
@@ -99,6 +118,7 @@ export function WorkOrderManager() {
         clients={clients}
         onCreate={() => {
           closeForm();
+          setSaved(null);
           setCreating(true);
         }}
         onEdit={(summary) => void startEditing(summary)}

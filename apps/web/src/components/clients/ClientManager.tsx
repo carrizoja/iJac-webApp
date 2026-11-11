@@ -4,18 +4,22 @@ import { ClientList } from './ClientList';
 import { ClientForm } from './ClientForm';
 import { useLanguage } from '../../hooks/useLanguage';
 import { useRevealOnOpen } from '../../hooks/useRevealOnOpen';
+import { SavedNotice } from '../ui';
 
 export function ClientManager() {
   const { t } = useLanguage();
   const [editing, setEditing] = useState<Client | null>(null);
   const [creating, setCreating] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
+  /** The client just saved, confirmed until dismissed or another form opens. */
+  const [saved, setSaved] = useState<{ client: Client; created: boolean } | null>(null);
 
   const { panelRef, focusRef } = useRevealOnOpen<HTMLHeadingElement>(
     editing ? editing.id : creating ? 'new' : null,
   );
 
-  const handleSaved = () => {
+  const handleSaved = (client: Client) => {
+    setSaved({ client, created: editing === null });
     setEditing(null);
     setCreating(false);
     setRefreshKey((k) => k + 1);
@@ -23,6 +27,14 @@ export function ClientManager() {
 
   return (
     <div className="space-y-6" data-testid="clients-manager">
+      {saved && (
+        <SavedNotice data-testid="client-saved" onClose={() => setSaved(null)}>
+          {t(saved.created ? 'clients.savedNew' : 'clients.savedEdit', {
+            name: saved.client.name,
+          })}
+        </SavedNotice>
+      )}
+
       {(creating || editing) && (
         <div
           ref={panelRef}
@@ -49,7 +61,17 @@ export function ClientManager() {
         </div>
       )}
 
-      <ClientList key={refreshKey} onCreate={() => setCreating(true)} onEdit={setEditing} />
+      <ClientList
+        key={refreshKey}
+        onCreate={() => {
+          setSaved(null);
+          setCreating(true);
+        }}
+        onEdit={(client) => {
+          setSaved(null);
+          setEditing(client);
+        }}
+      />
     </div>
   );
 }
