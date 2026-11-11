@@ -15,7 +15,7 @@ User choice, verbatim: "Buttons + letters, off switch (Recommended)": "Hoy butto
 
 - [x] T1 — S1 — inline — `?new=1` opens the create form in Órdenes and Clientes; Hoy buttons. RED: 3 new tests failed; GREEN: 636 web tests. Commit: T1 below.
 - [x] T2 — S2, S4 — inline — shortcut listener in the app shell and the stored preference. RED: 17 new tests failed (modules missing, wiring); GREEN: 653 web tests.
-- [ ] T3 — S3, S4 — inline — Settings section (switch and list); key hints on the Hoy buttons.
+- [x] T3 — S3, S4 — inline — Settings section (switch and list); key hints on the Hoy buttons. RED: 4 new tests failed; GREEN: 657 web tests, build, detector clean.
 
 Route evidence: the tasks depend on each other and each is under the parallel threshold, so no Writer trigger; work runs inline.
 
@@ -24,3 +24,4 @@ Route evidence: the tasks depend on each other and each is under the parallel th
 - L1 (2026-11-11, user): "Go with shorcuts from Hoy"
 - L2 (2026-11-11, user): "Buttons + letters, off switch (Recommended)"
 - L3: modern-web-guidance `switch`: use `<input type="checkbox" switch>`; the guide's polyfill for Chrome/Firefox would add a dependency (high-risk item 5), so it is left out: those browsers show a plain checkbox, which is still labelled and keyboard operable.
+- L4: Commits: T1 0a1fda0, T2 2aadd40, T3 in the commit after. Hoy buttons carry `aria-keyshortcuts` and a `<kbd>` hint only while shortcuts are on (read after mount, like the Settings switch, so the server render and the browser agree). Not checked in a browser.

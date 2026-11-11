@@ -97,6 +97,25 @@ describe('TodayDashboard', () => {
     );
   });
 
+  it('shows the key for each Hoy button while shortcuts are on, and not once they are off', async () => {
+    const { unmount } = render(<TodayDashboard />);
+    const order = await screen.findByRole('link', { name: /^Nueva orden/ });
+    expect(order).toHaveAttribute('aria-keyshortcuts', 'N');
+    expect(within(order).getByText('N').tagName).toBe('KBD');
+    expect(screen.getByRole('link', { name: /^Nuevo cliente/ })).toHaveAttribute(
+      'aria-keyshortcuts',
+      'C',
+    );
+    unmount();
+
+    window.localStorage.setItem('ijac.shortcuts', 'off');
+    render(<TodayDashboard />);
+    const quiet = await screen.findByRole('link', { name: /^Nueva orden/ });
+    expect(quiet).not.toHaveAttribute('aria-keyshortcuts');
+    expect(within(quiet).queryByText('N')).not.toBeInTheDocument();
+    window.localStorage.clear();
+  });
+
   it("shows today's date", async () => {
     render(<TodayDashboard />);
     expect(await screen.findByText(/6 de noviembre de 2026/)).toBeInTheDocument();
