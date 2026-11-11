@@ -13,6 +13,7 @@ import type {
   RecordPaymentInput,
   VoidPaymentInput,
   WorkOrderPaymentsResponse,
+  DailyPaymentsResponse,
   BrandingImage,
   BrandingImageInput,
   BrandingImageResponse,
@@ -141,6 +142,11 @@ export async function listPayments(workOrderId: string): Promise<WorkOrderPaymen
   return withToken((token) =>
     apiGet(`/work-orders/${encodeURIComponent(workOrderId)}/payments`, token),
   );
+}
+
+/** The organization's active payments dated `date` (YYYY-MM-DD), with a total per currency. */
+export async function listPaymentsByDate(date: string): Promise<DailyPaymentsResponse> {
+  return withToken((token) => apiGet(`/payments?date=${encodeURIComponent(date)}`, token));
 }
 
 export async function recordPayment(
