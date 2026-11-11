@@ -1,0 +1,16 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import { Protected } from '../../components/layout/Protected';
+import { AppShell } from '../../components/layout/AppShell';
+import { ClientDetails } from '../../components/clients/ClientDetails';
+---
+
+<Layout titleKey="title.clientDetails">
+  <Protected client:load>
+    <AppShell client:load>
+      <div class="py-4 sm:py-8" data-testid="client-details-page">
+        <ClientDetails client:load />
+      </div>
+    </AppShell>
+  </Protected>
+</Layout>

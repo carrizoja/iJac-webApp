@@ -505,7 +505,12 @@ describe('ClientList', () => {
 
       const row = (await screen.findByText('Acme Inc')).closest('tr')!;
       expect(within(row).getByText('Sin órdenes')).toBeInTheDocument();
-      expect(within(row).queryByRole('link')).toBeNull();
+      // The name links to the client's page; the orders cell has no link.
+      expect(
+        within(row)
+          .getAllByRole('link')
+          .map((link) => link.textContent),
+      ).toEqual(['Acme Inc']);
     });
 
     it('adds up a balance owed in two currencies', async () => {
@@ -541,6 +546,21 @@ describe('ClientList', () => {
       await waitFor(() => expect(listWorkOrders).toHaveBeenCalled());
       expect(screen.queryByRole('link', { name: /^Saldo/ })).toBeNull();
     });
+  });
+
+  it('links each client name to its page, in table and card views', async () => {
+    listClients.mockResolvedValue({ items: [client] });
+    render(<ClientList onCreate={vi.fn()} onEdit={vi.fn()} />);
+
+    expect(await screen.findByRole('link', { name: 'Acme Inc' })).toHaveAttribute(
+      'href',
+      '/clients/details?id=client-1',
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Tarjetas' }));
+    expect(screen.getByRole('link', { name: 'Acme Inc' })).toHaveAttribute(
+      'href',
+      '/clients/details?id=client-1',
+    );
   });
 
   describe('a client that has orders', () => {
