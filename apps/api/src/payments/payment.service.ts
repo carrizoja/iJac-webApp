@@ -1,10 +1,12 @@
 import { Inject, Injectable } from '@nestjs/common';
 import {
   computeBalance,
+  DailyPaymentsResponse,
   Payment,
   PAYMENT_METHODS,
   PaymentActor,
   PaymentMethod,
+  PaymentStatus,
   RecordPaymentInput,
   WorkOrderBalance,
 } from '@ijac/shared';
@@ -29,6 +31,27 @@ export class PaymentService {
     @Inject(WORK_ORDER_REPOSITORY) private readonly workOrders: WorkOrderRepository,
     @Inject(PAYMENT_REPOSITORY) private readonly payments: PaymentRepository,
   ) {}
+
+  /** The day's active payments (by payment date) and their total per currency. */
+  async listByDate(organizationId: string, date: string): Promise<DailyPaymentsResponse> {
+    if (!isIsoDate(date)) {
+      throw new ValidationError('Invalid date', { date: 'date must be a YYYY-MM-DD date' });
+    }
+    const items = (await this.payments.findByPaymentDate(organizationId, date)).filter(
+      (payment) => payment.status === PaymentStatus.ACTIVE,
+    );
+    const totals = new Map<Payment['currency'], number>();
+    for (const payment of items) {
+      totals.set(payment.currency, (totals.get(payment.currency) ?? 0) + payment.amountMinor);
+    }
+    return {
+      date,
+      items,
+      totals: [...totals]
+        .map(([currency, amountMinor]) => ({ currency, amountMinor }))
+        .sort((a, b) => a.currency.localeCompare(b.currency)),
+    };
+  }
 
   async list(
     organizationId: string,

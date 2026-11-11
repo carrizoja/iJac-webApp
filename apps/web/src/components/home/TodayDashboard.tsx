@@ -1,13 +1,19 @@
-import { useEffect, useId, useMemo, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useId, useMemo, useRef, useState, type ReactNode } from 'react';
 import {
   OrganizationMemberRole,
   formatMoney,
   formatReceiptNumber,
   type Currency,
+  type DailyPaymentsResponse,
   type Payment,
   type WorkOrderClientSummary,
 } from '@ijac/shared';
-import { getCurrentMember, getOrganizationProfile, listWorkOrders } from '../../lib/resources';
+import {
+  getCurrentMember,
+  getOrganizationProfile,
+  listPaymentsByDate,
+  listWorkOrders,
+} from '../../lib/resources';
 import { formatMoneyInput } from '../../lib/money';
 import { getCalendarConnectionStatus } from '../../lib/calendar';
 import { collectAllPages } from '../../lib/collectAllPages';
@@ -24,7 +30,7 @@ import {
   figureClass,
   sectionHeadingClass,
 } from '../ui';
-import { RecordPaymentDialog } from '../payments/RecordPaymentDialog';
+import { RecordPaymentDialog, paymentMethodKey } from '../payments/RecordPaymentDialog';
 import { ReceiptPrintView } from '../payments/ReceiptPrintView';
 import { priorityBadgeClass } from '../work-orders/workOrderBadges';
 import { StatusBadge } from '../work-orders/StatusBadge';
@@ -162,6 +168,61 @@ function OrderGroup({
   );
 }
 
+type CollectedState =
+  { kind: 'loading' } | { kind: 'error' } | { kind: 'ready'; data: DailyPaymentsResponse };
+
+/** Today's payments: the total per currency (never mixed), then each payment with its order. */
+function CollectedBody({ state }: { state: CollectedState }) {
+  const { t } = useLanguage();
+  if (state.kind === 'loading') {
+    return (
+      <LoadingState size="sm" message={t('home.loading')} className="flex-row justify-start" />
+    );
+  }
+  if (state.kind === 'error') {
+    return <p className="text-sm text-fg-muted">{t('home.collected.error')}</p>;
+  }
+  const { items, totals } = state.data;
+  if (items.length === 0) return <EmptyLine messageKey="home.collected.empty" />;
+  return (
+    <div className="space-y-4">
+      <dl data-testid="collected-totals">
+        <dt className="sr-only">{t('home.collected.total')}</dt>
+        <dd className="flex flex-wrap items-baseline gap-x-6 gap-y-1">
+          {totals.map((total) => (
+            <span key={total.currency} className={cn(figureClass, 'text-2xl')}>
+              {formatMoney(total.amountMinor, total.currency)}
+            </span>
+          ))}
+        </dd>
+      </dl>
+      <ul className="divide-y divide-border-subtle">
+        {items.map((payment) => (
+          <li
+            key={payment.id}
+            className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 py-3"
+          >
+            <div className="min-w-0 space-y-0.5">
+              <a href={`${detailsHref(payment.workOrderId)}#payments`} className={linkClass}>
+                {payment.workOrderTitle}
+              </a>
+              <p className="text-sm text-fg-muted">
+                {t('home.collected.receipt', {
+                  number: formatReceiptNumber(payment.receiptNumber),
+                })}{' '}
+                · {payment.client.name} · {t(paymentMethodKey(payment.method))}
+              </p>
+            </div>
+            <span className="font-semibold tabular-nums text-fg-primary">
+              {formatMoney(payment.amountMinor, payment.currency)}
+            </span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
 /**
  * The home page: what needs attention today. Every block links to the records behind it;
  * the order blocks share one load, and the calendar line loads on its own.
@@ -185,6 +246,34 @@ export function TodayDashboard() {
       active = false;
     };
   }, [ordersAttempt]);
+
+  /** What came in today: active payments whose payment date (the receipt date) is today. */
+  const [collected, setCollected] = useState<CollectedState>({ kind: 'loading' });
+  // Only the latest request counts: a slow first load must not undo a later refresh.
+  const latestCollected = useRef(0);
+
+  const loadCollected = useCallback(() => {
+    const request = ++latestCollected.current;
+    listPaymentsByDate(todayKey)
+      .then((data) => request === latestCollected.current && setCollected({ kind: 'ready', data }))
+      .catch(() => request === latestCollected.current && setCollected({ kind: 'error' }));
+  }, [todayKey]);
+
+  useEffect(() => {
+    loadCollected();
+    // Leaving Hoy discards any answer still on its way.
+    return () => {
+      latestCollected.current += 1;
+    };
+  }, [loadCollected]);
+
+  /**
+   * After a payment dated today is recorded here, Cobrado hoy asks the server again, so its
+   * totals stay the server's (one place adds them up) and the new payment is never lost.
+   */
+  const refreshCollected = (payment: Payment) => {
+    if (payment.paymentDate === todayKey) loadCollected();
+  };
 
   /** Only admins may record payments; until the role is known, nobody is offered it. */
   const [canRecord, setCanRecord] = useState(false);
@@ -454,6 +543,10 @@ export function TodayDashboard() {
               }
             </OrdersBody>
           </Block>
+          <Block id="home-collected" title={t('home.collected.title')}>
+            <CollectedBody state={collected} />
+          </Block>
+
           <Block id="home-open" title={t('home.open.title')}>
             <OrdersBody state={orders}>
               {() =>
@@ -490,6 +583,7 @@ export function TodayDashboard() {
           initialAmount={formatMoneyInput(paying.remainingMinor ?? 0)}
           onRecorded={(payment) => {
             applyPayment(payment);
+            refreshCollected(payment);
             setRecorded(payment);
           }}
           onFailed={() => refreshAfterFailure(paying.id)}

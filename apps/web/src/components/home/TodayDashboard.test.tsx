@@ -1,7 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import {
   Currency,
+  PaymentMethod,
+  formatMoney,
   WorkOrderPriority,
   WorkOrderStatus,
   type WorkOrderClientSummary,
@@ -9,6 +11,7 @@ import {
 
 const mocks = vi.hoisted(() => ({
   listWorkOrders: vi.fn(),
+  listPaymentsByDate: vi.fn(),
   getCurrentMember: vi.fn(),
   recordPayment: vi.fn(),
   getOrganizationProfile: vi.fn(),
@@ -24,6 +27,7 @@ const mocks = vi.hoisted(() => ({
 }));
 const {
   listWorkOrders,
+  listPaymentsByDate,
   getCurrentMember,
   recordPayment,
   getOrganizationProfile,
@@ -33,6 +37,7 @@ const {
 
 vi.mock('../../lib/resources', () => ({
   listWorkOrders: mocks.listWorkOrders,
+  listPaymentsByDate: mocks.listPaymentsByDate,
   getCurrentMember: mocks.getCurrentMember,
   recordPayment: mocks.recordPayment,
   getOrganizationProfile: mocks.getOrganizationProfile,
@@ -71,6 +76,7 @@ describe('TodayDashboard', () => {
     vi.setSystemTime(new Date(2026, 10, 6, 9, 0));
     getOrganizationProfile.mockResolvedValue({ configured: true, canEdit: true, profile: {} });
     listWorkOrders.mockResolvedValue({ items: [] });
+    listPaymentsByDate.mockResolvedValue({ date: '2026-11-06', items: [], totals: [] });
     getCurrentMember.mockResolvedValue({ role: 'admin' });
     getCalendarConnectionStatus.mockResolvedValue({ connected: true, status: 'connected' });
   });
@@ -499,6 +505,74 @@ describe('TodayDashboard', () => {
     expect(listWorkOrders).toHaveBeenCalledTimes(2);
   });
 
+  describe('Cobrado hoy', () => {
+    it('asks for the payments dated today and shows what came in, per currency', async () => {
+      listPaymentsByDate.mockResolvedValue({
+        date: '2026-11-06',
+        items: [
+          makePayment({
+            id: 'p1',
+            workOrderId: 'wo-a',
+            workOrderTitle: 'Cambio de disco',
+            receiptNumber: 42,
+            amountMinor: 2500000,
+            method: PaymentMethod.CASH,
+            paymentDate: '2026-11-06',
+          }),
+          makePayment({
+            id: 'p2',
+            workOrderId: 'wo-b',
+            workOrderTitle: 'Soporte mensual',
+            receiptNumber: 43,
+            amountMinor: 12000,
+            currency: Currency.USD,
+            paymentDate: '2026-11-06',
+          }),
+        ],
+        totals: [
+          { currency: Currency.ARS, amountMinor: 2500000 },
+          { currency: Currency.USD, amountMinor: 12000 },
+        ],
+      });
+      render(<TodayDashboard />);
+
+      const collected = section('Cobrado hoy');
+      const link = await within(collected).findByRole('link', { name: 'Cambio de disco' });
+      expect(listPaymentsByDate).toHaveBeenCalledWith('2026-11-06');
+      expect(link).toHaveAttribute('href', '/work-orders/details?id=wo-a#payments');
+      const totals = within(collected).getByTestId('collected-totals');
+      expect(within(totals).getByText('$ 25.000,00')).toHaveClass('font-heading');
+      expect(within(totals).getByText(formatMoney(12000, Currency.USD))).toBeInTheDocument();
+      const row = link.closest('li') as HTMLElement;
+      expect(row).toHaveTextContent('Recibo 0001-00000042');
+      expect(row).toHaveTextContent('Acme Corp');
+      expect(row).toHaveTextContent('Efectivo');
+      expect(row).toHaveTextContent('$ 25.000,00');
+    });
+
+    it('says plainly when nothing has come in today', async () => {
+      render(<TodayDashboard />);
+      expect(
+        await within(section('Cobrado hoy')).findByText('Todavía no hay cobros con fecha de hoy.'),
+      ).toBeInTheDocument();
+    });
+
+    it("says so when today's payments cannot be loaded, and the rest of Hoy still works", async () => {
+      listPaymentsByDate.mockRejectedValue(new Error('offline'));
+      listWorkOrders.mockResolvedValue({
+        items: [order({ id: 'late', title: 'Atrasada', dueDate: '2026-11-02T00:00:00.000Z' })],
+      });
+      render(<TodayDashboard />);
+
+      expect(
+        await within(section('Cobrado hoy')).findByText('No se pudo cargar lo cobrado hoy.'),
+      ).toBeInTheDocument();
+      expect(
+        await within(section('Atención')).findByRole('link', { name: 'Atrasada' }),
+      ).toBeInTheDocument();
+    });
+  });
+
   describe('recording a payment from Cobros pendientes', () => {
     const owedOrders = () => ({
       items: [
@@ -549,6 +623,101 @@ describe('TodayDashboard', () => {
         within(within(owed).getByTestId('owed-totals')).getByText('$ 9.000,00'),
       ).toBeInTheDocument();
       expect(listWorkOrders).toHaveBeenCalledTimes(1);
+    });
+
+    it('adds a payment dated today to Cobrado hoy without a reload, but not one dated another day', async () => {
+      listWorkOrders.mockResolvedValue(owedOrders());
+      recordPayment.mockResolvedValueOnce(
+        makePayment({
+          workOrderId: 'a',
+          workOrderTitle: 'Chico',
+          amountMinor: 50000,
+          paymentDate: '2026-11-06',
+        }),
+      );
+      const chico = makePayment({
+        workOrderId: 'a',
+        workOrderTitle: 'Chico',
+        amountMinor: 50000,
+        paymentDate: '2026-11-06',
+      });
+      listPaymentsByDate
+        .mockResolvedValueOnce({ date: '2026-11-06', items: [], totals: [] })
+        .mockResolvedValue({
+          date: '2026-11-06',
+          items: [chico],
+          totals: [{ currency: Currency.ARS, amountMinor: 50000 }],
+        });
+      render(<TodayDashboard />);
+      const owed = section('Cobros pendientes');
+      const collected = section('Cobrado hoy');
+      await within(collected).findByText('Todavía no hay cobros con fecha de hoy.');
+
+      fireEvent.click(await within(owed).findByRole('button', { name: 'Registrar pago de Chico' }));
+      fireEvent.click(
+        within(await screen.findByRole('dialog')).getByRole('button', { name: SUBMIT_PAYMENT }),
+      );
+
+      expect(await within(collected).findByRole('link', { name: 'Chico' })).toBeInTheDocument();
+      expect(
+        within(within(collected).getByTestId('collected-totals')).getByText('$ 500,00'),
+      ).toBeInTheDocument();
+      // The block asks the server again, so its totals are the server's, not a local copy.
+      expect(listPaymentsByDate).toHaveBeenCalledTimes(2);
+
+      recordPayment.mockResolvedValueOnce(
+        makePayment({
+          id: 'old',
+          workOrderId: 'b',
+          workOrderTitle: 'Grande',
+          amountMinor: 1000,
+          paymentDate: '2026-11-01',
+        }),
+      );
+      fireEvent.click(
+        await within(owed).findByRole('button', { name: 'Registrar pago de Grande' }),
+      );
+      fireEvent.click(
+        within(await screen.findByRole('dialog')).getByRole('button', { name: SUBMIT_PAYMENT }),
+      );
+      await waitFor(() => expect(recordPayment).toHaveBeenCalledTimes(2));
+      expect(within(collected).queryByRole('link', { name: 'Grande' })).not.toBeInTheDocument();
+      // A payment dated another day does not ask again.
+      expect(listPaymentsByDate).toHaveBeenCalledTimes(2);
+    });
+
+    it('keeps a payment recorded before Cobrado hoy has loaded, whichever answer arrives last', async () => {
+      listWorkOrders.mockResolvedValue(owedOrders());
+      const chico = makePayment({
+        workOrderId: 'a',
+        workOrderTitle: 'Chico',
+        amountMinor: 50000,
+        paymentDate: '2026-11-06',
+      });
+      recordPayment.mockResolvedValueOnce(chico);
+      // The first load is slow and was read before the payment existed.
+      let resolveFirst!: (value: unknown) => void;
+      listPaymentsByDate
+        .mockImplementationOnce(() => new Promise((resolve) => (resolveFirst = resolve)))
+        .mockResolvedValue({
+          date: '2026-11-06',
+          items: [chico],
+          totals: [{ currency: Currency.ARS, amountMinor: 50000 }],
+        });
+      render(<TodayDashboard />);
+      const owed = section('Cobros pendientes');
+      const collected = section('Cobrado hoy');
+
+      fireEvent.click(await within(owed).findByRole('button', { name: 'Registrar pago de Chico' }));
+      fireEvent.click(
+        within(await screen.findByRole('dialog')).getByRole('button', { name: SUBMIT_PAYMENT }),
+      );
+      expect(await within(collected).findByRole('link', { name: 'Chico' })).toBeInTheDocument();
+
+      // The stale first answer arrives late and must not take the payment away.
+      resolveFirst({ date: '2026-11-06', items: [], totals: [] });
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      expect(within(collected).getByRole('link', { name: 'Chico' })).toBeInTheDocument();
     });
 
     it('keeps a partly paid order in the list with what is still owed', async () => {
