@@ -44,6 +44,9 @@ const SORT_STORAGE_KEY = 'ijac.clients.sort';
 const VIEW_STORAGE_KEY = 'ijac.clients.view';
 const COLUMN_SORT_KEYS = ['name', 'email', 'phone', 'organization'] as const;
 const NEW_BUTTON_ID = 'client-new';
+const clientDetailsHref = (id: string) => `/clients/details?id=${encodeURIComponent(id)}`;
+const clientNameLinkClass =
+  'rounded text-fg-primary underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus';
 const deleteButtonId = (id: string) => `client-delete-${id}`;
 const deleteCancelId = (id: string) => `client-delete-cancel-${id}`;
 const deleteConfirmId = (id: string) => `client-delete-confirm-${id}`;
@@ -322,7 +325,9 @@ export function ClientList({ onCreate, onEdit, onDeleted }: ClientListProps) {
                   <Fragment key={client.id}>
                     <tr className={confirmDelete === client.id ? 'bg-danger/5' : 'table-row'}>
                       <td className="px-4 py-3.5 font-medium">
-                        {client.name}
+                        <a href={clientDetailsHref(client.id)} className={clientNameLinkClass}>
+                          {client.name}
+                        </a>
                         {client.taxId && (
                           <span className="block text-xs font-normal text-fg-muted">
                             {t('clients.taxId')}: {client.taxId}
@@ -464,7 +469,9 @@ export function ClientList({ onCreate, onEdit, onDeleted }: ClientListProps) {
                   <div className="flex flex-col gap-5">
                     <div className="flex-1">
                       <h3 className="font-heading text-lg font-semibold text-fg-primary">
-                        {client.name}
+                        <a href={clientDetailsHref(client.id)} className={clientNameLinkClass}>
+                          {client.name}
+                        </a>
                       </h3>
                       <p className="text-sm text-fg-muted">{client.email}</p>
                       <p className="text-sm text-fg-muted">{client.phone}</p>
