@@ -14,7 +14,7 @@ User choice, verbatim: "Buttons + letters, off switch (Recommended)": "Hoy butto
 ## Tasks
 
 - [x] T1 — S1 — inline — `?new=1` opens the create form in Órdenes and Clientes; Hoy buttons. RED: 3 new tests failed; GREEN: 636 web tests. Commit: T1 below.
-- [ ] T2 — S2, S4 — inline — shortcut listener in the app shell and the stored preference.
+- [x] T2 — S2, S4 — inline — shortcut listener in the app shell and the stored preference. RED: 17 new tests failed (modules missing, wiring); GREEN: 653 web tests.
 - [ ] T3 — S3, S4 — inline — Settings section (switch and list); key hints on the Hoy buttons.
 
 Route evidence: the tasks depend on each other and each is under the parallel threshold, so no Writer trigger; work runs inline.

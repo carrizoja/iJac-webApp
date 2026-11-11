@@ -6,6 +6,7 @@ import { ThemeToggle } from './ThemeToggle';
 import { LanguageToggle } from './LanguageToggle';
 import { BrandLogo } from '../ui';
 import { useLanguage } from '../../hooks/useLanguage';
+import { useKeyboardShortcuts } from '../../hooks/useKeyboardShortcuts';
 import type { TranslationKey } from '../../i18n/translations';
 
 interface NavLink {
@@ -34,6 +35,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   // Read after mount: the shell is also rendered on the server, where there is no location.
   const [pathname, setPathname] = useState<string | null>(null);
   useEffect(() => setPathname(window.location.pathname), []);
+  // N, C and / work on every page inside the shell (Settings can turn them off).
+  useKeyboardShortcuts();
   const currentProps = (href: string) =>
     pathname !== null && isCurrentSection(href, pathname)
       ? { 'aria-current': 'page' as const }
