@@ -59,9 +59,11 @@ const SORT_LABEL_KEYS: Record<ClientSortKey, TranslationKey> = {
 interface ClientListProps {
   onCreate?: () => void;
   onEdit?: (client: Client) => void;
+  /** Called once a client is deleted, so a confirmation naming it can go. */
+  onDeleted?: (id: string) => void;
 }
 
-export function ClientList({ onCreate, onEdit }: ClientListProps) {
+export function ClientList({ onCreate, onEdit, onDeleted }: ClientListProps) {
   const { t } = useLanguage();
   const rowActionButtonClass = 'rounded-lg px-4';
   const [clients, setClients] = useState<Client[]>([]);
@@ -150,6 +152,7 @@ export function ClientList({ onCreate, onEdit }: ClientListProps) {
     setDeleting(id);
     try {
       await deleteClient(id);
+      onDeleted?.(id);
       await load(debouncedSearch, true);
       setConfirmDelete(null);
       focusAfterRender(...(neighbour ? [deleteButtonId(neighbour.id)] : []), NEW_BUTTON_ID);

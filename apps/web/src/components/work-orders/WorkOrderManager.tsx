@@ -122,6 +122,7 @@ export function WorkOrderManager() {
           setCreating(true);
         }}
         onEdit={(summary) => void startEditing(summary)}
+        onDeleted={(id) => setSaved((current) => (current?.order.id === id ? null : current))}
       />
     </div>
   );

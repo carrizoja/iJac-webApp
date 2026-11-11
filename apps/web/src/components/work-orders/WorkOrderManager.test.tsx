@@ -268,6 +268,43 @@ describe('WorkOrderManager', () => {
       fireEvent.click(await screen.findByRole('button', { name: 'Nueva orden' }));
       expect(screen.queryByTestId('work-order-saved')).not.toBeInTheDocument();
     });
+
+    async function saveRevision() {
+      getWorkOrder.mockResolvedValue(fullOrder);
+      updateWorkOrder.mockResolvedValue(fullOrder);
+      deleteWorkOrder.mockResolvedValue(undefined);
+      render(<WorkOrderManager />);
+      fireEvent.click(await screen.findByRole('button', { name: 'Editar Revisión' }));
+      fireEvent.click(await screen.findByRole('button', { name: /guardar cambios/i }));
+      await screen.findByTestId('work-order-saved');
+    }
+
+    async function deleteOrder(title: string) {
+      fireEvent.click(await screen.findByRole('button', { name: `Eliminar ${title}` }));
+      fireEvent.click(screen.getByRole('button', { name: 'Eliminar' }));
+      await waitFor(() => expect(deleteWorkOrder).toHaveBeenCalled());
+    }
+
+    it('drops the confirmation once the order it names is deleted', async () => {
+      await saveRevision();
+      listWorkOrders.mockResolvedValue({ items: [] });
+
+      await deleteOrder('Revisión');
+
+      await waitFor(() => expect(screen.queryByTestId('work-order-saved')).not.toBeInTheDocument());
+    });
+
+    it('keeps the confirmation when another order is deleted', async () => {
+      listWorkOrders.mockResolvedValue({
+        items: [summary, { ...summary, id: 'wo-2', title: 'Otra' }],
+      });
+      await saveRevision();
+
+      await deleteOrder('Otra');
+
+      await waitFor(() => expect(deleteWorkOrder).toHaveBeenCalledWith('wo-2'));
+      expect(screen.getByTestId('work-order-saved')).toBeInTheDocument();
+    });
   });
 
   it('switches from editing an order to a blank new order', async () => {

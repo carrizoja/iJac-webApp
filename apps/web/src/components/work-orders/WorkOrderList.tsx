@@ -90,6 +90,8 @@ interface WorkOrderListProps {
   clients: Client[];
   onCreate?: () => void;
   onEdit?: (workOrder: WorkOrderClientSummary) => void;
+  /** Called once an order is deleted, so a confirmation naming it can go. */
+  onDeleted?: (id: string) => void;
 }
 
 /** The one balance filter: orders with money still to collect. Applied to the loaded list. */
@@ -131,7 +133,7 @@ function writeUrlFilters(filters: Record<string, string>): void {
   }
 }
 
-export function WorkOrderList({ clients, onCreate, onEdit }: WorkOrderListProps) {
+export function WorkOrderList({ clients, onCreate, onEdit, onDeleted }: WorkOrderListProps) {
   const { language, t } = useLanguage();
   const rowActionButtonClass = 'rounded-lg px-4';
   const [workOrders, setWorkOrders] = useState<WorkOrderClientSummary[]>([]);
@@ -245,6 +247,7 @@ export function WorkOrderList({ clients, onCreate, onEdit }: WorkOrderListProps)
     setDeleting(id);
     try {
       await deleteWorkOrder(id);
+      onDeleted?.(id);
       await load();
       setConfirmDelete(null);
       focusAfterRender(...(neighbour ? [deleteButtonId(neighbour.id)] : []), NEW_BUTTON_ID);

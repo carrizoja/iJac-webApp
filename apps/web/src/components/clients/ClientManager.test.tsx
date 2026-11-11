@@ -6,11 +6,15 @@ vi.mock('./ClientList', () => ({
   ClientList: ({
     onCreate,
     onEdit,
+    onDeleted,
   }: {
     onCreate: () => void;
     onEdit: (client: Client) => void;
+    onDeleted?: (id: string) => void;
   }) => (
     <div>
+      <button onClick={() => onDeleted?.('client-1')}>Eliminar Acme</button>
+      <button onClick={() => onDeleted?.('client-2')}>Eliminar Beta</button>
       <button onClick={onCreate}>Nuevo cliente</button>
       <button
         onClick={() =>
@@ -87,6 +91,17 @@ describe('ClientManager', () => {
       'Cliente guardado · Acme',
     );
     fireEvent.click(screen.getByRole('button', { name: 'Editar Beta' }));
+    expect(screen.queryByTestId('client-saved')).not.toBeInTheDocument();
+  });
+
+  it('drops the confirmation once the client it names is deleted, and only then', () => {
+    render(<ClientManager />);
+    fireEvent.click(screen.getByRole('button', { name: 'Editar Acme' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Guardar formulario' }));
+
+    fireEvent.click(screen.getByRole('button', { name: 'Eliminar Beta' }));
+    expect(screen.getByTestId('client-saved')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Eliminar Acme' }));
     expect(screen.queryByTestId('client-saved')).not.toBeInTheDocument();
   });
 
