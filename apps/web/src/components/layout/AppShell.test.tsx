@@ -47,6 +47,8 @@ describe('AppShell', () => {
 
     const logo = screen.getByText('iJac');
     expect(logo).toBeInTheDocument();
+    // The name is set in the brand face, as on the sign-in page.
+    expect(logo).toHaveClass('font-brand');
   });
 
   it('displays all navigation links on desktop', () => {

@@ -14,7 +14,16 @@ import { collectAllPages } from '../../lib/collectAllPages';
 import { useLanguage } from '../../hooks/useLanguage';
 import { formatDateOnly, localeFor, priorityLabel, statusLabel } from '../../i18n/format';
 import type { TranslationKey } from '../../i18n/translations';
-import { Alert, Badge, Button, LoadingState, Panel, cn } from '../ui';
+import {
+  Alert,
+  Badge,
+  Button,
+  LoadingState,
+  Panel,
+  cn,
+  figureClass,
+  sectionHeadingClass,
+} from '../ui';
 import { RecordPaymentDialog } from '../payments/RecordPaymentDialog';
 import { ReceiptPrintView } from '../payments/ReceiptPrintView';
 import { priorityBadgeClass } from '../work-orders/workOrderBadges';
@@ -43,7 +52,7 @@ function Block({
   return (
     <Panel size="lg" className={className}>
       <section aria-labelledby={id} className="space-y-4">
-        <h2 id={id} className="text-sm font-semibold uppercase tracking-wider text-fg-muted">
+        <h2 id={id} className={sectionHeadingClass}>
           {title}
         </h2>
         {children}
@@ -389,10 +398,7 @@ export function TodayDashboard() {
                       </dt>
                       <dd className="mt-1 flex flex-wrap items-baseline gap-x-6 gap-y-1">
                         {summary.owedTotals.map((total) => (
-                          <span
-                            key={total.currency}
-                            className="text-3xl font-semibold tabular-nums text-fg-primary"
-                          >
+                          <span key={total.currency} className={cn(figureClass, 'text-3xl')}>
                             {money(total.remainingMinor, total.currency)}
                           </span>
                         ))}

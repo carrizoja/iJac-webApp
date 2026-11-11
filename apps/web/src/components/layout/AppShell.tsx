@@ -63,11 +63,14 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               <div className="flex items-center gap-3">
                 <a
                   href="/"
-                  className="navbar-brand-control inline-flex h-11 w-11 items-center justify-center rounded-xl border transition-colors"
+                  className="navbar-brand-control inline-flex h-11 min-w-11 items-center justify-center gap-2 rounded-xl border px-2 transition-colors"
                   aria-label={t('nav.goHome')}
                 >
                   <BrandLogo alt="iJac" className="h-7 w-7" />
-                  <span className="sr-only">iJac</span>
+                  {/* The wordmark in the brand face, as on the sign-in page; on small screens the logo stands alone. */}
+                  <span className="hidden pr-1 font-brand text-base text-fg-primary lg:inline">
+                    iJac
+                  </span>
                 </a>
                 <nav
                   className="hidden items-center gap-1 text-sm sm:flex"

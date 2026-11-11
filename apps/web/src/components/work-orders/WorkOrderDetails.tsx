@@ -17,6 +17,7 @@ import {
   LoadingState,
   MenuButton,
   Panel,
+  sectionHeadingClass,
 } from '../ui';
 import { PaymentsPanel } from '../payments/PaymentsPanel';
 import { priorityBadgeClass } from './workOrderBadges';
@@ -391,9 +392,7 @@ export function WorkOrderDetails() {
       />
 
       <Panel size="lg" className="border border-border-default" data-print-panel>
-        <h2 className="text-sm font-semibold uppercase tracking-wider text-fg-muted">
-          {t('workOrders.description')}
-        </h2>
+        <h2 className={sectionHeadingClass}>{t('workOrders.description')}</h2>
         <p className="mt-4 whitespace-pre-wrap text-base leading-7 text-fg-secondary">
           {workOrder.description?.trim() || t('workOrders.noDescription')}
         </p>
