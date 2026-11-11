@@ -635,6 +635,19 @@ describe('TodayDashboard', () => {
           paymentDate: '2026-11-06',
         }),
       );
+      const chico = makePayment({
+        workOrderId: 'a',
+        workOrderTitle: 'Chico',
+        amountMinor: 50000,
+        paymentDate: '2026-11-06',
+      });
+      listPaymentsByDate
+        .mockResolvedValueOnce({ date: '2026-11-06', items: [], totals: [] })
+        .mockResolvedValue({
+          date: '2026-11-06',
+          items: [chico],
+          totals: [{ currency: Currency.ARS, amountMinor: 50000 }],
+        });
       render(<TodayDashboard />);
       const owed = section('Cobros pendientes');
       const collected = section('Cobrado hoy');
@@ -649,7 +662,8 @@ describe('TodayDashboard', () => {
       expect(
         within(within(collected).getByTestId('collected-totals')).getByText('$ 500,00'),
       ).toBeInTheDocument();
-      expect(listPaymentsByDate).toHaveBeenCalledTimes(1);
+      // The block asks the server again, so its totals are the server's, not a local copy.
+      expect(listPaymentsByDate).toHaveBeenCalledTimes(2);
 
       recordPayment.mockResolvedValueOnce(
         makePayment({
@@ -668,6 +682,42 @@ describe('TodayDashboard', () => {
       );
       await waitFor(() => expect(recordPayment).toHaveBeenCalledTimes(2));
       expect(within(collected).queryByRole('link', { name: 'Grande' })).not.toBeInTheDocument();
+      // A payment dated another day does not ask again.
+      expect(listPaymentsByDate).toHaveBeenCalledTimes(2);
+    });
+
+    it('keeps a payment recorded before Cobrado hoy has loaded, whichever answer arrives last', async () => {
+      listWorkOrders.mockResolvedValue(owedOrders());
+      const chico = makePayment({
+        workOrderId: 'a',
+        workOrderTitle: 'Chico',
+        amountMinor: 50000,
+        paymentDate: '2026-11-06',
+      });
+      recordPayment.mockResolvedValueOnce(chico);
+      // The first load is slow and was read before the payment existed.
+      let resolveFirst!: (value: unknown) => void;
+      listPaymentsByDate
+        .mockImplementationOnce(() => new Promise((resolve) => (resolveFirst = resolve)))
+        .mockResolvedValue({
+          date: '2026-11-06',
+          items: [chico],
+          totals: [{ currency: Currency.ARS, amountMinor: 50000 }],
+        });
+      render(<TodayDashboard />);
+      const owed = section('Cobros pendientes');
+      const collected = section('Cobrado hoy');
+
+      fireEvent.click(await within(owed).findByRole('button', { name: 'Registrar pago de Chico' }));
+      fireEvent.click(
+        within(await screen.findByRole('dialog')).getByRole('button', { name: SUBMIT_PAYMENT }),
+      );
+      expect(await within(collected).findByRole('link', { name: 'Chico' })).toBeInTheDocument();
+
+      // The stale first answer arrives late and must not take the payment away.
+      resolveFirst({ date: '2026-11-06', items: [], totals: [] });
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      expect(within(collected).getByRole('link', { name: 'Chico' })).toBeInTheDocument();
     });
 
     it('keeps a partly paid order in the list with what is still owed', async () => {

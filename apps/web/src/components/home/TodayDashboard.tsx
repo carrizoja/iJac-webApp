@@ -1,4 +1,4 @@
-import { useEffect, useId, useMemo, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useId, useMemo, useRef, useState, type ReactNode } from 'react';
 import {
   OrganizationMemberRole,
   formatMoney,
@@ -249,39 +249,30 @@ export function TodayDashboard() {
 
   /** What came in today: active payments whose payment date (the receipt date) is today. */
   const [collected, setCollected] = useState<CollectedState>({ kind: 'loading' });
+  // Only the latest request counts: a slow first load must not undo a later refresh.
+  const latestCollected = useRef(0);
 
-  useEffect(() => {
-    let active = true;
+  const loadCollected = useCallback(() => {
+    const request = ++latestCollected.current;
     listPaymentsByDate(todayKey)
-      .then((data) => active && setCollected({ kind: 'ready', data }))
-      .catch(() => active && setCollected({ kind: 'error' }));
-    return () => {
-      active = false;
-    };
+      .then((data) => request === latestCollected.current && setCollected({ kind: 'ready', data }))
+      .catch(() => request === latestCollected.current && setCollected({ kind: 'error' }));
   }, [todayKey]);
 
-  /** Adds a payment recorded here to Cobrado hoy, when it is dated today. */
-  const applyCollected = (payment: Payment) => {
-    if (payment.paymentDate !== todayKey) return;
-    setCollected((current) => {
-      if (current.kind !== 'ready') return current;
-      const { items, totals } = current.data;
-      const known = totals.some((total) => total.currency === payment.currency);
-      return {
-        kind: 'ready',
-        data: {
-          ...current.data,
-          items: [...items, payment],
-          totals: known
-            ? totals.map((total) =>
-                total.currency === payment.currency
-                  ? { ...total, amountMinor: total.amountMinor + payment.amountMinor }
-                  : total,
-              )
-            : [...totals, { currency: payment.currency, amountMinor: payment.amountMinor }],
-        },
-      };
-    });
+  useEffect(() => {
+    loadCollected();
+    // Leaving Hoy discards any answer still on its way.
+    return () => {
+      latestCollected.current += 1;
+    };
+  }, [loadCollected]);
+
+  /**
+   * After a payment dated today is recorded here, Cobrado hoy asks the server again, so its
+   * totals stay the server's (one place adds them up) and the new payment is never lost.
+   */
+  const refreshCollected = (payment: Payment) => {
+    if (payment.paymentDate === todayKey) loadCollected();
   };
 
   /** Only admins may record payments; until the role is known, nobody is offered it. */
@@ -592,7 +583,7 @@ export function TodayDashboard() {
           initialAmount={formatMoneyInput(paying.remainingMinor ?? 0)}
           onRecorded={(payment) => {
             applyPayment(payment);
-            applyCollected(payment);
+            refreshCollected(payment);
             setRecorded(payment);
           }}
           onFailed={() => refreshAfterFailure(paying.id)}
