@@ -221,6 +221,16 @@ export interface WorkOrderPaymentsResponse {
   canManage: boolean;
 }
 
+/**
+ * Body of `GET /payments?date=YYYY-MM-DD`: the organization's active payments with that payment
+ * date (the date on the receipt), and what they add up to per currency, never mixed.
+ */
+export interface DailyPaymentsResponse {
+  date: string;
+  items: Payment[];
+  totals: { currency: Currency; amountMinor: number }[];
+}
+
 /** Body of `GET /me`: what the signed-in member may do in their organization. */
 export interface CurrentMemberResponse {
   role: OrganizationMemberRole;

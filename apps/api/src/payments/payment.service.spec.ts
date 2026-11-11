@@ -55,12 +55,18 @@ const validInput = {
 describe('PaymentService', () => {
   let service: PaymentService;
   let workOrders: { findById: jest.Mock };
-  let payments: { findByWorkOrder: jest.Mock; record: jest.Mock; voidPayment: jest.Mock };
+  let payments: {
+    findByWorkOrder: jest.Mock;
+    findByPaymentDate: jest.Mock;
+    record: jest.Mock;
+    voidPayment: jest.Mock;
+  };
 
   beforeEach(async () => {
     workOrders = { findById: jest.fn().mockResolvedValue(workOrder()) };
     payments = {
       findByWorkOrder: jest.fn().mockResolvedValue([]),
+      findByPaymentDate: jest.fn().mockResolvedValue([]),
       record: jest.fn().mockImplementation(async () => payment(3000000)),
       voidPayment: jest.fn().mockImplementation(async () => payment(3000000, PaymentStatus.VOIDED)),
     };
@@ -115,6 +121,41 @@ describe('PaymentService', () => {
       workOrders.findById.mockResolvedValue(null);
       await expect(service.list('org-1', 'wo-1')).rejects.toBeInstanceOf(NotFoundError);
       expect(payments.findByWorkOrder).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('listByDate', () => {
+    it('lists the active payments of the day with a total per currency, never mixed', async () => {
+      const dollars = { ...payment(5000), id: 'usd', currency: Currency.USD };
+      payments.findByPaymentDate.mockResolvedValue([
+        payment(3000000),
+        payment(1000000, PaymentStatus.VOIDED),
+        dollars,
+        { ...payment(2000000), id: 'p-2b' },
+      ]);
+
+      const result = await service.listByDate('org-1', '2026-08-10');
+
+      expect(payments.findByPaymentDate).toHaveBeenCalledWith('org-1', '2026-08-10');
+      expect(result.date).toBe('2026-08-10');
+      expect(result.items.map((p) => p.id)).toEqual(['p-3000000', 'usd', 'p-2b']);
+      expect(result.totals).toEqual([
+        { currency: Currency.ARS, amountMinor: 5000000 },
+        { currency: Currency.USD, amountMinor: 5000 },
+      ]);
+    });
+
+    it('returns no items and no totals for a day without payments', async () => {
+      await expect(service.listByDate('org-1', '2026-08-10')).resolves.toEqual({
+        date: '2026-08-10',
+        items: [],
+        totals: [],
+      });
+    });
+
+    it.each(['2026-02-30', '10/08/2026', ''])('rejects %p as a date', async (date) => {
+      await expect(service.listByDate('org-1', date)).rejects.toBeInstanceOf(ValidationError);
+      expect(payments.findByPaymentDate).not.toHaveBeenCalled();
     });
   });
 

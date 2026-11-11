@@ -562,6 +562,29 @@ describe.each(['global', 'organization'] as const)(
         [2, PaymentStatus.ACTIVE],
       ]);
     });
+
+    it('finds the payments dated a given day across work orders, voided included', async () => {
+      const { repository, seed } = setup(mode);
+      seed(org, {}, 'wo-1');
+      seed(org, {}, 'wo-2');
+      const first = await repository.record(org, 'wo-1', { ...input, amountMinor: 100 }, admin);
+      await repository.record(org, 'wo-2', { ...input, amountMinor: 200 }, admin);
+      await repository.record(
+        org,
+        'wo-1',
+        { ...input, amountMinor: 300, paymentDate: '2026-08-11' },
+        admin,
+      );
+      await repository.voidPayment(org, 'wo-1', first.id, 'Mistake', admin);
+
+      const items = await repository.findByPaymentDate(org, '2026-08-10');
+
+      expect(items.map((p) => [p.receiptNumber, p.workOrderId, p.amountMinor, p.status])).toEqual([
+        [1, 'wo-1', 100, PaymentStatus.VOIDED],
+        [2, 'wo-2', 200, PaymentStatus.ACTIVE],
+      ]);
+      await expect(repository.findByPaymentDate(org, '2026-08-12')).resolves.toEqual([]);
+    });
   },
 );
 
@@ -589,6 +612,18 @@ describe('FirestorePaymentRepository counter scope', () => {
     expect([a.receiptNumber, b.receiptNumber]).toEqual([1, 1]);
     expect(store.docs.get('organizations/org-a/counters/receipts')).toEqual({ next: 2 });
     expect(store.docs.get('organizations/org-b/counters/receipts')).toEqual({ next: 2 });
+  });
+
+  it('never returns another organization payments for the same day', async () => {
+    const { repository, seed } = setup('organization');
+    seed('org-a');
+    seed('org-b');
+    await repository.record('org-a', 'wo-1', { ...input, amountMinor: 100 }, admin);
+    await repository.record('org-b', 'wo-1', { ...input, amountMinor: 999 }, admin);
+
+    const items = await repository.findByPaymentDate('org-a', input.paymentDate);
+
+    expect(items.map((p) => p.amountMinor)).toEqual([100]);
   });
 
   it('treats another organization work order as not found', async () => {
