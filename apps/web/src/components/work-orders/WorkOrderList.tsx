@@ -54,6 +54,11 @@ import { matchesOrderSearch } from './workOrderSearch';
 import { Check, ClipboardList, SlidersHorizontal, TriangleAlert, X } from 'lucide-react';
 
 const NEW_BUTTON_ID = 'work-order-new';
+/** Cards show priority only when it changes what to do first. */
+const PROMINENT_PRIORITIES = new Set<WorkOrderClientSummary['priority']>([
+  'high',
+  'urgent',
+] as WorkOrderClientSummary['priority'][]);
 const SEARCH_ID = 'workOrderSearch';
 const filterChipId = (key: string) => `work-order-filter-chip-${key}`;
 const deleteButtonId = (id: string) => `work-order-delete-${id}`;
@@ -267,13 +272,8 @@ export function WorkOrderList({ clients, onCreate, onEdit }: WorkOrderListProps)
     setBalanceFilter('');
     setDueFilter('');
   };
-  const activeFilterCount = [
-    statusFilter,
-    priorityFilter,
-    clientFilter,
-    balanceFilter,
-    dueFilter,
-  ].filter(Boolean).length;
+  /** What is folded behind Filtros; the Vencidas and Saldo toggles show their own state. */
+  const activeFilterCount = [statusFilter, priorityFilter, clientFilter].filter(Boolean).length;
   const clientName = clients.find((c) => c.id === clientFilter)?.name;
   /** The filters in force, in toolbar order, each with a way to drop just that one. */
   const activeFilters: { key: string; label: string; clear: () => void }[] = [];
@@ -350,115 +350,120 @@ export function WorkOrderList({ clients, onCreate, onEdit }: WorkOrderListProps)
 
   return (
     <div className="space-y-5" data-testid="work-order-list">
-      <div className="flex flex-col gap-3 rounded-xl border border-border-subtle bg-bg-primary/60 p-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex flex-wrap gap-2">
-          <Input
-            id={SEARCH_ID}
-            type="search"
-            aria-label={t('workOrders.search')}
-            placeholder={t('workOrders.searchPlaceholder')}
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="w-full rounded-xl sm:w-64"
-          />
-          <Button
-            type="button"
-            variant="secondary"
-            className="min-h-11 w-full gap-2 rounded-xl sm:hidden"
-            aria-expanded={filtersOpen}
-            aria-controls="workOrderFilters"
-            onClick={() => setFiltersOpen((open) => !open)}
-          >
-            <SlidersHorizontal aria-hidden="true" className="h-4 w-4" />
-            {activeFilterCount > 0
-              ? t('workOrders.filtersActive', { count: activeFilterCount })
-              : t('workOrders.filters')}
-          </Button>
-          <div
-            id="workOrderFilters"
-            className={`${filtersOpen ? 'flex' : 'hidden'} w-full flex-col gap-2 sm:contents`}
-          >
-            <Select
-              id="statusFilter"
-              aria-label={t('workOrders.filterStatus')}
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              className="w-full rounded-xl sm:w-40"
+      <div className="space-y-3 rounded-xl border border-border-subtle bg-bg-primary/60 p-3">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
+            <Input
+              id={SEARCH_ID}
+              type="search"
+              aria-label={t('workOrders.search')}
+              placeholder={t('workOrders.searchPlaceholder')}
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="w-full rounded-xl sm:w-64"
+            />
+            {/* The two money and time questions stay one press away; the rest folds behind Filtros. */}
+            <div className="flex gap-2">
+              <FilterToggle
+                pressed={dueFilter === 'overdue'}
+                onClick={() => setDueFilter((value) => (value ? '' : 'overdue'))}
+              >
+                {t('workOrders.dueOverdue')}
+              </FilterToggle>
+              <FilterToggle
+                pressed={balanceFilter === 'owed'}
+                onClick={() => setBalanceFilter((value) => (value ? '' : 'owed'))}
+              >
+                {t('workOrders.balanceOwed')}
+              </FilterToggle>
+              <Button
+                type="button"
+                variant="secondary"
+                className="min-h-11 flex-1 gap-2 whitespace-nowrap rounded-xl sm:flex-none"
+                aria-expanded={filtersOpen}
+                aria-controls="workOrderFilters"
+                onClick={() => setFiltersOpen((open) => !open)}
+              >
+                <SlidersHorizontal aria-hidden="true" className="h-4 w-4" />
+                {activeFilterCount > 0
+                  ? t('workOrders.filtersActive', { count: activeFilterCount })
+                  : t('workOrders.filters')}
+              </Button>
+            </div>
+          </div>
+          <div className="flex flex-wrap items-center gap-3">
+            {viewMode === 'cards' && (
+              <SortSelect
+                id="workOrderSort"
+                label={t('workOrders.sortBy')}
+                keys={WORK_ORDER_SORT_KEYS}
+                keyLabel={(key) => t(SORT_LABEL_KEYS[key])}
+                sort={sort}
+                defaultSort={DEFAULT_WORK_ORDER_SORT}
+                onChange={changeSort}
+              />
+            )}
+            <ViewModeToggle
+              value={viewMode}
+              onChange={changeViewMode}
+              ariaLabel={t('workOrders.view')}
+            />
+            <Button
+              id={NEW_BUTTON_ID}
+              onClick={onCreate}
+              className="min-h-11 rounded-xl px-6"
+              variant="primary"
             >
-              <option value="">{t('workOrders.allStatuses')}</option>
-              {WORK_ORDER_STATUSES.map((s) => (
-                <option key={s} value={s}>
-                  {statusLabel(s, language)}
-                </option>
-              ))}
-            </Select>
-            <Select
-              id="priorityFilter"
-              aria-label={t('workOrders.filterPriority')}
-              value={priorityFilter}
-              onChange={(e) => setPriorityFilter(e.target.value)}
-              className="w-full rounded-xl sm:w-48"
-            >
-              <option value="">{t('workOrders.allPriorities')}</option>
-              {WORK_ORDER_PRIORITIES.map((p) => (
-                <option key={p} value={p}>
-                  {priorityLabel(p, language)}
-                </option>
-              ))}
-            </Select>
-            <Select
-              id="clientFilter"
-              aria-label={t('workOrders.filterClient')}
-              value={clientFilter}
-              onChange={(e) => setClientFilter(e.target.value)}
-              className="w-full rounded-xl sm:w-40"
-            >
-              <option value="">{t('workOrders.allClients')}</option>
-              {clients.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name}
-                </option>
-              ))}
-            </Select>
-            <FilterToggle
-              pressed={balanceFilter === 'owed'}
-              onClick={() => setBalanceFilter((value) => (value ? '' : 'owed'))}
-            >
-              {t('workOrders.balanceOwed')}
-            </FilterToggle>
-            <FilterToggle
-              pressed={dueFilter === 'overdue'}
-              onClick={() => setDueFilter((value) => (value ? '' : 'overdue'))}
-            >
-              {t('workOrders.dueOverdue')}
-            </FilterToggle>
+              {t('workOrders.new')}
+            </Button>
           </div>
         </div>
-        <div className="flex flex-wrap items-center gap-3">
-          {viewMode === 'cards' && (
-            <SortSelect
-              id="workOrderSort"
-              label={t('workOrders.sortBy')}
-              keys={WORK_ORDER_SORT_KEYS}
-              keyLabel={(key) => t(SORT_LABEL_KEYS[key])}
-              sort={sort}
-              defaultSort={DEFAULT_WORK_ORDER_SORT}
-              onChange={changeSort}
-            />
-          )}
-          <ViewModeToggle
-            value={viewMode}
-            onChange={changeViewMode}
-            ariaLabel={t('workOrders.view')}
-          />
-          <Button
-            id={NEW_BUTTON_ID}
-            onClick={onCreate}
-            className="min-h-11 rounded-xl px-6"
-            variant="primary"
+        <div
+          id="workOrderFilters"
+          className={`${filtersOpen ? 'flex' : 'hidden'} flex-col gap-2 sm:flex-row sm:flex-wrap`}
+        >
+          <Select
+            id="statusFilter"
+            aria-label={t('workOrders.filterStatus')}
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            className="w-full rounded-xl sm:w-40"
           >
-            {t('workOrders.new')}
-          </Button>
+            <option value="">{t('workOrders.allStatuses')}</option>
+            {WORK_ORDER_STATUSES.map((s) => (
+              <option key={s} value={s}>
+                {statusLabel(s, language)}
+              </option>
+            ))}
+          </Select>
+          <Select
+            id="priorityFilter"
+            aria-label={t('workOrders.filterPriority')}
+            value={priorityFilter}
+            onChange={(e) => setPriorityFilter(e.target.value)}
+            className="w-full rounded-xl sm:w-48"
+          >
+            <option value="">{t('workOrders.allPriorities')}</option>
+            {WORK_ORDER_PRIORITIES.map((p) => (
+              <option key={p} value={p}>
+                {priorityLabel(p, language)}
+              </option>
+            ))}
+          </Select>
+          <Select
+            id="clientFilter"
+            aria-label={t('workOrders.filterClient')}
+            value={clientFilter}
+            onChange={(e) => setClientFilter(e.target.value)}
+            className="w-full rounded-xl sm:w-40"
+          >
+            <option value="">{t('workOrders.allClients')}</option>
+            {clients.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.name}
+              </option>
+            ))}
+          </Select>
         </div>
       </div>
 
@@ -779,66 +784,69 @@ export function WorkOrderList({ clients, onCreate, onEdit }: WorkOrderListProps)
                         </a>
                       </h2>
                       <p className="text-sm text-fg-muted">{wo.clientName}</p>
+                      {/* Badges only for state that needs attention; dates and money read as text. */}
                       <div className="mt-2 flex flex-wrap gap-2 text-xs">
                         <StatusBadge status={wo.status}>
                           {statusLabel(wo.status, language)}
                         </StatusBadge>
-                        <Badge variant="tone" className={priorityBadgeClass(wo.priority)}>
-                          {priorityLabel(wo.priority, language)}
-                        </Badge>
-                        {wo.dueDate &&
-                          (isOverdue(wo, todayKey) ? (
-                            // One badge says it is overdue and when it was due.
-                            <Badge variant="error">
-                              {`${t('workOrders.overdue')} · ${formatDateOnly(wo.dueDate, language)}`}
-                            </Badge>
-                          ) : (
-                            <Badge variant="neutral">{formatDateOnly(wo.dueDate, language)}</Badge>
-                          ))}
-                        {wo.totalPriceMinor !== undefined && wo.currency && (
-                          <Badge variant="neutral">
-                            {formatMoney(wo.totalPriceMinor, wo.currency)}
+                        {PROMINENT_PRIORITIES.has(wo.priority) && (
+                          <Badge variant="tone" className={priorityBadgeClass(wo.priority)}>
+                            {priorityLabel(wo.priority, language)}
                           </Badge>
                         )}
-                        {isOwed(wo) && wo.currency && (
-                          <Badge variant="warning">
-                            {t('workOrders.balanceDue', {
-                              value: formatMoney(wo.remainingMinor ?? 0, wo.currency),
-                            })}
+                        {wo.dueDate && isOverdue(wo, todayKey) && (
+                          // One badge says it is overdue and when it was due.
+                          <Badge variant="error">
+                            {`${t('workOrders.overdue')} · ${formatDateOnly(wo.dueDate, language)}`}
                           </Badge>
                         )}
-                        {isPaidUp(wo) && <Badge variant="neutral">{t('workOrders.paidUp')}</Badge>}
                       </div>
+                      {wo.dueDate && !isOverdue(wo, todayKey) && (
+                        <p className="mt-2 text-sm tabular-nums text-fg-secondary">
+                          {t('workOrders.dueOn', { date: formatDateOnly(wo.dueDate, language) })}
+                        </p>
+                      )}
+                      {wo.totalPriceMinor !== undefined && wo.currency && (
+                        <p
+                          className="mt-1 text-sm tabular-nums text-fg-secondary"
+                          data-testid="card-money"
+                        >
+                          {formatMoney(wo.totalPriceMinor, wo.currency)}
+                          {isOwed(wo) && (
+                            <>
+                              {' · '}
+                              <span className="font-semibold text-fg-primary">
+                                {t('workOrders.balanceDue', {
+                                  value: formatMoney(wo.remainingMinor ?? 0, wo.currency),
+                                })}
+                              </span>
+                            </>
+                          )}
+                          {isPaidUp(wo) && ` · ${t('workOrders.paidUp')}`}
+                        </p>
+                      )}
                     </div>
+                    {/* The same icon actions as the table, always shown: a card has no hover. */}
                     <div className="flex gap-2">
-                      <Button
-                        variant="edit"
-                        size="sm"
-                        className={rowActionButtonClass}
+                      <RowActionButton
+                        action="edit"
+                        label={t('workOrders.editNamed', { name: wo.title })}
+                        title={t('common.edit')}
                         onClick={() => onEdit?.(wo)}
                         disabled={confirmDelete !== null}
-                        aria-label={t('workOrders.editNamed', { name: wo.title })}
-                      >
-                        {t('common.edit')}
-                      </Button>
-                      <Button
-                        variant="delete"
-                        size="sm"
-                        className={rowActionButtonClass}
+                      />
+                      <RowActionButton
+                        action="delete"
                         id={deleteButtonId(wo.id)}
-                        onClick={
-                          wo.hasPayments
-                            ? (event) => showBlockedDelete(wo.id, event)
-                            : () => openDelete(wo.id)
-                        }
+                        label={deleteLabel(wo)}
+                        title={t('common.delete')}
+                        onClick={() => openDelete(wo.id)}
                         disabled={confirmDelete !== null || deleting === wo.id}
-                        // A blocked delete stays focusable, so its reason can be reached.
-                        aria-disabled={wo.hasPayments ? true : undefined}
-                        title={wo.hasPayments ? t('workOrders.deleteHasPayments') : undefined}
-                        aria-label={deleteLabel(wo)}
-                      >
-                        {t('common.delete')}
-                      </Button>
+                        disabledReason={
+                          wo.hasPayments ? t('workOrders.deleteHasPayments') : undefined
+                        }
+                        onBlockedClick={(event) => showBlockedDelete(wo.id, event)}
+                      />
                     </div>
                   </div>
                 </Panel>
@@ -869,7 +877,7 @@ function FilterToggle({
       type="button"
       aria-pressed={pressed}
       onClick={onClick}
-      className={`view-mode-option inline-flex min-h-11 w-full items-center justify-center gap-1.5 whitespace-nowrap rounded-xl border px-4 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus sm:w-auto ${
+      className={`view-mode-option inline-flex min-h-11 flex-1 items-center justify-center gap-1.5 whitespace-nowrap rounded-xl border px-4 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus sm:flex-none ${
         pressed
           ? 'view-mode-option-active'
           : 'border-border-default text-fg-secondary hover:text-fg-primary'
