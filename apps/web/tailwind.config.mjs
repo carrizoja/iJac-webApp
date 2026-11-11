@@ -1,3 +1,11 @@
+/**
+ * A theme color read from a CSS variable that still takes opacity modifiers such as
+ * `bg-bg-primary/60`. A plain `var(--color-x)` makes Tailwind skip those classes silently;
+ * without a modifier, `<alpha-value>` is 1 and the color is unchanged.
+ */
+const withAlpha = (name) =>
+  `color-mix(in srgb, var(--color-${name}) calc(<alpha-value> * 100%), transparent)`;
+
 /** @type {import('tailwindcss').Config} */
 export default {
   darkMode: 'class',
@@ -40,69 +48,68 @@ export default {
       },
       colors: {
         /* Semantic backgrounds */
-        'bg-primary': 'var(--color-bg-primary)',
-        'bg-secondary': 'var(--color-bg-secondary)',
-        'bg-tertiary': 'var(--color-bg-tertiary)',
+        'bg-primary': withAlpha('bg-primary'),
+        'bg-secondary': withAlpha('bg-secondary'),
+        'bg-tertiary': withAlpha('bg-tertiary'),
 
         /* Panels */
-        'panel-default': 'var(--color-panel-default)',
-        'panel-hover': 'var(--color-panel-hover)',
-        'panel-active': 'var(--color-panel-active)',
-        'panel-elevated': 'var(--color-panel-elevated)',
+        'panel-default': withAlpha('panel-default'),
+        'panel-hover': withAlpha('panel-hover'),
+        'panel-active': withAlpha('panel-active'),
+        'panel-elevated': withAlpha('panel-elevated'),
 
         /* Borders */
-        'border-default': 'var(--color-border-default)',
-        'border-subtle': 'var(--color-border-subtle)',
-        'border-strong': 'var(--color-border-strong)',
-        'border-active': 'var(--color-border-active)',
-        'border-primary': 'var(--color-border-primary)',
-        'border-muted': 'var(--color-border-muted)',
+        'border-default': withAlpha('border-default'),
+        'border-subtle': withAlpha('border-subtle'),
+        'border-strong': withAlpha('border-strong'),
+        'border-active': withAlpha('border-active'),
+        'border-primary': withAlpha('border-primary'),
+        'border-muted': withAlpha('border-muted'),
 
         /* Foreground */
-        'fg-primary': 'var(--color-fg-primary)',
-        'fg-secondary': 'var(--color-fg-secondary)',
-        'fg-tertiary': 'var(--color-fg-tertiary)',
+        'fg-primary': withAlpha('fg-primary'),
+        'fg-secondary': withAlpha('fg-secondary'),
+        'fg-tertiary': withAlpha('fg-tertiary'),
         /* Labels and secondary details; same tone as tertiary text. */
-        'fg-muted': 'var(--color-fg-tertiary)',
+        'fg-muted': withAlpha('fg-tertiary'),
 
         /* Muted */
-        'muted-bg': 'var(--color-muted-bg)',
-        'muted-fg': 'var(--color-muted-fg)',
-        'bg-accent': 'var(--color-bg-accent)',
+        'muted-bg': withAlpha('muted-bg'),
+        'muted-fg': withAlpha('muted-fg'),
+        'bg-accent': withAlpha('bg-accent'),
 
         /* Accent */
-        'accent-brand': 'var(--color-accent-brand)',
+        'accent-brand': withAlpha('accent-brand'),
 
         /* Status */
-        'status-open': 'var(--color-status-open)',
-        'status-in-progress': 'var(--color-status-in-progress)',
-        'status-completed': 'var(--color-status-completed)',
-        'status-cancelled': 'var(--color-status-cancelled)',
+        'status-open': withAlpha('status-open'),
+        'status-in-progress': withAlpha('status-in-progress'),
+        'status-completed': withAlpha('status-completed'),
+        'status-cancelled': withAlpha('status-cancelled'),
 
         /* Warning; supports opacity modifiers such as bg-warning/10 */
-        warning: 'color-mix(in srgb, var(--color-warning) calc(<alpha-value> * 100%), transparent)',
+        warning: withAlpha('warning'),
 
         /* Danger tint for delete confirmations; supports opacity modifiers such as bg-danger/10 */
-        danger:
-          'color-mix(in srgb, var(--color-destructive) calc(<alpha-value> * 100%), transparent)',
+        danger: withAlpha('destructive'),
 
         /* Destructive */
         destructive: {
-          DEFAULT: 'var(--color-destructive)',
-          hover: 'var(--color-destructive-hover)',
-          active: 'var(--color-destructive-active)',
-          text: 'var(--color-destructive-text)',
+          DEFAULT: withAlpha('destructive'),
+          hover: withAlpha('destructive-hover'),
+          active: withAlpha('destructive-active'),
+          text: withAlpha('destructive-text'),
         },
 
         /* Focus */
-        focus: 'var(--color-focus)',
+        focus: withAlpha('focus'),
 
         /* Legacy status for compatibility */
         status: {
-          open: 'var(--color-status-open)',
-          'in-progress': 'var(--color-status-in-progress)',
-          completed: 'var(--color-status-completed)',
-          cancelled: 'var(--color-status-cancelled)',
+          open: withAlpha('status-open'),
+          'in-progress': withAlpha('status-in-progress'),
+          completed: withAlpha('status-completed'),
+          cancelled: withAlpha('status-cancelled'),
         },
         surface: {
           DEFAULT: '#0f172a',
