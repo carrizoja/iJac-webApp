@@ -1,10 +1,19 @@
-import { useState, useEffect, useCallback, useMemo, useRef, Fragment } from 'react';
+import {
+  useState,
+  useEffect,
+  useCallback,
+  useMemo,
+  useRef,
+  Fragment,
+  type MouseEvent,
+} from 'react';
 import type { Client } from '@ijac/shared';
 import { formatMoney } from '@ijac/shared';
-import { listClients, deleteClient, listWorkOrders } from '../../lib/resources';
+import { ApiRequestError, listClients, deleteClient, listWorkOrders } from '../../lib/resources';
 import {
   Input,
   Button,
+  buttonVariants,
   Alert,
   EmptyState,
   LoadingState,
@@ -70,6 +79,8 @@ export function ClientList({ onCreate, onEdit }: ClientListProps) {
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [deleting, setDeleting] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
+  const [blockedDelete, setBlockedDelete] = useState<string | null>(null);
+  const blockedTrigger = useRef<HTMLButtonElement | null>(null);
   // The inline confirmation disables the row actions, so focus is moved on purpose at each step.
   const focusAfterRender = useFocusAfterRender();
   const openDelete = (id: string) => {
@@ -142,13 +153,54 @@ export function ClientList({ onCreate, onEdit }: ClientListProps) {
       await load(debouncedSearch, true);
       setConfirmDelete(null);
       focusAfterRender(...(neighbour ? [deleteButtonId(neighbour.id)] : []), NEW_BUTTON_ID);
-    } catch {
-      setErrorKey('clients.deleteError');
+    } catch (error) {
+      // The API refuses a client with orders (one may have been added since the list loaded).
+      setErrorKey(
+        error instanceof ApiRequestError && error.code === 'CONFLICT'
+          ? 'clients.deleteHasOrders'
+          : 'clients.deleteError',
+      );
       focusAfterRender(deleteConfirmId(id));
     } finally {
       setDeleting(null);
     }
   };
+
+  // A client with orders cannot be deleted; the button stays focusable and says why.
+  const hasOrders = (client: Client) => client.workOrderCount > 0;
+  const deleteLabel = (client: Client) =>
+    t(hasOrders(client) ? 'clients.deleteBlockedNamed' : 'clients.deleteNamed', {
+      name: client.name,
+    });
+  const showBlockedDelete = (id: string, event: MouseEvent<HTMLButtonElement>) => {
+    blockedTrigger.current = event.currentTarget;
+    setBlockedDelete(id);
+  };
+  const dismissBlockedDelete = () => {
+    setBlockedDelete(null);
+    blockedTrigger.current?.focus();
+  };
+  const blockedDeleteNote = (client: Client) => (
+    <div
+      className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between"
+      data-testid="client-delete-blocked"
+    >
+      <p role="status" className="text-sm text-fg-primary">
+        {t('clients.deleteHasOrders')}
+      </p>
+      <div className="flex shrink-0 justify-end gap-2">
+        <a
+          href={`/work-orders?client=${encodeURIComponent(client.id)}`}
+          className={buttonVariants({ variant: 'secondary', size: 'sm', className: 'rounded-lg' })}
+        >
+          {t('clients.viewOrders')}
+        </a>
+        <Button variant="secondary" size="sm" className="rounded-lg" onClick={dismissBlockedDelete}>
+          {t('common.gotIt')}
+        </Button>
+      </div>
+    </div>
+  );
 
   return (
     <div className="space-y-5" data-testid="client-list">
@@ -295,14 +347,25 @@ export function ClientList({ onCreate, onEdit }: ClientListProps) {
                           <RowActionButton
                             action="delete"
                             id={deleteButtonId(client.id)}
-                            label={t('clients.deleteNamed', { name: client.name })}
+                            label={deleteLabel(client)}
                             title={t('common.delete')}
                             onClick={() => openDelete(client.id)}
                             disabled={confirmDelete !== null || deleting === client.id}
+                            disabledReason={
+                              hasOrders(client) ? t('clients.deleteHasOrders') : undefined
+                            }
+                            onBlockedClick={(event) => showBlockedDelete(client.id, event)}
                           />
                         </div>
                       </td>
                     </tr>
+                    {blockedDelete === client.id && (
+                      <tr key={`${client.id}-blocked`}>
+                        <td colSpan={6} className="bg-bg-secondary px-4 py-3">
+                          {blockedDeleteNote(client)}
+                        </td>
+                      </tr>
+                    )}
                     {confirmDelete === client.id && (
                       <tr key={`${client.id}-delete`}>
                         <td
@@ -349,6 +412,11 @@ export function ClientList({ onCreate, onEdit }: ClientListProps) {
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3" data-testid="client-cards">
             {sortedClients.map((client) => (
               <div key={client.id}>
+                {blockedDelete === client.id && (
+                  <Panel className="mb-3 border border-border-default">
+                    {blockedDeleteNote(client)}
+                  </Panel>
+                )}
                 {confirmDelete === client.id && (
                   <Panel
                     className="mb-3 border border-danger bg-danger/10"
@@ -425,9 +493,16 @@ export function ClientList({ onCreate, onEdit }: ClientListProps) {
                         size="sm"
                         className={rowActionButtonClass}
                         id={deleteButtonId(client.id)}
-                        onClick={() => openDelete(client.id)}
+                        onClick={
+                          hasOrders(client)
+                            ? (event) => showBlockedDelete(client.id, event)
+                            : () => openDelete(client.id)
+                        }
                         disabled={confirmDelete !== null || deleting === client.id}
-                        aria-label={t('clients.deleteNamed', { name: client.name })}
+                        // A blocked delete stays focusable, so its reason can be reached.
+                        aria-disabled={hasOrders(client) ? true : undefined}
+                        title={hasOrders(client) ? t('clients.deleteHasOrders') : undefined}
+                        aria-label={deleteLabel(client)}
                       >
                         {t('common.delete')}
                       </Button>
