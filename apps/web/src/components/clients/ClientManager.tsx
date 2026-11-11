@@ -71,6 +71,7 @@ export function ClientManager() {
           setSaved(null);
           setEditing(client);
         }}
+        onDeleted={(id) => setSaved((current) => (current?.client.id === id ? null : current))}
       />
     </div>
   );
