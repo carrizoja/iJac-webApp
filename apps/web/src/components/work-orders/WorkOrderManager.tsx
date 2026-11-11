@@ -7,6 +7,7 @@ import { collectAllPages } from '../../lib/collectAllPages';
 import { useLanguage } from '../../hooks/useLanguage';
 import { useRevealOnOpen } from '../../hooks/useRevealOnOpen';
 import { Alert, SavedNotice } from '../ui';
+import { takeNewFormRequest } from '../../lib/newFormLink';
 
 export function WorkOrderManager() {
   const { t } = useLanguage();
@@ -26,6 +27,12 @@ export function WorkOrderManager() {
       .then(setClients)
       .catch(() => setClientsError(true));
   }, [refreshKey]);
+
+  // Opened from Hoy or the N shortcut: start with the new-order form. Read after mount, since
+  // the server render cannot see the URL.
+  useEffect(() => {
+    if (takeNewFormRequest()) setCreating(true);
+  }, []);
 
   const { panelRef, focusRef } = useRevealOnOpen<HTMLHeadingElement>(
     editing ? editing.id : creating ? 'new' : null,

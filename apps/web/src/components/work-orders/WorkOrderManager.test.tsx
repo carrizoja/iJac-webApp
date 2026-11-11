@@ -307,6 +307,16 @@ describe('WorkOrderManager', () => {
     });
   });
 
+  it('opens the new-order form straight away from a ?new=1 link, then drops it from the URL', async () => {
+    window.history.replaceState(null, '', '/work-orders?new=1');
+    render(<WorkOrderManager />);
+
+    expect(await screen.findByTestId('work-order-form-panel')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Nueva orden' })).toBeInTheDocument();
+    await waitFor(() => expect(new URLSearchParams(window.location.search).has('new')).toBe(false));
+    window.history.replaceState(null, '', '/');
+  });
+
   it('switches from editing an order to a blank new order', async () => {
     listClients.mockResolvedValue({ items: [client('c1', 'Acme')] });
     listWorkOrders.mockResolvedValue({ items: [summary] });

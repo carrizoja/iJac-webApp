@@ -1,10 +1,11 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { Client } from '@ijac/shared';
 import { ClientList } from './ClientList';
 import { ClientForm } from './ClientForm';
 import { useLanguage } from '../../hooks/useLanguage';
 import { useRevealOnOpen } from '../../hooks/useRevealOnOpen';
 import { SavedNotice } from '../ui';
+import { takeNewFormRequest } from '../../lib/newFormLink';
 
 export function ClientManager() {
   const { t } = useLanguage();
@@ -13,6 +14,12 @@ export function ClientManager() {
   const [refreshKey, setRefreshKey] = useState(0);
   /** The client just saved, confirmed until dismissed or another form opens. */
   const [saved, setSaved] = useState<{ client: Client; created: boolean } | null>(null);
+
+  // Opened from Hoy or the C shortcut: start with the new-client form. Read after mount, since
+  // the server render cannot see the URL.
+  useEffect(() => {
+    if (takeNewFormRequest()) setCreating(true);
+  }, []);
 
   const { panelRef, focusRef } = useRevealOnOpen<HTMLHeadingElement>(
     editing ? editing.id : creating ? 'new' : null,

@@ -105,6 +105,16 @@ describe('ClientManager', () => {
     expect(screen.queryByTestId('client-saved')).not.toBeInTheDocument();
   });
 
+  it('opens the new-client form straight away from a ?new=1 link, then drops it from the URL', () => {
+    window.history.replaceState(null, '', '/clients?new=1');
+    render(<ClientManager />);
+
+    expect(screen.getByTestId('client-form-panel')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Nuevo cliente' })).toBeInTheDocument();
+    expect(new URLSearchParams(window.location.search).has('new')).toBe(false);
+    window.history.replaceState(null, '', '/');
+  });
+
   it('shows the editorial form panel for create and edit flows', () => {
     render(<ClientManager />);
 

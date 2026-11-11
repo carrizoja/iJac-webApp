@@ -17,6 +17,7 @@ import {
 import { formatMoneyInput } from '../../lib/money';
 import { getCalendarConnectionStatus } from '../../lib/calendar';
 import { collectAllPages } from '../../lib/collectAllPages';
+import { newFormHref } from '../../lib/newFormLink';
 import { useLanguage } from '../../hooks/useLanguage';
 import { formatDateOnly, localeFor, priorityLabel, statusLabel } from '../../i18n/format';
 import type { TranslationKey } from '../../i18n/translations';
@@ -24,6 +25,7 @@ import {
   Alert,
   Badge,
   Button,
+  buttonVariants,
   LoadingState,
   Panel,
   cn,
@@ -374,7 +376,23 @@ export function TodayDashboard() {
 
   return (
     <div className="space-y-6">
-      <p className="text-fg-secondary first-letter:uppercase">{dateLine}</p>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <p className="text-fg-secondary first-letter:uppercase">{dateLine}</p>
+        <div className="flex flex-wrap gap-2">
+          <a
+            href={newFormHref('/work-orders')}
+            className={cn(buttonVariants({ variant: 'secondary', size: 'sm' }), 'rounded-lg')}
+          >
+            {t('workOrders.new')}
+          </a>
+          <a
+            href={newFormHref('/clients')}
+            className={cn(buttonVariants({ variant: 'secondary', size: 'sm' }), 'rounded-lg')}
+          >
+            {t('clients.new')}
+          </a>
+        </div>
+      </div>
 
       {orders.kind === 'error' && (
         <Alert

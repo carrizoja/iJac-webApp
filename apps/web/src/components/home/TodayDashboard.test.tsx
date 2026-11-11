@@ -85,6 +85,18 @@ describe('TodayDashboard', () => {
     vi.useRealTimers();
   });
 
+  it('starts a new order or a new client from Hoy', async () => {
+    render(<TodayDashboard />);
+    expect(await screen.findByRole('link', { name: /^Nueva orden/ })).toHaveAttribute(
+      'href',
+      '/work-orders?new=1',
+    );
+    expect(screen.getByRole('link', { name: /^Nuevo cliente/ })).toHaveAttribute(
+      'href',
+      '/clients?new=1',
+    );
+  });
+
   it("shows today's date", async () => {
     render(<TodayDashboard />);
     expect(await screen.findByText(/6 de noviembre de 2026/)).toBeInTheDocument();
