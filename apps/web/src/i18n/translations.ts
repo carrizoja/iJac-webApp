@@ -298,7 +298,7 @@ export const es = {
   'workOrders.validation.priceForCurrency': 'Ingresá el precio para la moneda elegida',
   'payments.title': 'Pagos',
   'payments.receiptHelp':
-    'Cada pago recibe el siguiente número de recibo de la organización (0001-00000001, 0001-00000002…). Un número nunca se reutiliza, aunque el pago se anule.',
+    'Cada pago recibe el siguiente número de recibo de la organización ({first}, {second}…). Un número nunca se reutiliza, aunque el pago se anule.',
   'payments.loading': 'Cargando pagos...',
   'payments.loadError': 'No se pudieron cargar los pagos.',
   'payments.total': 'Total',
@@ -711,7 +711,7 @@ export const en = {
   'workOrders.validation.priceForCurrency': 'Enter the price for the chosen currency',
   'payments.title': 'Payments',
   'payments.receiptHelp':
-    "Each payment gets the organization's next receipt number (0001-00000001, 0001-00000002…). A number is never reused, even if the payment is voided.",
+    "Each payment gets the organization's next receipt number ({first}, {second}…). A number is never reused, even if the payment is voided.",
   'payments.loading': 'Loading payments...',
   'payments.loadError': 'Payments could not be loaded.',
   'payments.total': 'Total',

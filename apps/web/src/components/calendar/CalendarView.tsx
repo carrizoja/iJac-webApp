@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, useId } from 'react';
 import { WorkOrderStatus, type CalendarEvent } from '@ijac/shared';
 import { listCalendarEvents, syncCalendar } from '../../lib/calendar';
 import { Button, Alert, EmptyState, LoadingState, Panel } from '../ui';
@@ -112,6 +112,7 @@ export function CalendarView() {
   const monthLabel = formatMonthYear(currentMonth, language);
   const todayKey = localDateKey(new Date());
 
+  const syncHelpId = useId();
   const handleSync = async () => {
     setSyncing(true);
     setSyncResult(null);
@@ -204,14 +205,14 @@ export function CalendarView() {
             onClick={handleSync}
             isLoading={syncing}
             aria-busy={syncing}
-            aria-describedby="calendar-sync-help"
+            aria-describedby={syncHelpId}
           >
             {syncing ? t('calendar.syncing') : t('calendar.sync')}
           </Button>
         </div>
       </div>
       {/* What the button sends where, and that it only goes one way. */}
-      <p id="calendar-sync-help" className="text-sm text-fg-secondary">
+      <p id={syncHelpId} className="text-sm text-fg-secondary">
         {t('calendar.syncHelp')}
       </p>
 
