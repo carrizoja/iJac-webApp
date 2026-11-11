@@ -56,6 +56,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="min-h-screen">
+      {/* First in the tab order: lets keyboard users jump past the navigation. */}
+      <a
+        href="#main-content"
+        className="sr-only rounded-lg bg-bg-primary px-4 py-2 text-sm font-semibold text-fg-primary focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 focus:outline-none focus:ring-2 focus:ring-focus"
+      >
+        {t('nav.skipToContent')}
+      </a>
       <header className="app-shell-header px-4 pt-4">
         <div className="mx-auto max-w-7xl">
           <div className="navbar-surface rounded-2xl border px-3 py-2 backdrop-blur">
@@ -153,7 +160,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </div>
         </div>
       </header>
-      <main className="app-shell-main mx-auto max-w-7xl p-4">{children}</main>
+      <main
+        id="main-content"
+        tabIndex={-1}
+        className="app-shell-main mx-auto max-w-7xl p-4 focus:outline-none"
+      >
+        {children}
+      </main>
     </div>
   );
 }
