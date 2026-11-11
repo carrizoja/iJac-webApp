@@ -17,7 +17,9 @@ export function useRevealOnOpen<T extends HTMLElement>(openKey: string | null) {
     if (openKey === null) {
       const target = returnTo.current;
       returnTo.current = null;
-      // Only when focus fell back to the page: a confirmation shown on close keeps it.
+      // Only when focus fell back to the page: a confirmation shown on close keeps it. This
+      // relies on the confirmation (a child, like SavedNotice) focusing itself in its own mount
+      // effect, which React runs before this parent effect.
       const lost = document.activeElement === null || document.activeElement === document.body;
       // After a save the list reloads, so the trigger may no longer exist.
       if (lost && target?.isConnected) target.focus();
