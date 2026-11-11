@@ -204,11 +204,16 @@ export function CalendarView() {
             onClick={handleSync}
             isLoading={syncing}
             aria-busy={syncing}
+            aria-describedby="calendar-sync-help"
           >
             {syncing ? t('calendar.syncing') : t('calendar.sync')}
           </Button>
         </div>
       </div>
+      {/* What the button sends where, and that it only goes one way. */}
+      <p id="calendar-sync-help" className="text-sm text-fg-secondary">
+        {t('calendar.syncHelp')}
+      </p>
 
       <div
         className="hidden grid-cols-7 gap-1 text-center text-xs text-fg-muted sm:grid"

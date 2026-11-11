@@ -243,6 +243,20 @@ describe('PaymentsPanel', () => {
     expect(confirmation.parentElement).toHaveFocus();
   });
 
+  it('explains how receipt numbers are given, and Registrar pago reads it as its description', async () => {
+    listPayments.mockResolvedValue(response({ items: [makePayment()] }));
+    renderPanel();
+    const record = await screen.findByRole('button', { name: 'Registrar pago' });
+    expect(
+      screen.getByText(
+        'Cada pago recibe el siguiente número de recibo de la organización (0001-00000001, 0001-00000002…). Un número nunca se reutiliza, aunque el pago se anule.',
+      ),
+    ).toBeInTheDocument();
+    expect(record).toHaveAccessibleDescription(
+      'Cada pago recibe el siguiente número de recibo de la organización (0001-00000001, 0001-00000002…). Un número nunca se reutiliza, aunque el pago se anule.',
+    );
+  });
+
   it('shows the remaining balance as the main figure', async () => {
     listPayments.mockResolvedValue(
       response({

@@ -31,6 +31,19 @@ describe('CalendarView', () => {
     syncCalendar.mockResolvedValue({ attempted: 1, succeeded: 1, failed: 0 });
   });
 
+  it('says what syncing does, and the sync button reads it as its description', async () => {
+    render(<CalendarView />);
+    const sync = await screen.findByRole('button', { name: 'Sincronizar con Google' });
+    expect(
+      screen.getByText(
+        'Envía a tu Google Calendar las órdenes que vencen en el mes que estás viendo, como eventos de todo el día. Volver a sincronizar las actualiza; los cambios hechos en Google no vuelven a iJac.',
+      ),
+    ).toBeInTheDocument();
+    expect(sync).toHaveAccessibleDescription(
+      'Envía a tu Google Calendar las órdenes que vencen en el mes que estás viendo, como eventos de todo el día. Volver a sincronizar las actualiza; los cambios hechos en Google no vuelven a iJac.',
+    );
+  });
+
   it('links events to the static details route with an encoded ID', async () => {
     render(<CalendarView />);
 

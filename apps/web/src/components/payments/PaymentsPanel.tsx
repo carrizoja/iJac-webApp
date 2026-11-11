@@ -168,12 +168,20 @@ export function PaymentsPanel({
             variant="primary"
             className="work-order-print-hidden"
             onClick={openRecord}
+            aria-describedby="payments-receipt-help"
             startIcon={<Banknote aria-hidden="true" focusable="false" className="h-4 w-4" />}
           >
             {t('payments.record')}
           </Button>
         )}
       </div>
+      {/* How receipt numbers are given; kept off the printout. */}
+      <p
+        id="payments-receipt-help"
+        className="work-order-print-hidden mt-2 text-sm text-fg-secondary"
+      >
+        {t('payments.receiptHelp')}
+      </p>
 
       {notice && (
         <div
