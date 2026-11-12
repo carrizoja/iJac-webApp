@@ -23,8 +23,8 @@
 
 ## 5. Settings section (web)
 
-- [ ] 5.1 Add `apiDownload(path, token)` to `lib/api.ts`, returning `{ blob, filename }` from `Content-Disposition`. Verify: `api.test.ts` covers the bearer header, the file name, and a failed response
-- [ ] 5.2 Create the `DataExportSettings` component: it renders the "Respaldo de datos" section with "Exportar a Excel" and "Descargar copia (JSON)" only when `getCurrentMember()` returns `admin`, disables the buttons while a download runs, shows an error message if it fails, and includes help text about keeping the file safe. Add it to `pages/settings/index.astro` and add the i18n strings. Verify: component tests cover the admin view, the member view (nothing rendered), the in-progress state, and the error with retry
+- [x] 5.1 Add `apiDownload(path, token)` to `lib/api.ts`, returning `{ blob, filename }` from `Content-Disposition`. Verify: `api.test.ts` covers the bearer header, the file name, and a failed response
+- [x] 5.2 Create the `DataExportSettings` component: it renders the "Respaldo de datos" section with "Exportar a Excel" and "Descargar copia (JSON)" only when `getCurrentMember()` returns `admin`, disables the buttons while a download runs, shows an error message if it fails, and includes help text about keeping the file safe. Add it to `pages/settings/index.astro` and add the i18n strings. Verify: component tests cover the admin view, the member view (nothing rendered), the in-progress state, and the error with retry
 
 ## 6. Integration
 

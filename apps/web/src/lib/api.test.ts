@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { apiCall, apiPut } from './api';
+import { apiCall, apiDownload, apiPut } from './api';
 
 function jsonResponse(body: unknown, init: ResponseInit = {}): Response {
   return new Response(JSON.stringify(body), {
@@ -131,5 +131,71 @@ describe('apiPut', () => {
     const [, init] = vi.mocked(fetch).mock.calls[0];
     expect(init?.method).toBe('PUT');
     expect(init?.body).toBe(JSON.stringify({ phone: '555' }));
+  });
+});
+
+describe('apiDownload', () => {
+  beforeEach(() => {
+    vi.stubGlobal('fetch', vi.fn());
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it('sends the bearer token and returns the file with its name', async () => {
+    vi.mocked(fetch).mockResolvedValue(
+      new Response('xlsx-bytes', {
+        status: 200,
+        headers: {
+          'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+          'Content-Disposition': 'attachment; filename="ijac-export-2026-11-12.xlsx"',
+        },
+      }),
+    );
+
+    const result = await apiDownload('/export.xlsx', 'secret-token');
+
+    const [url, init] = vi.mocked(fetch).mock.calls[0];
+    expect(String(url)).toContain('/api/export.xlsx');
+    expect((init?.headers as Record<string, string>).Authorization).toBe('Bearer secret-token');
+    expect(result.error).toBeUndefined();
+    expect(result.data?.filename).toBe('ijac-export-2026-11-12.xlsx');
+    expect(await result.data?.blob.text()).toBe('xlsx-bytes');
+  });
+
+  it('falls back to the given name when the response does not name the file', async () => {
+    vi.mocked(fetch).mockResolvedValue(new Response('{}', { status: 200 }));
+
+    const result = await apiDownload('/export.json', 'token', 'export.json');
+
+    expect(result.data?.filename).toBe('export.json');
+  });
+
+  it('returns the structured API error of a failed download', async () => {
+    vi.mocked(fetch).mockResolvedValue(
+      jsonResponse({ error: { code: 'FORBIDDEN', message: 'Insufficient role' } }, { status: 403 }),
+    );
+
+    const result = await apiDownload('/export.xlsx', 'token');
+
+    expect(result.data).toBeUndefined();
+    expect(result.error).toEqual({ code: 'FORBIDDEN', message: 'Insufficient role' });
+  });
+
+  it('returns HTTP_ERROR for a failed download without an error body', async () => {
+    vi.mocked(fetch).mockResolvedValue(new Response('', { status: 500 }));
+
+    const result = await apiDownload('/export.xlsx', 'token');
+
+    expect(result.error).toEqual({ code: 'HTTP_ERROR', message: 'HTTP 500' });
+  });
+
+  it('returns NETWORK_ERROR when fetch rejects', async () => {
+    vi.mocked(fetch).mockRejectedValue(new Error('offline'));
+
+    const result = await apiDownload('/export.xlsx', 'token');
+
+    expect(result.error?.code).toBe('NETWORK_ERROR');
   });
 });

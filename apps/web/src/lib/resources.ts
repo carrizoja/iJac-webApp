@@ -1,4 +1,5 @@
-import { apiGet, apiPost, apiPatch, apiPut, apiDelete } from './api';
+import { apiGet, apiPost, apiPatch, apiPut, apiDelete, apiDownload } from './api';
+import type { DownloadedFile } from './api';
 import { getCurrentToken } from './auth';
 import type {
   Client,
@@ -185,4 +186,9 @@ export async function saveBrandingImage(
 
 export async function deleteBrandingImage(kind: BrandingKind): Promise<void> {
   return withToken((token) => apiDelete(`/organization/branding/${kind}`, token));
+}
+
+/** A full copy of the organization's records, for admins: Excel to read, JSON for machines. */
+export async function downloadDataExport(format: 'xlsx' | 'json'): Promise<DownloadedFile> {
+  return withToken((token) => apiDownload(`/export.${format}`, token, `ijac-export.${format}`));
 }
