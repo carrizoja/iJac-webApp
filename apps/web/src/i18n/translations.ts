@@ -297,6 +297,8 @@ export const es = {
     'Esta orden ya tiene pagos: la moneda no se puede cambiar y el precio no puede ser menor a lo pagado.',
   'workOrders.validation.priceForCurrency': 'Ingresá el precio para la moneda elegida',
   'payments.title': 'Pagos',
+  'payments.receiptHelp':
+    'Cada pago recibe el siguiente número de recibo de la organización ({first}, {second}…). Un número nunca se reutiliza, aunque el pago se anule.',
   'payments.loading': 'Cargando pagos...',
   'payments.loadError': 'No se pudieron cargar los pagos.',
   'payments.total': 'Total',
@@ -386,6 +388,8 @@ export const es = {
   'calendar.next': 'Siguiente',
   'calendar.syncing': 'Sincronizando...',
   'calendar.sync': 'Sincronizar con Google',
+  'calendar.syncHelp':
+    'Envía a tu Google Calendar las órdenes que vencen en el mes que estás viendo, como eventos de todo el día. Volver a sincronizar las actualiza; los cambios hechos en Google no vuelven a iJac.',
   'calendar.viewDetails': 'Ver detalles de {name}',
   'calendar.legend': 'Referencias',
   'calendar.syncSummary':
@@ -706,6 +710,8 @@ export const en = {
     'This order has payments: the currency cannot be changed and the price cannot be lower than what was paid.',
   'workOrders.validation.priceForCurrency': 'Enter the price for the chosen currency',
   'payments.title': 'Payments',
+  'payments.receiptHelp':
+    "Each payment gets the organization's next receipt number ({first}, {second}…). A number is never reused, even if the payment is voided.",
   'payments.loading': 'Loading payments...',
   'payments.loadError': 'Payments could not be loaded.',
   'payments.total': 'Total',
@@ -795,6 +801,8 @@ export const en = {
   'calendar.next': 'Next',
   'calendar.syncing': 'Syncing...',
   'calendar.sync': 'Sync with Google',
+  'calendar.syncHelp':
+    'Sends the orders due in the month shown to your Google Calendar as all-day events. Syncing again updates them; changes made in Google do not come back to iJac.',
   'calendar.viewDetails': 'View details for {name}',
   'calendar.legend': 'Legend',
   'calendar.syncSummary':

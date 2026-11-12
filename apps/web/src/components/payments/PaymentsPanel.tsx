@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useId, useRef, useState } from 'react';
 import {
   PaymentStatus,
   WorkOrderStatus,
@@ -61,6 +61,7 @@ export function PaymentsPanel({
   // The control that opened the dialog may be gone once it closes (a voided row, a settled
   // balance), so focus lands on the confirmation instead of falling back to the page.
   const noticeRef = useRef<HTMLDivElement>(null);
+  const receiptHelpId = useId();
   useEffect(() => {
     if (notice) noticeRef.current?.focus();
   }, [notice]);
@@ -168,12 +169,21 @@ export function PaymentsPanel({
             variant="primary"
             className="work-order-print-hidden"
             onClick={openRecord}
+            aria-describedby={receiptHelpId}
             startIcon={<Banknote aria-hidden="true" focusable="false" className="h-4 w-4" />}
           >
             {t('payments.record')}
           </Button>
         )}
       </div>
+      {/* How receipt numbers are given; kept off the printout. */}
+      <p id={receiptHelpId} className="work-order-print-hidden mt-2 text-sm text-fg-secondary">
+        {/* The examples come from the real formatter, so the copy follows any format change. */}
+        {t('payments.receiptHelp', {
+          first: formatReceiptNumber(1),
+          second: formatReceiptNumber(2),
+        })}
+      </p>
 
       {notice && (
         <div
