@@ -36,6 +36,9 @@ class InMemoryWorkOrderRepository implements WorkOrderRepository {
   async findById(): Promise<import('@ijac/shared').WorkOrder | null> {
     throw new Error('not needed');
   }
+  async listAll(): Promise<import('@ijac/shared').WorkOrder[]> {
+    throw new Error('not needed');
+  }
   async findMany(): Promise<{ items: WorkOrderClientSummary[]; nextCursor?: string }> {
     throw new Error('not needed');
   }

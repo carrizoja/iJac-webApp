@@ -106,15 +106,20 @@ export class FirestorePaymentRepository implements PaymentRepository {
   }
 
   async findByPaymentDate(organizationId: string, paymentDate: string): Promise<Payment[]> {
+    const payments = await this.listAll(organizationId);
+    return payments.filter((payment) => payment.paymentDate === paymentDate);
+  }
+
+  async listAll(organizationId: string): Promise<Payment[]> {
     // Reads the organization's own work orders only (scoped by `collection`), the same way the
     // work-order list reads payments for balances: no collection-group query, no extra index.
     const workOrders = await this.collection(organizationId, 'workOrders').get();
     const perOrder = await Promise.all(
       workOrders.docs.map(async (workOrder) => {
         const snapshot = await this.paymentsCollection(organizationId, workOrder.id).get();
-        return snapshot.docs
-          .map((doc) => this.toPayment(doc.id, workOrder.id, doc.data() as StoredPayment))
-          .filter((payment) => payment.paymentDate === paymentDate);
+        return snapshot.docs.map((doc) =>
+          this.toPayment(doc.id, workOrder.id, doc.data() as StoredPayment),
+        );
       }),
     );
     return perOrder.flat().sort((a, b) => a.receiptNumber - b.receiptNumber);

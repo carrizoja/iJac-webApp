@@ -14,7 +14,7 @@ The full requirements and scenarios are in `openspec/changes/add-data-backups/sp
 ## Tasks
 
 - [x] T1 — S1 — inline — OpenSpec 1.1–1.2: setup script, its test (wired into CI), restore runbook. RED: 8 tests failed (script missing); GREEN: 8 passed. Shellcheck not installed locally; it runs in CI.
-- [ ] T2 — S2, S3 — inline — OpenSpec 2.1–2.3: `listAll` on the repositories, shared export type, `ExportService`.
+- [x] T2 — S2, S3 — inline — OpenSpec 2.1–2.3: `listAll` on the repositories, shared export type, `ExportService`. RED: 8 tests failed (`listAll` and the service missing); GREEN: 252 tests in the touched suites. `findByPaymentDate` now filters `listAll`; its existing tests still pass.
 - [ ] T3 — S2 — inline — OpenSpec 3.1–3.2: `exceljs`, `buildWorkbook`.
 - [ ] T4 — S2–S4 — inline — OpenSpec 4.1–4.2: endpoints and route docs.
 - [ ] T5 — S4 — inline — OpenSpec 5.1–5.2: `apiDownload`, the Settings section.

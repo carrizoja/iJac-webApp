@@ -405,3 +405,69 @@ describe('FirestoreWorkOrderRepository delete', () => {
     );
   });
 });
+
+describe('FirestoreWorkOrderRepository listAll', () => {
+  function workOrderDocument(id: string, createdAt: string) {
+    return {
+      id,
+      data: () => ({
+        title: `Order ${id}`,
+        status: 'open',
+        priority: 'normal',
+        clientId: 'c1',
+        dueDate: new Date('2026-09-01T00:00:00.000Z'),
+        createdAt: new Date(createdAt),
+        updatedAt: new Date(createdAt),
+      }),
+    };
+  }
+
+  function setup(docsByPath: Record<string, unknown[]>) {
+    const paths: string[] = [];
+    const collectionAt = (path: string) => ({
+      get: jest.fn().mockImplementation(async () => {
+        paths.push(path);
+        return { docs: docsByPath[path] ?? [] };
+      }),
+    });
+    const firestore = {
+      collection: jest.fn().mockImplementation((root: string) => ({
+        ...collectionAt(root),
+        doc: (id: string) => ({
+          collection: (name: string) => collectionAt(`${root}/${id}/${name}`),
+        }),
+      })),
+    } as unknown as Firestore;
+    const config = {
+      get: jest.fn().mockReturnValue('organization'),
+    } as unknown as ConfigService<ApiEnvironment>;
+    return { repository: new FirestoreWorkOrderRepository(firestore, config), paths };
+  }
+
+  it('returns every work order of the organization, oldest first', async () => {
+    const { repository, paths } = setup({
+      'organizations/org-a/workOrders': [
+        workOrderDocument('wo-2', '2026-08-02T10:00:00.000Z'),
+        workOrderDocument('wo-1', '2026-08-01T10:00:00.000Z'),
+      ],
+      'organizations/org-b/workOrders': [workOrderDocument('other', '2026-08-01T10:00:00.000Z')],
+    });
+
+    const items = await repository.listAll('org-a');
+
+    expect(items.map((o) => o.id)).toEqual(['wo-1', 'wo-2']);
+    expect(items[0]).toMatchObject({
+      title: 'Order wo-1',
+      clientId: 'c1',
+      dueDate: '2026-09-01T00:00:00.000Z',
+      createdAt: '2026-08-01T10:00:00.000Z',
+    });
+    expect(paths).toEqual(['organizations/org-a/workOrders']);
+  });
+
+  it('returns an empty list for an organization with no work orders', async () => {
+    const { repository } = setup({});
+
+    await expect(repository.listAll('org-a')).resolves.toEqual([]);
+  });
+});

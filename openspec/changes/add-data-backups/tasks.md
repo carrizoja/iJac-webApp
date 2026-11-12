@@ -7,9 +7,9 @@
 
 ## 2. Export data path (API)
 
-- [ ] 2.1 Add `listAll(organizationId)` to `ClientRepository`, `WorkOrderRepository` and `PaymentRepository`, their Firestore implementations and their test doubles. Verify: repository specs show it returns every record of one organization and none of another
-- [ ] 2.2 Add the export JSON shape to `@ijac/shared` (`formatVersion`, `exportedAt`, `organizationId`, `clients`, `workOrders`, `payments`). Verify: shared typecheck passes
-- [ ] 2.3 Create `ExportService.collect(organizationId)` in a new export module. Verify: a unit test with in-memory repositories returns the three collections for the organization, and empty arrays for an empty one
+- [x] 2.1 Add `listAll(organizationId)` to `ClientRepository`, `WorkOrderRepository` and `PaymentRepository`, their Firestore implementations and their test doubles. Verify: repository specs show it returns every record of one organization and none of another
+- [x] 2.2 Add the export JSON shape to `@ijac/shared` (`formatVersion`, `exportedAt`, `organizationId`, `clients`, `workOrders`, `payments`). Verify: shared typecheck passes
+- [x] 2.3 Create `ExportService.collect(organizationId)` in a new export module. Verify: a unit test with in-memory repositories returns the three collections for the organization, and empty arrays for an empty one
 
 ## 3. Excel workbook (API)
 
