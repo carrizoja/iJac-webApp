@@ -7,6 +7,12 @@ import { downloadDataExport, getCurrentMember } from '../../lib/resources';
 
 type ExportFormat = 'xlsx' | 'json';
 
+/**
+ * How long the file's object URL stays valid after the click. Some browsers start the save
+ * after `click()` returns, so releasing the URL right away can leave an empty or broken file.
+ */
+const RELEASE_URL_AFTER_MS = 10_000;
+
 /** Hands a downloaded file to the browser's save flow. */
 function saveFile(blob: Blob, filename: string) {
   const url = URL.createObjectURL(blob);
@@ -16,7 +22,7 @@ function saveFile(blob: Blob, filename: string) {
   document.body.append(link);
   link.click();
   link.remove();
-  URL.revokeObjectURL(url);
+  window.setTimeout(() => URL.revokeObjectURL(url), RELEASE_URL_AFTER_MS);
 }
 
 /**
