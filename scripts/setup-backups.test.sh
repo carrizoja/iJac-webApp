@@ -84,10 +84,61 @@ test_dry_run_prints_commands_and_changes_nothing() {
   local out
   out="$(bash "$SETUP_SCRIPT" --dry-run 2>&1)" || fail "--dry-run exited non-zero"
   [[ ! -s "$CALLS" ]] || fail "--dry-run called gcloud: $(cat "$CALLS")"
-  [[ "$out" == *"[dry run] gcloud firestore backups schedules create --database=(default) --recurrence=daily --retention=14d --project=ijac-webapp"* ]] \
+  [[ "$out" == *"[dry run] gcloud firestore backups schedules create --database=\\(default\\) --recurrence=daily --retention=14d --project=ijac-webapp"* ]] \
     || fail "no schedule command in: $out"
-  [[ "$out" == *"[dry run] gcloud firestore databases update --database=(default) --enable-pitr --project=ijac-webapp"* ]] \
+  [[ "$out" == *"[dry run] gcloud firestore databases update --database=\\(default\\) --enable-pitr --project=ijac-webapp"* ]] \
     || fail "no PITR command in: $out"
+}
+
+test_dry_run_commands_can_be_pasted_into_bash() {
+  local out line
+  out="$(bash "$SETUP_SCRIPT" --dry-run 2>/dev/null)" || fail "--dry-run exited non-zero"
+  while IFS= read -r line; do
+    [[ "$line" == "[dry run] "* ]] || continue
+    bash -n -c "${line#\[dry run\] }" 2> /dev/null || fail "not valid bash: $line"
+  done <<< "$out"
+}
+
+test_dry_run_works_without_gcloud() {
+  # An empty PATH: the script needs only bash builtins for a dry run.
+  local out bash_bin
+  bash_bin="$(command -v bash)"
+  mkdir -p "$WORK/empty"
+  out="$(PATH="$WORK/empty" "$bash_bin" "$SETUP_SCRIPT" --dry-run 2>&1)" \
+    || fail "--dry-run failed without gcloud: $out"
+  [[ "$out" == *"[dry run] gcloud firestore backups schedules create"* ]] || fail "no commands in: $out"
+}
+
+test_stops_when_schedules_cannot_be_listed() {
+  cat > "$WORK/bin/gcloud" <<'STUB'
+#!/usr/bin/env bash
+echo "gcloud $*" >> "$CALLS"
+if [[ "$*" == *"backups schedules list"* ]]; then
+  echo "ERROR: not authenticated" >&2
+  exit 1
+fi
+STUB
+  local out status=0
+  out="$(bash "$SETUP_SCRIPT" --yes 2>&1)" || status=$?
+  [[ "$status" -ne 0 ]] || fail "went on after a failed listing"
+  ! grep -q "schedules create" "$CALLS" || fail "created a schedule after a failed listing"
+  [[ "$out" == *"Could not list the backup schedules"* ]] || fail "no error in: $out"
+}
+
+test_stops_when_pitr_state_cannot_be_read() {
+  cat > "$WORK/bin/gcloud" <<'STUB'
+#!/usr/bin/env bash
+echo "gcloud $*" >> "$CALLS"
+if [[ "$*" == *"backups schedules list"* ]]; then
+  echo '[]'
+elif [[ "$*" == *"databases describe"* ]]; then
+  exit 1
+fi
+STUB
+  local status=0
+  bash "$SETUP_SCRIPT" --yes > /dev/null 2>&1 || status=$?
+  [[ "$status" -ne 0 ]] || fail "went on after a failed describe"
+  ! grep -q "databases update" "$CALLS" || fail "updated PITR after a failed describe"
 }
 
 test_creates_schedule_and_enables_pitr() {
@@ -130,6 +181,10 @@ test_confirmation_yes_proceeds() {
 run_test test_help_exits_zero
 run_test test_unknown_option_fails_with_usage
 run_test test_dry_run_prints_commands_and_changes_nothing
+run_test test_dry_run_commands_can_be_pasted_into_bash
+run_test test_dry_run_works_without_gcloud
+run_test test_stops_when_schedules_cannot_be_listed
+run_test test_stops_when_pitr_state_cannot_be_read
 run_test test_creates_schedule_and_enables_pitr
 run_test test_rerun_keeps_one_daily_schedule
 run_test test_weekly_schedule_does_not_count_as_daily

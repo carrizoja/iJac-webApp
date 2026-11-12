@@ -28,7 +28,7 @@
 
 ## 6. Integration
 
-- [ ] 6.1 Run lint, typecheck and the full test suites for `apps/api`, `apps/web` and `packages/shared`. Verify: all pass
+- [x] 6.1 Run lint, typecheck and the full test suites for `apps/api`, `apps/web` and `packages/shared`. Verify: all pass
 - [ ] 6.2 After the full deploy, download both files as an admin and open the .xlsx in a spreadsheet; open Settings as a member. Verify: the files open with the right sheets and records, and the member sees no export section
 
 ## Workflow follow-up

@@ -18,7 +18,7 @@ The full requirements and scenarios are in `openspec/changes/add-data-backups/sp
 - [x] T3 — S2 — inline — OpenSpec 3.1–3.2: `exceljs` ^4.4.0, `buildWorkbook`. RED: module missing; GREEN: 11 export tests. Timestamps show Buenos Aires wall time; due and payment dates stay calendar dates.
 - [x] T4 — S2–S4 — inline — OpenSpec 4.1–4.2: endpoints and route docs. RED: controller and file-name helper missing; GREEN: 21 export tests over HTTP (admin 200, member 403, no token 401 with the real FirebaseAuthGuard, org scoping, same records), full API suite 390, AppModule DI resolves. Risk: item 2 (admin-only guard), own commit.
 - [x] T5 — S4 — inline — OpenSpec 5.1–5.2: `apiDownload`, `downloadDataExport`, the Settings section. RED: 5 api tests (function missing) and the component (module missing) failed; GREEN: 671 web tests, lint, typecheck, build.
-- [ ] T6 — all — inline — OpenSpec 6.1: lint, typecheck, full suites.
+- [x] T6 — all — inline — OpenSpec 6.1: lint, typecheck, full suites. API 390, web 671, shared 78, setup-backups 8, deploy 13; lint and typecheck clean everywhere. OpenSpec 6.2 (manual check after deploy) stays open.
 
 Route evidence: T2–T5 depend on each other (the web uses the API contract, the endpoints use the service), so there is no parallel Writer trigger; work runs inline.
 
@@ -28,3 +28,5 @@ Route evidence: T2–T5 depend on each other (the web uses the API contract, the
 - L2 (2026-11-12, user): "I am worried about the two of them. Could we add the two possibilities?"
 - L3 (2026-11-12, user): "Only admins." / "Yes, go with both." (IDs plus readable columns) / "Yes, include Json."
 - L4 (2026-11-12): T1 done. The CI job keeps its name "Deploy script" so a required status check doesn't break; it now also runs the backup script test.
+- L5 (2026-11-12): Commits: T1 4e48b45, T2 c605aba, T3 9b8d2b7, T4 b35b9bb (risk item 2, own commit), T5 2051b97. Native assess on the branch: risk high (`review_due: high_risk`; reasons: executable script, payments hot path, shell in CI, escalated item 2). Independent verifier launched for items 2 and 5 before the native review. The branch is ~1,000 authored lines plus the lockfile, above the 400-line budget, so ask-on-risk applies: ask for the chain strategy before opening a PR.
+- L6 (2026-11-12): Independent verifier: no blockers; every spec requirement and S1–S4 PASS (the two live Google Cloud checks can't be verified here); `findByPaymentDate` unchanged (the baseline spec passes on the branch). One correction batch for its advisories: the setup script now stops when it can't list schedules or read the PITR state, no longer needs gcloud for `--dry-run`, and prints commands that can be pasted into bash. RED: 5 new tests failed; GREEN: 12 passed.

@@ -43,7 +43,10 @@ die() {
 
 run() {
   if [[ "$DRY_RUN" == true ]]; then
-    printf '[dry run] %s\n' "$*"
+    # Quoted so each printed command can be pasted into a shell as it is.
+    printf '[dry run]'
+    printf ' %q' "$@"
+    printf '\n'
     return 0
   fi
   "$@"
@@ -76,9 +79,12 @@ confirm() {
 }
 
 has_daily_schedule() {
+  # Called inside `if`, where `set -e` is off: a failed listing must stop the script
+  # here, or it would read as "no schedule" and create a second one.
   local schedules
   schedules="$(gcloud firestore backups schedules list \
-    --database="$DATABASE" --project="$PROJECT" --format=json)"
+    --database="$DATABASE" --project="$PROJECT" --format=json)" \
+    || die "Could not list the backup schedules. Is gcloud logged in?"
   [[ "$schedules" == *'"dailyRecurrence"'* ]]
 }
 
@@ -86,7 +92,8 @@ pitr_enabled() {
   local state
   state="$(gcloud firestore databases describe \
     --database="$DATABASE" --project="$PROJECT" \
-    --format='value(pointInTimeRecoveryEnablement)')"
+    --format='value(pointInTimeRecoveryEnablement)')" \
+    || die "Could not read the database's point-in-time recovery setting."
   [[ "$state" == POINT_IN_TIME_RECOVERY_ENABLED ]]
 }
 
@@ -113,7 +120,9 @@ setup_pitr() {
 
 main() {
   parse_args "$@"
-  command -v gcloud > /dev/null 2>&1 || die "Missing command: gcloud"
+  if [[ "$DRY_RUN" != true ]]; then
+    command -v gcloud > /dev/null 2>&1 || die "Missing command: gcloud"
+  fi
   confirm
   setup_schedule
   setup_pitr
