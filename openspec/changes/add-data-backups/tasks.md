@@ -13,8 +13,8 @@
 
 ## 3. Excel workbook (API)
 
-- [ ] 3.1 Add `exceljs` to `apps/api` and run the install. Verify: the lockfile updates and the API builds
-- [ ] 3.2 Write a pure `buildWorkbook(snapshot, exportedAt)` with the sheets "Clientes", "Órdenes" and "Pagos": a bold frozen header row, ID plus readable columns (order → client name from the lookup, payment → order ID and title plus client name from the snapshots), numeric amounts with a "Moneda" column, Date cells, Spanish labels, and voided payments with status "Anulado", void date and reason. Verify: unit tests read the workbook back and check sheet order, headers, the `c1`/"Ana Pérez" and `o1`/"Reparación techo" rows, the missing-client row, the 150050 → 1500.50 amount, and the voided receipt 12
+- [x] 3.1 Add `exceljs` to `apps/api` and run the install. Verify: the lockfile updates and the API builds
+- [x] 3.2 Write a pure `buildWorkbook(snapshot)` (the export date comes from the snapshot) with the sheets "Clientes", "Órdenes" and "Pagos": a bold frozen header row, ID plus readable columns (order → client name from the lookup, payment → order ID and title plus client name from the snapshots), numeric amounts with a "Moneda" column, Date cells, Spanish labels, and voided payments with status "Anulado", void date and reason. Verify: unit tests read the workbook back and check sheet order, headers, the `c1`/"Ana Pérez" and `o1`/"Reparación techo" rows, the missing-client row, the 150050 → 1500.50 amount, and the voided receipt 12
 
 ## 4. Export endpoints (API)
 
