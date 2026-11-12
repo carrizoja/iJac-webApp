@@ -81,7 +81,24 @@ describe('DataExportSettings', () => {
 
     await waitFor(() => expect(clicked).toEqual([name]));
     expect(downloadDataExport).toHaveBeenCalledWith(format);
-    expect(URL.revokeObjectURL).toHaveBeenCalledWith('blob:export');
+  });
+
+  it('releases the file link only after the browser has had time to start the save', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    try {
+      vi.mocked(getCurrentMember).mockResolvedValue({ role: OrganizationMemberRole.ADMIN });
+      vi.mocked(downloadDataExport).mockResolvedValue(file('ijac-export-2026-11-12.xlsx'));
+      render(<DataExportSettings />);
+
+      fireEvent.click(await screen.findByRole('button', { name: 'Exportar a Excel' }));
+      await waitFor(() => expect(clicked).toEqual(['ijac-export-2026-11-12.xlsx']));
+
+      expect(URL.revokeObjectURL).not.toHaveBeenCalled();
+      vi.advanceTimersByTime(10_000);
+      expect(URL.revokeObjectURL).toHaveBeenCalledWith('blob:export');
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('disables both buttons while a download is in progress', async () => {
