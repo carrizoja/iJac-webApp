@@ -13,5 +13,6 @@ import { PaymentService } from './payment.service';
     PaymentService,
     { provide: PAYMENT_REPOSITORY, useClass: FirestorePaymentRepository },
   ],
+  exports: [PAYMENT_REPOSITORY],
 })
 export class PaymentModule {}

@@ -104,6 +104,65 @@ export async function apiCall<T>(
   }
 }
 
+export interface DownloadedFile {
+  blob: Blob;
+  filename: string;
+}
+
+/** The file name from a `Content-Disposition: attachment; filename="..."` header. */
+function attachmentName(header: string | null): string | null {
+  const match = header ? /filename="?([^";]+)"?/i.exec(header) : null;
+  return match ? match[1] : null;
+}
+
+/**
+ * Downloads a file the API serves as an attachment. The bearer token rules out a plain
+ * link, so the bytes come back as a Blob, named by the response or by `fallbackName`.
+ */
+export async function apiDownload(
+  path: string,
+  token: string | null,
+  fallbackName = 'download',
+): Promise<ApiResult<DownloadedFile>> {
+  let url: URL;
+  try {
+    url = buildApiUrl(path);
+  } catch {
+    return { error: { code: 'NETWORK_ERROR', message: 'Invalid API base URL' } };
+  }
+  const headers: Record<string, string> = {};
+  if (token) {
+    headers.Authorization = `Bearer ${token}`;
+  }
+
+  try {
+    const response = await fetch(url.toString(), { method: 'GET', headers });
+    if (!response.ok) {
+      const text = await response.text();
+      let body: unknown;
+      try {
+        body = text ? JSON.parse(text) : undefined;
+      } catch {
+        body = undefined;
+      }
+      if (isObject(body) && isApiError(body.error)) {
+        return { error: body.error };
+      }
+      return { error: { code: 'HTTP_ERROR', message: `HTTP ${response.status}` } };
+    }
+    const blob = await response.blob();
+    const filename = attachmentName(response.headers.get('Content-Disposition')) ?? fallbackName;
+    return { data: { blob, filename } };
+  } catch (error) {
+    return {
+      error: {
+        code: 'NETWORK_ERROR',
+        message: error instanceof Error ? error.message : 'Network error',
+      },
+    };
+  }
+}
+
 export async function apiGet<T>(path: string, token: string | null): Promise<ApiResult<T>> {
   return apiCall<T>(path, { method: 'GET' }, token);
 }

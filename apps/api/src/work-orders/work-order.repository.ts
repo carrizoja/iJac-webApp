@@ -45,6 +45,8 @@ export interface WorkOrderRepository {
   ): Promise<WorkOrder>;
   delete(organizationId: string, id: string): Promise<void>;
   findById(organizationId: string, id: string): Promise<WorkOrder | null>;
+  /** Every work order of the organization, oldest first. Used by the data export. */
+  listAll(organizationId: string): Promise<WorkOrder[]>;
   findMany(
     organizationId: string,
     filter: WorkOrderFilter,

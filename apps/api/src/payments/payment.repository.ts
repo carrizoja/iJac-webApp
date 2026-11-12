@@ -9,6 +9,11 @@ export interface PaymentRepository {
    */
   findByPaymentDate(organizationId: string, paymentDate: string): Promise<Payment[]>;
   /**
+   * Every payment of the organization (active and voided), across its work orders,
+   * ordered by receipt number. Used by the data export.
+   */
+  listAll(organizationId: string): Promise<Payment[]>;
+  /**
    * Records a payment in one transaction: validates preconditions, assigns the
    * next receipt number and stores the issuance-time snapshots.
    */

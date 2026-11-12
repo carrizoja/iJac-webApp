@@ -73,6 +73,10 @@ class InMemoryWorkOrderRepository implements WorkOrderRepository {
     if (!exists) throw new NotFoundError('Work order');
   }
 
+  async listAll(): Promise<WorkOrder[]> {
+    return [...this.workOrders.values()];
+  }
+
   async findById(_uid: string, id: string): Promise<WorkOrder | null> {
     return this.workOrders.get(id) ?? null;
   }

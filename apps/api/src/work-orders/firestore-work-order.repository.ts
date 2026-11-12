@@ -258,6 +258,13 @@ export class FirestoreWorkOrderRepository implements WorkOrderRepository {
     return this.toWorkOrder(doc);
   }
 
+  async listAll(organizationId: string): Promise<WorkOrder[]> {
+    const snapshot = await this.collection(organizationId).get();
+    return snapshot.docs
+      .map((doc) => this.toWorkOrder(doc))
+      .sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+  }
+
   async findMany(
     organizationId: string,
     filter: WorkOrderFilter,

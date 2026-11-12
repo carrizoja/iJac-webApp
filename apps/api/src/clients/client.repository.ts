@@ -37,4 +37,6 @@ export interface ClientRepository {
     filter: ClientFilter,
   ): Promise<{ items: Client[]; nextCursor?: string }>;
   exists(organizationId: string, id: string): Promise<boolean>;
+  /** Every client of the organization, oldest first. Used by the data export. */
+  listAll(organizationId: string): Promise<Client[]>;
 }

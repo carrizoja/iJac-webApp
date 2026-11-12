@@ -63,6 +63,10 @@ class InMemoryClientRepository implements ClientRepository {
     this.clients.delete(id);
   }
 
+  async listAll(): Promise<Client[]> {
+    return [...this.clients.values()];
+  }
+
   async findById(_organizationId: string, id: string): Promise<Client | null> {
     return this.clients.get(id) ?? null;
   }

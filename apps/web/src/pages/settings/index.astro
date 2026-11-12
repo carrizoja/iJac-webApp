@@ -4,6 +4,7 @@ import { Protected } from '../../components/layout/Protected';
 import { AppShell } from '../../components/layout/AppShell';
 import { OrganizationSettings } from '../../components/settings/OrganizationSettings';
 import { ShortcutSettings } from '../../components/settings/ShortcutSettings';
+import { DataExportSettings } from '../../components/settings/DataExportSettings';
 ---
 
 <Layout titleKey="title.settings">
@@ -19,6 +20,7 @@ import { ShortcutSettings } from '../../components/settings/ShortcutSettings';
         <h2 id="settings-shortcuts-heading" class="mb-5 font-heading text-xl font-semibold text-fg-primary" data-i18n="settings.shortcuts.heading">Atajos de teclado</h2>
         <ShortcutSettings client:load />
       </section>
+      <DataExportSettings client:load />
     </AppShell>
   </Protected>
 </Layout>

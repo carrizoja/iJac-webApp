@@ -88,6 +88,15 @@ export const es = {
   'home.open.open': 'Abiertas',
   'home.open.inProgress': 'En progreso',
   'settings.pageHeading': 'Configuración',
+  'settings.export.heading': 'Respaldo de datos',
+  'settings.export.description':
+    'Descargá una copia de los clientes, las órdenes y los pagos de la organización, incluidos los pagos anulados.',
+  'settings.export.hint':
+    'El archivo tiene datos personales de tus clientes: guardalo en un lugar seguro. Excel sirve para leer y hacer cuentas; JSON, para cargar los datos en otro sistema.',
+  'settings.export.excel': 'Exportar a Excel',
+  'settings.export.json': 'Descargar copia (JSON)',
+  'settings.export.downloading': 'Descargando…',
+  'settings.export.error': 'No se pudo descargar el archivo. Probá de nuevo.',
   'settings.shortcuts.heading': 'Atajos de teclado',
   'settings.shortcuts.toggle': 'Activar atajos de teclado',
   'settings.shortcuts.list': 'Atajos disponibles',
@@ -503,6 +512,15 @@ export const en = {
   'home.open.open': 'Open',
   'home.open.inProgress': 'In progress',
   'settings.pageHeading': 'Settings',
+  'settings.export.heading': 'Data backup',
+  'settings.export.description':
+    "Download a copy of the organization's clients, work orders and payments, voided payments included.",
+  'settings.export.hint':
+    "The file holds your clients' personal data: keep it somewhere safe. Excel is for reading and totals; JSON is for loading the data into another system.",
+  'settings.export.excel': 'Export to Excel',
+  'settings.export.json': 'Download copy (JSON)',
+  'settings.export.downloading': 'Downloading…',
+  'settings.export.error': 'The file could not be downloaded. Try again.',
   'settings.shortcuts.heading': 'Keyboard shortcuts',
   'settings.shortcuts.toggle': 'Turn on keyboard shortcuts',
   'settings.shortcuts.list': 'Available shortcuts',

@@ -626,6 +626,36 @@ describe('FirestorePaymentRepository counter scope', () => {
     expect(items.map((p) => p.amountMinor)).toEqual([100]);
   });
 
+  it('lists every payment of the organization across work orders, voided included', async () => {
+    const { repository, seed } = setup('organization');
+    seed('org-a', {}, 'wo-1');
+    seed('org-a', {}, 'wo-2');
+    seed('org-b', {}, 'wo-1');
+    const first = await repository.record('org-a', 'wo-1', { ...input, amountMinor: 100 }, admin);
+    await repository.record(
+      'org-a',
+      'wo-2',
+      { ...input, amountMinor: 200, paymentDate: '2026-08-11' },
+      admin,
+    );
+    await repository.record('org-b', 'wo-1', { ...input, amountMinor: 999 }, admin);
+    await repository.voidPayment('org-a', 'wo-1', first.id, 'Mistake', admin);
+
+    const items = await repository.listAll('org-a');
+
+    expect(items.map((p) => [p.receiptNumber, p.workOrderId, p.amountMinor, p.status])).toEqual([
+      [1, 'wo-1', 100, PaymentStatus.VOIDED],
+      [2, 'wo-2', 200, PaymentStatus.ACTIVE],
+    ]);
+    expect(items[0].void).toMatchObject({ reason: 'Mistake' });
+  });
+
+  it('lists no payments for an organization without work orders', async () => {
+    const { repository } = setup('organization');
+
+    await expect(repository.listAll('org-a')).resolves.toEqual([]);
+  });
+
   it('treats another organization work order as not found', async () => {
     const { repository, seed } = setup('organization');
     seed('org-a');

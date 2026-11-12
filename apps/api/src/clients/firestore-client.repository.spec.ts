@@ -181,3 +181,50 @@ describe('FirestoreClientRepository taxId persistence', () => {
     expect(patch.taxId).toBeInstanceOf(FieldValue.delete().constructor);
   });
 });
+
+describe('FirestoreClientRepository.listAll', () => {
+  function setup(docsByPath: Record<string, FirebaseFirestore.QueryDocumentSnapshot[]>) {
+    const paths: string[] = [];
+    const collectionAt = (path: string) => ({
+      get: jest.fn().mockImplementation(async () => {
+        paths.push(path);
+        return { docs: docsByPath[path] ?? [] };
+      }),
+    });
+    const firestore = {
+      collection: jest.fn().mockImplementation((root: string) => ({
+        ...collectionAt(root),
+        doc: (id: string) => ({
+          collection: (name: string) => collectionAt(`${root}/${id}/${name}`),
+        }),
+      })),
+    } as unknown as Firestore;
+    const config = {
+      get: jest.fn().mockReturnValue('organization'),
+    } as unknown as ConfigService<ApiEnvironment>;
+    return { repository: new FirestoreClientRepository(firestore, config), paths };
+  }
+
+  it('returns every client of the organization, and only that organization', async () => {
+    const { repository, paths } = setup({
+      'organizations/org-a/clients': [clientDocument('c1'), clientDocument('c2')],
+      'organizations/org-b/clients': [clientDocument('other')],
+    });
+
+    const items = await repository.listAll('org-a');
+
+    expect(items.map((c) => c.id)).toEqual(['c1', 'c2']);
+    expect(items[0]).toMatchObject({
+      name: 'Acme Inc',
+      createdAt: '2026-08-01T10:00:00.000Z',
+      updatedAt: '2026-08-07T10:00:00.000Z',
+    });
+    expect(paths).toEqual(['organizations/org-a/clients']);
+  });
+
+  it('returns an empty list for an organization with no clients', async () => {
+    const { repository } = setup({});
+
+    await expect(repository.listAll('org-a')).resolves.toEqual([]);
+  });
+});

@@ -55,7 +55,10 @@ jobs:
         uses: actions/checkout@v6
 
       - name: Shellcheck
-        run: shellcheck scripts/deploy.sh scripts/deploy.test.sh
+        run: shellcheck scripts/deploy.sh scripts/deploy.test.sh scripts/setup-backups.sh scripts/setup-backups.test.sh
 
-      - name: Test
+      - name: Test deploy script
         run: bash scripts/deploy.test.sh
+
+      - name: Test backup setup script
+        run: bash scripts/setup-backups.test.sh

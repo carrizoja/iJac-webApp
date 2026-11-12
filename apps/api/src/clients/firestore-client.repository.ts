@@ -131,6 +131,13 @@ export class FirestoreClientRepository implements ClientRepository {
     return doc.exists;
   }
 
+  async listAll(organizationId: string): Promise<Client[]> {
+    const snapshot = await this.collection(organizationId).get();
+    return snapshot.docs
+      .map((doc) => this.toClient(doc))
+      .sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+  }
+
   async findMany(
     organizationId: string,
     filter: ClientFilter,
