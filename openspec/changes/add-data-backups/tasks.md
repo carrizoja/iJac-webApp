@@ -18,8 +18,8 @@
 
 ## 4. Export endpoints (API)
 
-- [ ] 4.1 Add `GET /api/export.xlsx` and `GET /api/export.json` with `@RequireRole(OrganizationMemberRole.ADMIN)`, attachment `Content-Disposition` named `ijac-export-<YYYY-MM-DD>.xlsx|.json`, the right content types, and `Cache-Control: no-store`. Verify: controller and e2e tests cover admin 200, member 403, no token 401, org-A-only content, and the same records in both formats
-- [ ] 4.2 Document both endpoints in `docs/deployment/cloud-run-api-v1.md`, next to the other routes. Verify: the doc lists the routes, the role, and the response formats
+- [x] 4.1 Add `GET /api/export.xlsx` and `GET /api/export.json` with `@RequireRole(OrganizationMemberRole.ADMIN)`, attachment `Content-Disposition` named `ijac-export-<YYYY-MM-DD>.xlsx|.json`, the right content types, and `Cache-Control: no-store`. Verify: controller and e2e tests cover admin 200, member 403, no token 401, org-A-only content, and the same records in both formats
+- [x] 4.2 Document both endpoints in `docs/deployment/cloud-run-api-v1.md`, next to the other routes. Verify: the doc lists the routes, the role, and the response formats
 
 ## 5. Settings section (web)
 

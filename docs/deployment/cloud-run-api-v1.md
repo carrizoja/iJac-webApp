@@ -50,6 +50,15 @@ Select the narrowest predefined or custom IAM roles that provide those capabilit
 
 Recording and voiding payments (`POST /work-orders/:id/payments` and `POST /work-orders/:id/payments/:paymentId/void`) and saving the organization profile are admin-only. Roles are resolved only when `REPOSITORY_MODE=organization`; in `global` mode no role is resolved, so these routes always return 403. Cut production over to `organization` mode (and provision the owner as `admin`) before relying on payments. Payments and receipt counters are server-only Firestore data covered by the default-deny rules.
 
+## Data Export Routes
+
+`GET /api/export.xlsx` and `GET /api/export.json` return a full copy of the caller's organization: every client, work order and payment, voided payments included. Both are admin-only. A member gets 403 and a request without a token gets 401, and like the payment routes they need `REPOSITORY_MODE=organization`.
+
+- `export.xlsx`: an Excel workbook (`application/vnd.openxmlformats-officedocument.spreadsheetml.sheet`) with the sheets Clientes, Órdenes and Pagos. Rows keep their IDs and add readable references (the client name on each order, the order title and client name on each payment). Amounts are in major units, and timestamps are shown in Buenos Aires time.
+- `export.json`: `{ formatVersion, exportedAt, organizationId, clients, workOrders, payments }` (`DataExport` in `@ijac/shared`), with records as stored and amounts in minor units.
+
+Both are sent as attachments named `ijac-export-<YYYY-MM-DD>.<ext>`, dated in Buenos Aires time, with `Cache-Control: no-store` because they contain personal data. They read the whole organization in one request, which is fine at this data size. The web calls them from Configuración → Respaldo de datos. For disaster recovery use the Firestore backups instead (`docs/deployment/database-backups.md`).
+
 ## Secrets
 
 Store `GOOGLE_CLIENT_SECRET` and `CREDENTIAL_ENCRYPTION_KEY` in Secret Manager. OAuth client identifiers may be normal environment configuration according to organization policy. Cloud Run must use its runtime identity for Firebase Admin; do not create or inject a Firebase service-account private key.
